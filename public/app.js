@@ -7,7 +7,7 @@
     token: null, // Google ID token (Bearer)
     me: null, // { email, name, role, canApprove }
     view: 'submit',
-    loaded: { mine: false, approvals: false },
+    loaded: { mine: false, approvals: false, audit: false },
     accounts: [],
   };
 
@@ -29,6 +29,8 @@
     receiptName: $('#receipt-name'),
     mineList: $('#mine-list'),
     approvalsList: $('#approvals-list'),
+    auditSummary: $('#audit-summary'),
+    auditList: $('#audit-list'),
     toast: $('#toast'),
   };
 
@@ -155,7 +157,7 @@
   function signOut(message) {
     state.token = null;
     state.me = null;
-    state.loaded = { mine: false, approvals: false };
+    state.loaded = { mine: false, approvals: false, audit: false };
     try { window.google?.accounts?.id?.disableAutoSelect(); } catch { /* noop */ }
     el.app.hidden = true;
     el.signin.hidden = false;
@@ -174,6 +176,7 @@
     el.whoRole.textContent = state.me.role;
 
     $('.tab[data-view="approvals"]').hidden = !state.me.canApprove;
+    $('.tab[data-view="audit"]').hidden = !state.me.canApprove;
 
     // Default the date field to today.
     const dateInput = $('#f-date');
@@ -205,6 +208,7 @@
 
     if (view === 'mine' && !state.loaded.mine) loadMine();
     if (view === 'approvals' && !state.loaded.approvals) loadApprovals();
+    if (view === 'audit' && !state.loaded.audit) loadAudit();
   }
 
   // ---------- Submit ----------
@@ -459,6 +463,55 @@
     }
   }
 
+  // ---------- Audit ----------
+
+  function renderAudit(data) {
+    const c = data.counts || { total: 0, ready: 0, needsAttention: 0 };
+    if (c.needsAttention === 0) {
+      el.auditSummary.className = 'audit-summary good';
+      el.auditSummary.textContent = c.total
+        ? `✓ All ${c.total} expense${c.total === 1 ? '' : 's'} are complete and ready for Cedarstone.`
+        : 'Nothing to check yet — no submitted or approved expenses.';
+      el.auditList.innerHTML = '';
+      return;
+    }
+    el.auditSummary.className = 'audit-summary warn';
+    el.auditSummary.textContent = `⚠ ${c.needsAttention} of ${c.total} need attention · ${c.ready} ready.`;
+
+    el.auditList.innerHTML = (data.items || []).map((e) => `
+      <article class="expense">
+        <div class="expense-top">
+          <div class="expense-main">
+            <div class="expense-desc">${escapeHtml(e.description || '(no description)')}</div>
+            <div class="expense-meta">${escapeHtml(e.submitterName || e.submitterEmail || '—')} · ${escapeHtml(e.account || '—')} · ${escapeHtml(fmtDate(e.date)) || '—'}</div>
+          </div>
+          ${amountBlock(e)}
+        </div>
+        <div class="issues">
+          ${e.issues.map((i) => `<span class="issue">${escapeHtml(i)}</span>`).join('')}
+        </div>
+        <div class="expense-actions">
+          ${statusBadge(e.status)}
+          ${receiptLink(e)}
+          ${e.recordUrl ? `<a class="receipt-link" href="${escapeHtml(e.recordUrl)}" target="_blank" rel="noopener">Open in Airtable ↗</a>` : ''}
+        </div>
+      </article>
+    `).join('');
+  }
+
+  async function loadAudit() {
+    el.auditSummary.className = 'audit-summary';
+    el.auditSummary.textContent = '';
+    el.auditList.innerHTML = `<div class="state">Checking…</div>`;
+    try {
+      const data = await api('audit');
+      state.loaded.audit = true;
+      renderAudit(data);
+    } catch (e) {
+      el.auditList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
   // ---------- Wire up ----------
 
   function bind() {
@@ -470,8 +523,9 @@
     el.form.addEventListener('submit', onSubmit);
     el.receiptInput.addEventListener('change', onReceiptChange);
     el.approvalsList.addEventListener('click', onApprovalsClick);
+    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit };
     $$('[data-refresh]').forEach((b) =>
-      b.addEventListener('click', () => (b.dataset.refresh === 'mine' ? loadMine() : loadApprovals()))
+      b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())
     );
   }
 

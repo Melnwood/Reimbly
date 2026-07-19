@@ -46,6 +46,7 @@
           <button class="tab" data-view="submit" role="tab">Submit</button>
           <button class="tab" data-view="mine" role="tab">My expenses</button>
           <button class="tab" data-view="approvals" role="tab" hidden>Approvals</button>
+          <button class="tab" data-view="audit" role="tab" hidden>Audit</button>
         </nav>
         <div class="who">
           <span id="who-name" class="who-name"></span>
@@ -134,6 +135,19 @@
               <button class="link-btn" data-refresh="approvals">Refresh</button>
             </div>
             <div id="approvals-list" class="list"></div>
+          </div>
+        </section>
+
+        <!-- Audit -->
+        <section id="view-audit" class="view" data-view="audit" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Audit</h2>
+              <button class="link-btn" data-refresh="audit">Refresh</button>
+            </div>
+            <p class="panel-sub">A completeness check on every submitted &amp; approved expense before it goes to Cedarstone.</p>
+            <div id="audit-summary"></div>
+            <div id="audit-list" class="list"></div>
           </div>
         </section>
       </main>

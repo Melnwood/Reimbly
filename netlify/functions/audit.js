@@ -1,0 +1,74 @@
+'use strict';
+
+// Pre-Cedarstone audit: scan every expense in the pipeline (Submitted +
+// Approved) and flag anything that would make the report look sloppy — missing
+// receipt, date, amount, account, currency, or an uncomputed USD total.
+// Approver / Finance only.
+
+const { ok, error, methodGuard } = require('./lib/http');
+const { verifyRequest } = require('./lib/google');
+const airtable = require('./lib/airtable');
+const { TABLES, ensureStaff, isApprover, displayMaps, shapeExpense } = require('./lib/domain');
+
+const EXPENSES_TABLE_ID = process.env.EXPENSES_TABLE_ID || 'tbliyYWAryk0Om7vn';
+
+function recordUrl(id) {
+  const base = process.env.AIRTABLE_BASE_ID;
+  return base ? `https://airtable.com/${base}/${EXPENSES_TABLE_ID}/${id}` : null;
+}
+
+// Return the list of problems with one expense (empty = ready to send).
+function auditExpense(e) {
+  const issues = [];
+  if (!e.description) issues.push('Missing description');
+  if (e.amount == null || !(e.amount > 0)) issues.push('Missing amount');
+  if (!e.currency) issues.push('Missing currency');
+  if (e.amountUsd == null) issues.push('USD not calculated');
+  if (!e.date) issues.push('Missing date');
+  if (!e.account) issues.push('Missing account');
+  if (!e.receipt) issues.push('Missing receipt');
+  return issues;
+}
+
+exports.handler = async (event) => {
+  const guard = methodGuard(event, 'GET');
+  if (guard) return guard;
+
+  try {
+    const user = await verifyRequest(event.headers);
+    const { role } = await ensureStaff(user);
+    if (!isApprover(role)) {
+      const err = new Error('You do not have approver access.');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const [records, maps] = await Promise.all([
+      airtable.listRecords(TABLES.EXPENSES, {
+        filterByFormula: `OR({Status} = 'Submitted', {Status} = 'Approved')`,
+        'sort[0][field]': 'Submitted On',
+        'sort[0][direction]': 'desc',
+      }),
+      displayMaps(),
+    ]);
+
+    const items = records.map((r) => {
+      const e = shapeExpense(r, maps);
+      return { ...e, issues: auditExpense(e), recordUrl: recordUrl(r.id) };
+    });
+    const flagged = items.filter((i) => i.issues.length > 0);
+
+    return ok({
+      counts: {
+        total: items.length,
+        ready: items.length - flagged.length,
+        needsAttention: flagged.length,
+      },
+      items: flagged,
+    });
+  } catch (err) {
+    return error(err);
+  }
+};
+
+module.exports.auditExpense = auditExpense; // exported for tests

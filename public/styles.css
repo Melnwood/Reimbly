@@ -209,6 +209,17 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .sendback-row.open { display: flex; }
 .sendback-row input { flex: 1; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
 
+/* ---------- Audit ---------- */
+.audit-summary { font-weight: 700; border-radius: var(--radius-sm); padding: 0; }
+.audit-summary.good { background: #ecfdf5; color: #0f766e; border: 1px solid #a7f3d0; padding: 14px 16px; margin-bottom: 8px; }
+.audit-summary.warn { background: #fffbeb; color: #a16207; border: 1px solid #fde68a; padding: 14px 16px; margin-bottom: 16px; }
+.issues { display: flex; flex-wrap: wrap; gap: 6px; }
+.issue {
+  font-size: 0.75rem; font-weight: 600; color: #b91c1c;
+  background: #fee2e2; border: 1px solid #fecaca;
+  padding: 3px 9px; border-radius: 999px;
+}
+
 /* ---------- Empty / loading states ---------- */
 .state { text-align: center; color: var(--ink-soft); padding: 32px 12px; }
 .state .emoji { font-size: 2rem; display: block; margin-bottom: 8px; }
