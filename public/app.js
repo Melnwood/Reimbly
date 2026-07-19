@@ -7,7 +7,7 @@
     token: null, // Google ID token (Bearer)
     me: null, // { email, name, role, canApprove }
     view: 'submit',
-    loaded: { mine: false, approvals: false, audit: false },
+    loaded: { mine: false, approvals: false, audit: false, dashboard: false },
     accounts: [],
     mineExpenses: [],
     editingId: null,
@@ -34,6 +34,10 @@
     approvalsList: $('#approvals-list'),
     auditSummary: $('#audit-summary'),
     auditList: $('#audit-list'),
+    dashTiles: $('#dash-tiles'),
+    dashAccounts: $('#dash-accounts'),
+    dashStatus: $('#dash-status'),
+    dashHistory: $('#dash-history'),
     toast: $('#toast'),
   };
 
@@ -160,7 +164,7 @@
   function signOut(message) {
     state.token = null;
     state.me = null;
-    state.loaded = { mine: false, approvals: false, audit: false };
+    state.loaded = { mine: false, approvals: false, audit: false, dashboard: false };
     try { window.google?.accounts?.id?.disableAutoSelect(); } catch { /* noop */ }
     el.app.hidden = true;
     el.signin.hidden = false;
@@ -180,6 +184,7 @@
 
     $('.tab[data-view="approvals"]').hidden = !state.me.canApprove;
     $('.tab[data-view="audit"]').hidden = !state.me.canApprove;
+    $('.tab[data-view="dashboard"]').hidden = !state.me.canApprove;
 
     // Default the date field to today.
     const dateInput = $('#f-date');
@@ -241,6 +246,7 @@
     if (view === 'mine' && !state.loaded.mine) loadMine();
     if (view === 'approvals' && !state.loaded.approvals) loadApprovals();
     if (view === 'audit' && !state.loaded.audit) loadAudit();
+    if (view === 'dashboard' && !state.loaded.dashboard) loadDashboard();
   }
 
   // ---------- Submit ----------
@@ -634,6 +640,63 @@
     }
   }
 
+  // ---------- Dashboard ----------
+
+  function tile(label, value) {
+    return `<div class="tile"><div class="tile-val">${escapeHtml(value)}</div><div class="tile-label">${escapeHtml(label)}</div></div>`;
+  }
+
+  function renderDashboard(d) {
+    el.dashTiles.innerHTML = [
+      tile('Total spent', money(d.totals.usd, 'USD')),
+      tile('Expenses', String(d.totals.count)),
+      tile('This month', money(d.thisMonthUsd, 'USD')),
+    ].join('');
+
+    const max = (d.byAccount[0] && d.byAccount[0].usd) || 1;
+    el.dashAccounts.innerHTML = d.byAccount.length
+      ? d.byAccount.map((a) => `
+        <div class="bar-row">
+          <div class="bar-top"><span class="bar-label">${escapeHtml(a.account)}</span><span class="bar-val">${escapeHtml(money(a.usd, 'USD'))}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.max(3, (a.usd / max) * 100)}%"></div></div>
+        </div>`).join('')
+      : `<div class="state">No spend yet.</div>`;
+
+    el.dashStatus.innerHTML = d.byStatus.map((s) => {
+      const key = String(s.status).toLowerCase().replace(/[^a-z]/g, '');
+      const cls = ['draft', 'submitted', 'approved', 'rejected', 'reimbursed'].includes(key) ? key : 'submitted';
+      return `<span class="badge ${cls}">${escapeHtml(s.status)} · ${s.count} · ${escapeHtml(money(s.usd, 'USD'))}</span>`;
+    }).join('');
+
+    el.dashHistory.innerHTML = (d.history || []).length
+      ? d.history.map((e) => `
+        <article class="expense">
+          <div class="expense-top">
+            <div class="expense-main">
+              <div class="expense-desc">${cardTitle(e)}</div>
+              <div class="expense-meta">${cardMeta(e, [e.submitterName || e.submitterEmail, e.account, fmtDate(e.date)])}</div>
+            </div>
+            ${amountBlock(e)}
+          </div>
+          <div class="expense-actions">${statusBadge(e.status)}${receiptLink(e)}</div>
+        </article>`).join('')
+      : `<div class="state">No history yet.</div>`;
+  }
+
+  async function loadDashboard() {
+    el.dashTiles.innerHTML = '';
+    el.dashAccounts.innerHTML = '';
+    el.dashStatus.innerHTML = '';
+    el.dashHistory.innerHTML = `<div class="state">Loading…</div>`;
+    try {
+      const d = await api('dashboard');
+      state.loaded.dashboard = true;
+      renderDashboard(d);
+    } catch (e) {
+      el.dashHistory.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
   // ---------- Wire up ----------
 
   function bind() {
@@ -651,7 +714,7 @@
     el.mineList.addEventListener('click', onMineClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
-    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit };
+    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())
     );

@@ -13,7 +13,7 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role } = await ensureStaff(user);
+    const { role, id: myStaffId } = await ensureStaff(user);
     if (!isApprover(role)) {
       const err = new Error('You do not have approver access.');
       err.statusCode = 403;
@@ -29,7 +29,19 @@ exports.handler = async (event) => {
       displayMaps(),
     ]);
 
-    return ok({ expenses: records.map((r) => shapeExpense(r, maps)), role });
+    let expenses = records.map((r) => shapeExpense(r, maps));
+
+    // Finance sees everything; an approver sees expenses from the people who
+    // report to them (Upline = them), plus any with no upline set yet.
+    if (role !== 'Finance') {
+      expenses = expenses.filter((e) => {
+        const submitter = e.submitterId && maps.staff[e.submitterId];
+        const uplineId = submitter && submitter.uplineId;
+        return !uplineId || uplineId === myStaffId;
+      });
+    }
+
+    return ok({ expenses, role });
   } catch (err) {
     return error(err);
   }

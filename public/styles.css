@@ -230,6 +230,20 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
   padding: 3px 9px; border-radius: 999px;
 }
 
+/* ---------- Dashboard ---------- */
+.dash-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tile { background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px 16px; }
+.tile-val { font-size: 1.45rem; font-weight: 800; color: var(--brand-ink); letter-spacing: -0.02em; line-height: 1.1; }
+.tile-label { font-size: 0.8rem; color: var(--ink-soft); font-weight: 600; margin-top: 3px; }
+.dash-h { font-size: 1rem; margin: 26px 0 12px; }
+.bar-row { margin-bottom: 13px; }
+.bar-top { display: flex; justify-content: space-between; gap: 10px; font-size: 0.9rem; margin-bottom: 5px; }
+.bar-label { font-weight: 600; }
+.bar-val { color: var(--ink-soft); font-weight: 700; white-space: nowrap; }
+.bar-track { height: 9px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #b4530a); border-radius: 999px; }
+.dash-status { display: flex; flex-wrap: wrap; gap: 8px; }
+
 /* ---------- Empty / loading states ---------- */
 .state { text-align: center; color: var(--ink-soft); padding: 32px 12px; }
 .state .emoji { font-size: 2rem; display: block; margin-bottom: 8px; }

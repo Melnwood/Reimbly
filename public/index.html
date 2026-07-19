@@ -48,6 +48,7 @@
           <button class="tab" data-view="mine" role="tab">My expenses</button>
           <button class="tab" data-view="approvals" role="tab" hidden>Approvals</button>
           <button class="tab" data-view="audit" role="tab" hidden>Audit</button>
+          <button class="tab" data-view="dashboard" role="tab" hidden>Dashboard</button>
         </nav>
         <div class="who">
           <span id="who-name" class="who-name"></span>
@@ -163,6 +164,23 @@
             <p class="panel-sub">A completeness check on every submitted &amp; approved expense before it goes to Cedarstone.</p>
             <div id="audit-summary"></div>
             <div id="audit-list" class="list"></div>
+          </div>
+        </section>
+
+        <!-- Dashboard -->
+        <section id="view-dashboard" class="view" data-view="dashboard" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Dashboard</h2>
+              <button class="link-btn" data-refresh="dashboard">Refresh</button>
+            </div>
+            <div id="dash-tiles" class="dash-tiles"></div>
+            <h3 class="dash-h">By account</h3>
+            <div id="dash-accounts"></div>
+            <h3 class="dash-h">By status</h3>
+            <div id="dash-status" class="dash-status"></div>
+            <h3 class="dash-h">History</h3>
+            <div id="dash-history" class="list"></div>
           </div>
         </section>
       </main>

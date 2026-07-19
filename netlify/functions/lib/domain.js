@@ -151,7 +151,7 @@ async function staffMap() {
   const map = {};
   for (const r of records) {
     const f = r.fields || {};
-    map[r.id] = { name: f.Name || '', email: f.Email || '' };
+    map[r.id] = { name: f.Name || '', email: f.Email || '', uplineId: firstLinkId(f.Upline) };
   }
   return map;
 }
@@ -191,6 +191,7 @@ function shapeExpense(record, maps = {}) {
 
   return {
     id: record.id,
+    submitterId,
     description: f.Description || '',
     merchant: f.Merchant || '',
     amount: f.Amount != null ? Number(f.Amount) : null,
