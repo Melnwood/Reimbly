@@ -28,6 +28,7 @@
     form: $('#expense-form'),
     submitBtn: $('#submit-btn'),
     receiptInput: $('#f-receipt'),
+    receiptCamera: $('#f-camera'),
     receiptName: $('#receipt-name'),
     mineList: $('#mine-list'),
     approvalsList: $('#approvals-list'),
@@ -243,8 +244,15 @@
     if (desc) $('#f-description').value = desc;
   }
 
-  async function onReceiptChange() {
-    const file = el.receiptInput.files[0];
+  function currentReceipt() {
+    return el.receiptInput.files[0] || el.receiptCamera.files[0];
+  }
+
+  async function onReceiptChange(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    // keep only the input the file came from populated
+    (input === el.receiptCamera ? el.receiptInput : el.receiptCamera).value = '';
     el.receiptName.textContent = file ? file.name : '';
     if (!file) return;
 
@@ -284,7 +292,7 @@
     const account = $('#f-account').value;
     const date = $('#f-date').value;
     const description = $('#f-description').value.trim();
-    const file = el.receiptInput.files[0];
+    const file = currentReceipt();
 
     if (!description) return toast('Add a short description.', 'bad');
     if (!(amount > 0)) return toast('Amount must be greater than zero.', 'bad');
@@ -343,6 +351,7 @@
     $('#f-date').value = e.date || '';
     $('#f-description').value = e.description || '';
     el.receiptInput.value = '';
+    el.receiptCamera.value = '';
     el.receiptName.textContent = e.receipt ? `Keeping current receipt (${e.receipt.filename || 'attached'})` : '';
     $('#submit-title').textContent = 'Edit expense';
     el.submitBtn.textContent = 'Save changes';
@@ -592,6 +601,9 @@
     $('#cancel-edit').addEventListener('click', cancelEdit);
     el.form.addEventListener('submit', onSubmit);
     el.receiptInput.addEventListener('change', onReceiptChange);
+    el.receiptCamera.addEventListener('change', onReceiptChange);
+    $('#btn-choose').addEventListener('click', () => el.receiptInput.click());
+    $('#btn-camera').addEventListener('click', () => el.receiptCamera.click());
     el.mineList.addEventListener('click', onMineClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);

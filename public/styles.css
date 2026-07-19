@@ -164,6 +164,8 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
   box-shadow: 0 0 0 3px var(--brand-soft);
 }
 .amount-field input { font-size: 1.1rem; font-weight: 700; }
+.receipt-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+.receipt-buttons .btn { flex: 1 1 auto; }
 .file-hint { font-weight: 500; color: var(--ink-soft); font-size: 0.82rem; min-height: 1em; }
 
 .btn {

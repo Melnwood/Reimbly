@@ -108,12 +108,16 @@
                        maxlength="120" placeholder="e.g. Train to Ostrava for camp planning" required />
               </label>
 
-              <label class="field">
+              <div class="field">
                 <span>Receipt <em class="opt">(photo or PDF)</em></span>
-                <input id="f-receipt" name="receipt" type="file"
-                       accept="image/*,application/pdf" capture="environment" />
+                <div class="receipt-buttons">
+                  <button type="button" class="btn ghost small" id="btn-camera">📷 Take a photo</button>
+                  <button type="button" class="btn ghost small" id="btn-choose">📎 Choose a file</button>
+                </div>
+                <input id="f-camera" type="file" accept="image/*" capture="environment" hidden />
+                <input id="f-receipt" type="file" accept="image/*,application/pdf" hidden />
                 <span id="receipt-name" class="file-hint"></span>
-              </label>
+              </div>
 
               <button id="submit-btn" class="btn primary" type="submit">Submit expense</button>
             </form>
