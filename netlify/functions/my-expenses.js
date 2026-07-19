@@ -1,11 +1,12 @@
 'use strict';
 
-// The signed-in person's own expenses, newest first.
+// The signed-in person's own expenses, newest first. We match on the
+// "Submitter Email" lookup (populated from the linked Staff record).
 
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { EXPENSES_TABLE, shapeExpense } = require('./lib/domain');
+const { TABLES, displayMaps, shapeExpense } = require('./lib/domain');
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
@@ -13,15 +14,18 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const email = user.email.replace(/'/g, "\\'");
+    const email = user.email.toLowerCase().replace(/'/g, "\\'");
 
-    const records = await airtable.listRecords(EXPENSES_TABLE, {
-      filterByFormula: `LOWER({Submitter Email}) = '${email}'`,
-      'sort[0][field]': 'Submitted On',
-      'sort[0][direction]': 'desc',
-    });
+    const [records, maps] = await Promise.all([
+      airtable.listRecords(TABLES.EXPENSES, {
+        filterByFormula: `LOWER(ARRAYJOIN({Submitter Email})) = '${email}'`,
+        'sort[0][field]': 'Submitted On',
+        'sort[0][direction]': 'desc',
+      }),
+      displayMaps(),
+    ]);
 
-    return ok({ expenses: records.map(shapeExpense) });
+    return ok({ expenses: records.map((r) => shapeExpense(r, maps)) });
   } catch (err) {
     return error(err);
   }

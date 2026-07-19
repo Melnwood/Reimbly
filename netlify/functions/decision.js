@@ -1,11 +1,21 @@
 'use strict';
 
-// Approve or send back a submitted expense. Approver / Finance only.
+// Approve or send back (reject) a submitted expense. Approver / Finance only.
+// "Send back" maps to the base's "Rejected" status plus an Approver Note so the
+// submitter sees why and can fix + resubmit.
 
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { EXPENSES_TABLE, ensureStaff, isApprover, shapeExpense } = require('./lib/domain');
+const { TABLES, STATUS, ensureStaff, isApprover, displayMaps, shapeExpense } = require('./lib/domain');
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+function badRequest(message) {
+  const err = new Error(message);
+  err.statusCode = 400;
+  return err;
+}
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'POST');
@@ -13,7 +23,7 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role } = await ensureStaff(user);
+    const { role, id: approverId } = await ensureStaff(user);
     if (!isApprover(role)) {
       const err = new Error('You do not have approver access.');
       err.statusCode = 403;
@@ -33,33 +43,30 @@ exports.handler = async (event) => {
       throw badRequest('Please add a short note so they know what to fix.');
     }
 
-    // Only act on records that are still awaiting a decision.
-    const current = await airtable.findFirst(EXPENSES_TABLE, {
+    // Only act on records still awaiting a decision.
+    const current = await airtable.findFirst(TABLES.EXPENSES, {
       filterByFormula: `RECORD_ID() = '${id.replace(/'/g, "\\'")}'`,
     });
     if (!current) throw badRequest('That expense no longer exists.');
-    if ((current.fields && current.fields.Status) !== 'Submitted') {
+    if ((current.fields && current.fields.Status) !== STATUS.SUBMITTED) {
       const err = new Error('That expense was already decided by someone else.');
       err.statusCode = 409;
       throw err;
     }
 
     const fields = {
-      Status: decision === 'approve' ? 'Approved' : 'Sent Back',
-      'Decided On': new Date().toISOString(),
-      'Decided By': user.email,
+      Status: decision === 'approve' ? STATUS.APPROVED : STATUS.REJECTED,
+      'Decided On': today(),
+      Approver: [approverId],
     };
-    if (note) fields.Notes = note;
+    if (note) fields['Approver Note'] = note;
 
-    const updated = await airtable.updateRecord(EXPENSES_TABLE, id, fields);
-    return ok({ expense: shapeExpense(updated) });
+    const [updated, maps] = await Promise.all([
+      airtable.updateRecord(TABLES.EXPENSES, id, fields),
+      displayMaps(),
+    ]);
+    return ok({ expense: shapeExpense(updated, maps) });
   } catch (err) {
     return error(err);
   }
 };
-
-function badRequest(message) {
-  const err = new Error(message);
-  err.statusCode = 400;
-  return err;
-}

@@ -92,47 +92,43 @@ Open the URL, sign in with your JV Google account, and submit a test expense. �
 
 ---
 
-## Airtable base setup
+## Airtable base
 
-Reimbly reads and writes three tables. Create them in the **JV Expenses** base
-(field names must match exactly — they're case-sensitive).
+The **JV Expenses** base (`appquqkhFfrnoU6v9`) is already built with everything
+Reimbly needs — you don't create anything. It's a relational base: an expense
+**links** to the person, category, and currency rather than storing them as loose
+text, and it converts to USD automatically. Reimbly matches this structure exactly.
 
-**`Staff`**
+The tables it uses:
 
-| Field | Type | Notes |
-|---|---|---|
-| `Email` | Single line text | Primary field. The person's Google email. |
-| `Name` | Single line text | |
-| `Role` | Single select | Options: `Staff`, `Approver`, `Finance`. |
+**`Staff`** — people who submit and approve.
+`Name`, `Email`, `Role` (single select: `Staff` / `Approver` / `Finance`).
+Everyone gets a `Staff` record automatically the first time they sign in.
 
-**`Expenses`**
+**`Expenses`** — one row per expense. Reimbly writes these on submit:
 
-| Field | Type | Notes |
-|---|---|---|
-| `Description` | Single line text | Primary field. |
-| `Amount` | Number (decimal) | In the original currency. |
-| `Currency` | Single line text | e.g. `USD`, `CZK`, `EUR`. |
-| `Amount (USD)` | Number (decimal) | Filled in automatically on submit. |
-| `Category` | Single select | e.g. `Travel`, `Meals`, `Lodging`, `Supplies`, `Other`. |
-| `Date` | Date | When the expense happened. |
-| `Status` | Single select | Options: `Submitted`, `Approved`, `Sent Back`. |
-| `Submitter Email` | Email | |
-| `Submitter Name` | Single line text | |
-| `Receipt` | Attachment | Uploaded on submit. |
-| `Submitted On` | Date (with time) | Set automatically. |
-| `Decided On` | Date (with time) | Set when approved / sent back. |
-| `Decided By` | Single line text | The approver's email. |
-| `Notes` | Long text | Reason when an expense is sent back. |
+| Field | How Reimbly uses it |
+|---|---|
+| `Description` | The short description from the form. |
+| `Expense Date` | Date the expense happened. |
+| `Amount` | Amount in the original currency. |
+| `Currency` | **Linked** to the Currencies table (drives the USD formula). |
+| `Category` | **Linked** to the Categories table (falls back to "Other"). |
+| `Submitter` | **Linked** to the submitter's Staff record. |
+| `Payment Method` | Defaults to `Personal funds (reimburse me)`. |
+| `Status` | `Submitted` → `Approved` / `Rejected` on a decision. |
+| `Receipt` | The uploaded photo or PDF. |
+| `Submitted On` | Stamped on submit. |
+| `Approver` / `Decided On` / `Approver Note` | Stamped when an approver decides. |
+| `Amount (USD)` | **Formula** — `Amount × Rate to USD`, computed by the base. Reimbly never writes it. |
+| `Submitter Email` | **Lookup** from the linked Staff record. Reimbly filters "My expenses" on this. |
 
-**`Currencies`**
+**`Currencies`** — `Code`, `Rate to USD` (USD value of one unit), kept current by
+the weekly rate automation. **`Categories`** — `Category` + `GL Code` for
+accounting. **`Teams`** — teams/projects a spend can be charged to.
 
-| Field | Type | Notes |
-|---|---|---|
-| `Code` | Single line text | Primary field. e.g. `CZK`. |
-| `Rate` | Number (decimal) | USD value of **one** unit. `USD` = `1`. Kept current by a weekly rate automation. |
-
-> Missing `Currencies`? Reimbly still works — `USD` converts 1:1 and unknown
-> currencies are stored at their original amount so nothing is ever lost.
+> "Send back" in the approver view sets the expense to **`Rejected`** and writes an
+> **`Approver Note`** so the submitter sees what to fix and can resubmit.
 
 ---
 

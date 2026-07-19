@@ -5,7 +5,7 @@
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { EXPENSES_TABLE, ensureStaff, isApprover, shapeExpense } = require('./lib/domain');
+const { TABLES, STATUS, ensureStaff, isApprover, displayMaps, shapeExpense } = require('./lib/domain');
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
@@ -20,13 +20,16 @@ exports.handler = async (event) => {
       throw err;
     }
 
-    const records = await airtable.listRecords(EXPENSES_TABLE, {
-      filterByFormula: `{Status} = 'Submitted'`,
-      'sort[0][field]': 'Submitted On',
-      'sort[0][direction]': 'asc',
-    });
+    const [records, maps] = await Promise.all([
+      airtable.listRecords(TABLES.EXPENSES, {
+        filterByFormula: `{Status} = '${STATUS.SUBMITTED}'`,
+        'sort[0][field]': 'Submitted On',
+        'sort[0][direction]': 'asc',
+      }),
+      displayMaps(),
+    ]);
 
-    return ok({ expenses: records.map(shapeExpense), role });
+    return ok({ expenses: records.map((r) => shapeExpense(r, maps)), role });
   } catch (err) {
     return error(err);
   }

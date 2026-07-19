@@ -263,8 +263,9 @@
   // ---------- My expenses ----------
 
   function statusBadge(status) {
-    const key = String(status || '').toLowerCase().replace(/\s+/g, '');
-    const cls = key === 'approved' ? 'approved' : key === 'sentback' ? 'sentback' : 'submitted';
+    const key = String(status || '').toLowerCase().replace(/[^a-z]/g, '');
+    const known = ['draft', 'submitted', 'approved', 'rejected', 'reimbursed'];
+    const cls = known.includes(key) ? key : 'submitted';
     return `<span class="badge ${cls}">${escapeHtml(status || 'Submitted')}</span>`;
   }
 
@@ -298,7 +299,7 @@
           ${statusBadge(e.status)}
           ${receiptLink(e)}
         </div>
-        ${e.status === 'Sent Back' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
+        ${e.status === 'Rejected' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
       </article>
     `).join('');
   }
