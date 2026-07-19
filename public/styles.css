@@ -230,6 +230,17 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
   padding: 3px 9px; border-radius: 999px;
 }
 
+/* ---------- Approval reports (batch by person) ---------- */
+.report { border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fffdfa; margin-bottom: 14px; overflow: hidden; }
+.report-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 14px 16px; background: var(--bg-soft); border-bottom: 1px solid var(--line);
+}
+.report-name { font-weight: 800; }
+.report-sub { color: var(--ink-soft); font-size: 0.85rem; margin-top: 1px; }
+.report-items { padding: 12px; display: grid; gap: 10px; }
+.report-items .expense { background: #fff; }
+
 /* ---------- Dashboard ---------- */
 .dash-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .tile { background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px 16px; }

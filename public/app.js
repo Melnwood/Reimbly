@@ -505,30 +505,57 @@
 
   // ---------- Approvals ----------
 
+  // Group each person's pending expenses into one "report" the upline approves
+  // together.
+  function groupBySubmitter(expenses) {
+    const groups = new Map();
+    for (const e of expenses) {
+      const key = e.submitterId || e.submitterEmail || 'unknown';
+      if (!groups.has(key)) {
+        groups.set(key, { key, name: e.submitterName || e.submitterEmail || 'Someone', items: [], total: 0 });
+      }
+      const g = groups.get(key);
+      g.items.push(e);
+      g.total += Number(e.amountUsd) || 0;
+    }
+    return [...groups.values()];
+  }
+
   function renderApprovals(expenses) {
     if (!expenses.length) {
       el.approvalsList.innerHTML = `<div class="state"><span class="emoji">✅</span>All caught up — nothing waiting.</div>`;
       return;
     }
-    el.approvalsList.innerHTML = expenses.map((e) => `
-      <article class="expense" data-id="${escapeHtml(e.id)}">
-        <div class="expense-top">
-          <div class="expense-main">
-            <div class="expense-desc">${cardTitle(e)}</div>
-            <div class="expense-meta">${cardMeta(e, [e.submitterName || e.submitterEmail, e.account || e.category, fmtDate(e.date)])}</div>
+    el.approvalsList.innerHTML = groupBySubmitter(expenses).map((g) => `
+      <div class="report" data-group="${escapeHtml(g.key)}">
+        <div class="report-head">
+          <div class="report-who">
+            <div class="report-name">${escapeHtml(g.name)}</div>
+            <div class="report-sub">${g.items.length} expense${g.items.length === 1 ? '' : 's'} · ${escapeHtml(money(g.total, 'USD'))}</div>
           </div>
-          ${amountBlock(e)}
+          <button class="btn primary small" data-act="approve-all">Approve all</button>
         </div>
-        <div class="expense-actions">
-          ${receiptLink(e)}
-          <button class="btn ghost small" data-act="sendback-toggle">Send back</button>
-          <button class="btn primary small" data-act="approve">Approve</button>
+        <div class="report-items">
+          ${g.items.map((e) => `
+            <article class="expense" data-id="${escapeHtml(e.id)}">
+              <div class="expense-top">
+                <div class="expense-main">
+                  <div class="expense-desc">${cardTitle(e)}</div>
+                  <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
+                </div>
+                ${amountBlock(e)}
+              </div>
+              <div class="expense-actions">
+                ${receiptLink(e)}
+                <button class="btn ghost small" data-act="sendback-toggle">Send back</button>
+              </div>
+              <div class="sendback-row">
+                <input type="text" placeholder="What needs fixing?" data-role="note" maxlength="200" />
+                <button class="btn primary small" data-act="sendback-confirm">Send</button>
+              </div>
+            </article>`).join('')}
         </div>
-        <div class="sendback-row">
-          <input type="text" placeholder="What needs fixing?" data-role="note" maxlength="200" />
-          <button class="btn primary small" data-act="sendback-confirm">Send</button>
-        </div>
-      </article>
+      </div>
     `).join('');
   }
 
@@ -543,21 +570,52 @@
     }
   }
 
-  async function decide(card, decision, note) {
-    const id = card.dataset.id;
+  function afterApprovalsChange() {
+    state.loaded.mine = false;
+    state.loaded.dashboard = false;
+  }
+
+  // Remove a card (and its now-empty report) with a little animation.
+  function removeApprovalCard(card) {
+    const group = card.closest('.report');
+    card.style.transition = 'opacity .25s, transform .25s';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(12px)';
+    setTimeout(() => {
+      card.remove();
+      if (group && !$$('.expense', group).length) group.remove();
+      if (!$$('.report', el.approvalsList).length) renderApprovals([]);
+    }, 240);
+  }
+
+  async function sendBack(card, note) {
     const buttons = $$('button', card);
     buttons.forEach((b) => (b.disabled = true));
     try {
-      await api('decision', { method: 'POST', body: { id, decision, note } });
-      card.style.transition = 'opacity .25s, transform .25s';
-      card.style.opacity = '0';
-      card.style.transform = 'translateX(12px)';
+      await api('decision', { method: 'POST', body: { id: card.dataset.id, decision: 'sendback', note } });
+      removeApprovalCard(card);
+      afterApprovalsChange();
+      toast('Sent back ↩︎', 'good');
+    } catch (e) {
+      buttons.forEach((b) => (b.disabled = false));
+      toast(e.message, 'bad');
+    }
+  }
+
+  async function approveAll(group) {
+    const ids = $$('.expense', group).map((c) => c.dataset.id);
+    const buttons = $$('button', group);
+    buttons.forEach((b) => (b.disabled = true));
+    try {
+      const res = await api('decide-batch', { method: 'POST', body: { ids, decision: 'approve' } });
+      group.style.transition = 'opacity .25s';
+      group.style.opacity = '0';
       setTimeout(() => {
-        card.remove();
-        if (!$$('.expense', el.approvalsList).length) renderApprovals([]);
+        group.remove();
+        if (!$$('.report', el.approvalsList).length) renderApprovals([]);
       }, 240);
-      state.loaded.mine = false; // my list may change too
-      toast(decision === 'approve' ? 'Approved ✅' : 'Sent back ↩︎', 'good');
+      afterApprovalsChange();
+      toast(`Approved ${res.approved} expense${res.approved === 1 ? '' : 's'} ✅`, 'good');
     } catch (e) {
       buttons.forEach((b) => (b.disabled = false));
       toast(e.message, 'bad');
@@ -567,20 +625,24 @@
   function onApprovalsClick(event) {
     const btn = event.target.closest('button[data-act]');
     if (!btn) return;
-    const card = event.target.closest('.expense');
-    if (!card) return;
     const act = btn.dataset.act;
 
-    if (act === 'approve') {
-      decide(card, 'approve', '');
-    } else if (act === 'sendback-toggle') {
+    if (act === 'approve-all') {
+      const group = event.target.closest('.report');
+      if (group) approveAll(group);
+      return;
+    }
+
+    const card = event.target.closest('.expense');
+    if (!card) return;
+    if (act === 'sendback-toggle') {
       const row = $('.sendback-row', card);
       row.classList.toggle('open');
       if (row.classList.contains('open')) $('input[data-role="note"]', row).focus();
     } else if (act === 'sendback-confirm') {
       const note = $('input[data-role="note"]', card).value.trim();
       if (!note) return toast('Add a short note so they know what to fix.', 'bad');
-      decide(card, 'sendback', note);
+      sendBack(card, note);
     }
   }
 
