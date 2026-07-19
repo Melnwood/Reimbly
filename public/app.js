@@ -189,18 +189,47 @@
     switchView('submit');
   }
 
-  async function loadOptions() {
+  // Per-person account usage, kept on this device — the app "learns" which
+  // accounts you use most and floats them to the top of the picker.
+  function usageKey() {
+    return `reimbly.accts.${(state.me && state.me.email) || 'anon'}`;
+  }
+  function accountUsage() {
+    try { return JSON.parse(localStorage.getItem(usageKey()) || '{}') || {}; } catch { return {}; }
+  }
+  function bumpAccountUsage(code) {
+    if (!code) return;
+    try {
+      const u = accountUsage();
+      u[code] = (u[code] || 0) + 1;
+      localStorage.setItem(usageKey(), JSON.stringify(u));
+    } catch { /* private mode — no history, that's fine */ }
+  }
+
+  function populateAccounts() {
     const sel = $('#f-account');
+    if (!state.accounts.length) return;
+    const usage = accountUsage();
+    const opt = (a) => `<option value="${escapeHtml(a.code)}">${escapeHtml(a.code)} – ${escapeHtml(a.name)}</option>`;
+
+    const frequent = state.accounts
+      .filter((a) => usage[a.code] > 0)
+      .sort((a, b) => usage[b.code] - usage[a.code] || a.code.localeCompare(b.code))
+      .slice(0, 6);
+
+    let html = '<option value="">Choose an account…</option>';
+    if (frequent.length) html += `<optgroup label="Your accounts">${frequent.map(opt).join('')}</optgroup>`;
+    html += `<optgroup label="All accounts">${state.accounts.map(opt).join('')}</optgroup>`;
+    sel.innerHTML = html;
+  }
+
+  async function loadOptions() {
     try {
       const data = await api('options');
       state.accounts = (data && data.accounts) || [];
-      const opts = ['<option value="">Choose an account…</option>'];
-      for (const a of state.accounts) {
-        opts.push(`<option value="${escapeHtml(a.code)}">${escapeHtml(a.code)} – ${escapeHtml(a.name)}</option>`);
-      }
-      sel.innerHTML = opts.join('');
+      populateAccounts();
     } catch (e) {
-      sel.innerHTML = '<option value="">Couldn’t load accounts — refresh</option>';
+      $('#f-account').innerHTML = '<option value="">Couldn’t load accounts — refresh</option>';
     }
   }
 
@@ -318,7 +347,9 @@
 
       const result = await api(editing ? 'update-expense' : 'submit-expense', { method: 'POST', body });
 
+      bumpAccountUsage(account); // learn this person's go-to accounts
       cancelEdit(); // resets form, date, labels, banner, editingId
+      populateAccounts(); // re-sort with the freshly used account near the top
 
       if (editing) {
         toast(result.resubmitted ? 'Saved and resubmitted for approval.' : 'Changes saved.', 'good');
