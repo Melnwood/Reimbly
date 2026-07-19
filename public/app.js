@@ -269,8 +269,8 @@
     if (s.currency && hasOption('#f-currency', s.currency)) $('#f-currency').value = s.currency;
     if (s.date) $('#f-date').value = s.date; // receipt date beats today's default
     if (s.account && hasOption('#f-account', s.account)) $('#f-account').value = s.account;
-    const desc = s.description || s.merchant;
-    if (desc) $('#f-description').value = desc;
+    if (s.merchant) $('#f-business').value = s.merchant;
+    if (s.description || s.merchant) $('#f-description').value = s.description || s.merchant;
   }
 
   function currentReceipt() {
@@ -321,6 +321,7 @@
     const account = $('#f-account').value;
     const date = $('#f-date').value;
     const description = $('#f-description').value.trim();
+    const merchant = $('#f-business').value.trim();
     const file = currentReceipt();
 
     if (!description) return toast('Add a short description.', 'bad');
@@ -342,7 +343,7 @@
         };
       }
 
-      const body = { amount, currency, account, date, description, receipt };
+      const body = { amount, currency, account, date, description, merchant, receipt };
       if (editing) body.id = state.editingId;
 
       const result = await api(editing ? 'update-expense' : 'submit-expense', { method: 'POST', body });
@@ -380,6 +381,7 @@
     if (e.currency && hasOption('#f-currency', e.currency)) $('#f-currency').value = e.currency;
     if (e.accountCode && hasOption('#f-account', e.accountCode)) $('#f-account').value = e.accountCode;
     $('#f-date').value = e.date || '';
+    $('#f-business').value = e.merchant || '';
     $('#f-description').value = e.description || '';
     el.receiptInput.value = '';
     el.receiptCamera.value = '';
@@ -436,6 +438,17 @@
     return `<a class="receipt-link" href="${escapeHtml(expense.receipt.url)}" target="_blank" rel="noopener">📎 Receipt</a>`;
   }
 
+  // Business name is the headline; the description drops to the meta line.
+  function cardTitle(e) {
+    return escapeHtml(e.merchant || e.description || '(no description)');
+  }
+  function cardMeta(e, tail) {
+    const parts = [];
+    if (e.merchant && e.description) parts.push(e.description);
+    (tail || []).forEach((t) => { if (t) parts.push(t); });
+    return parts.map(escapeHtml).join(' · ');
+  }
+
   function amountBlock(expense) {
     const primary = expense.amountUsd != null ? money(expense.amountUsd, 'USD') : money(expense.amount, expense.currency);
     const showOriginal = expense.currency && expense.currency !== 'USD' && expense.amount != null;
@@ -456,8 +469,8 @@
       <article class="expense">
         <div class="expense-top">
           <div class="expense-main">
-            <div class="expense-desc">${escapeHtml(e.description)}</div>
-            <div class="expense-meta">${escapeHtml(e.account || e.category)} · ${escapeHtml(fmtDate(e.date))}</div>
+            <div class="expense-desc">${cardTitle(e)}</div>
+            <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
           </div>
           ${amountBlock(e)}
         </div>
@@ -495,8 +508,8 @@
       <article class="expense" data-id="${escapeHtml(e.id)}">
         <div class="expense-top">
           <div class="expense-main">
-            <div class="expense-desc">${escapeHtml(e.description)}</div>
-            <div class="expense-meta">${escapeHtml(e.submitterName || e.submitterEmail)} · ${escapeHtml(e.account || e.category)} · ${escapeHtml(fmtDate(e.date))}</div>
+            <div class="expense-desc">${cardTitle(e)}</div>
+            <div class="expense-meta">${cardMeta(e, [e.submitterName || e.submitterEmail, e.account || e.category, fmtDate(e.date)])}</div>
           </div>
           ${amountBlock(e)}
         </div>
@@ -584,8 +597,8 @@
       <article class="expense">
         <div class="expense-top">
           <div class="expense-main">
-            <div class="expense-desc">${escapeHtml(e.description || '(no description)')}</div>
-            <div class="expense-meta">${escapeHtml(e.submitterName || e.submitterEmail || '—')} · ${escapeHtml(e.account || '—')} · ${escapeHtml(fmtDate(e.date)) || '—'}</div>
+            <div class="expense-desc">${cardTitle(e)}</div>
+            <div class="expense-meta">${cardMeta(e, [e.submitterName || e.submitterEmail || '—', e.account || '—', fmtDate(e.date) || '—'])}</div>
           </div>
           ${amountBlock(e)}
         </div>

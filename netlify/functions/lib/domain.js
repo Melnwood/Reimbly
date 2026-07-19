@@ -192,6 +192,7 @@ function shapeExpense(record, maps = {}) {
   return {
     id: record.id,
     description: f.Description || '',
+    merchant: f.Merchant || '',
     amount: f.Amount != null ? Number(f.Amount) : null,
     currency: (maps.currency && currencyId && maps.currency[currencyId]) || '',
     amountUsd: f['Amount (USD)'] != null ? Number(f['Amount (USD)']) : null,

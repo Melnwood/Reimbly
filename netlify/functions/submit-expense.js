@@ -38,6 +38,7 @@ exports.handler = async (event) => {
     const body = parseBody(event);
 
     const description = String(body.description || '').trim();
+    const merchant = String(body.merchant || '').trim();
     const amount = Number(body.amount);
     const currency = String(body.currency || 'USD').trim().toUpperCase();
     const account = String(body.account || '').trim();
@@ -67,6 +68,7 @@ exports.handler = async (event) => {
       Currency: [currencyId],
       Account: [accountId],
     };
+    if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
 
     const created = await airtable.createRecord(TABLES.EXPENSES, fields);
