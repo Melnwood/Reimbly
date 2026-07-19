@@ -205,6 +205,51 @@
     });
   }
 
+  // ---------- Receipt scan (auto-fill) ----------
+
+  function hasOption(sel, value) {
+    return Array.from($(sel).options).some((o) => o.value === value);
+  }
+
+  function applyScan(s) {
+    if (s.amount != null) $('#f-amount').value = s.amount;
+    if (s.currency && hasOption('#f-currency', s.currency)) $('#f-currency').value = s.currency;
+    if (s.date) $('#f-date').value = s.date; // receipt date beats today's default
+    if (s.category && hasOption('#f-category', s.category)) $('#f-category').value = s.category;
+    const desc = s.description || s.merchant;
+    if (desc) $('#f-description').value = desc;
+  }
+
+  async function onReceiptChange() {
+    const file = el.receiptInput.files[0];
+    el.receiptName.textContent = file ? file.name : '';
+    if (!file) return;
+
+    const type = (file.type || '').toLowerCase();
+    if (!type.startsWith('image/') && type !== 'application/pdf') return; // can't scan it — fine
+
+    el.receiptName.textContent = `${file.name} · reading…`;
+    el.submitBtn.disabled = true;
+    try {
+      const base64 = await readFileAsBase64(file);
+      const result = await api('scan-receipt', {
+        method: 'POST',
+        body: { receipt: { filename: file.name, contentType: file.type || 'application/octet-stream', base64 } },
+      });
+      if (result && result.scan) {
+        applyScan(result.scan);
+        el.receiptName.textContent = `${file.name} · filled from receipt ✨`;
+        toast('Filled from your receipt — please double-check.', 'good');
+      } else {
+        el.receiptName.textContent = file.name;
+      }
+    } catch (e) {
+      el.receiptName.textContent = file.name; // scanning is best-effort; never block
+    } finally {
+      el.submitBtn.disabled = false;
+    }
+  }
+
   async function onSubmit(event) {
     event.preventDefault();
     const form = el.form;
@@ -405,10 +450,7 @@
     });
     $('#signout').addEventListener('click', () => signOut('Signed out. See you soon!'));
     el.form.addEventListener('submit', onSubmit);
-    el.receiptInput.addEventListener('change', () => {
-      const f = el.receiptInput.files[0];
-      el.receiptName.textContent = f ? f.name : '';
-    });
+    el.receiptInput.addEventListener('change', onReceiptChange);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (b.dataset.refresh === 'mine' ? loadMine() : loadApprovals()))

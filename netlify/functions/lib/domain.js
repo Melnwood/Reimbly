@@ -26,6 +26,22 @@ const STATUS = {
 // Default when the app doesn't ask (Reimbly is for out-of-pocket spend).
 const DEFAULT_PAYMENT_METHOD = 'Personal funds (reimburse me)';
 
+// Kept in sync with the base's Currencies/Categories tables and the form
+// dropdowns. Used to constrain the receipt scanner's output.
+const CURRENCY_CODES = ['USD', 'EUR', 'CZK', 'PLN', 'GBP', 'RON', 'HUF', 'BGN', 'RSD', 'UAH'];
+const CATEGORY_NAMES = [
+  'Travel – Ground (taxi, train, fuel)',
+  'Travel – Airfare',
+  'Lodging',
+  'Meals & Hospitality',
+  'Ministry Supplies',
+  'Events & Camps',
+  'Training & Development',
+  'Technology & Software',
+  'Office & Admin',
+  'Other',
+];
+
 const APPROVER_ROLES = new Set(['Approver', 'Finance']);
 const esc = (s) => String(s).replace(/'/g, "\\'");
 const firstLinkId = (v) => (Array.isArray(v) && v.length ? v[0] : null);
@@ -140,6 +156,8 @@ module.exports = {
   TABLES,
   STATUS,
   DEFAULT_PAYMENT_METHOD,
+  CURRENCY_CODES,
+  CATEGORY_NAMES,
   ensureStaff,
   findStaffByEmail,
   isApprover,

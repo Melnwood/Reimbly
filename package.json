@@ -8,9 +8,10 @@
   },
   "scripts": {
     "dev": "netlify dev",
-    "check": "node --check netlify/functions/config.js && node --check netlify/functions/me.js && node --check netlify/functions/submit-expense.js && node --check netlify/functions/my-expenses.js && node --check netlify/functions/approvals.js && node --check netlify/functions/decision.js"
+    "check": "for f in netlify/functions/*.js netlify/functions/lib/*.js; do node --check \"$f\" || exit 1; done"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.3",
     "google-auth-library": "^9.14.1"
   }
 }

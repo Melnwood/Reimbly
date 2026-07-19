@@ -83,6 +83,7 @@ git push -u origin main
    | `AIRTABLE_BASE_ID` | `appquqkhFfrnoU6v9` |
    | `GOOGLE_CLIENT_ID` | your `…apps.googleusercontent.com` from step 2 |
    | `ALLOWED_DOMAIN` | `josiahventure.com` |
+   | `ANTHROPIC_API_KEY` | *(optional)* enables receipt auto-fill — see below |
 
 4. **Deploys → Trigger deploy → Deploy site** so the new variables take effect.
 5. Copy your live URL (e.g. `https://reimbly.netlify.app`) and add it back into
@@ -129,6 +130,25 @@ accounting. **`Teams`** — teams/projects a spend can be charged to.
 
 > "Send back" in the approver view sets the expense to **`Rejected`** and writes an
 > **`Approver Note`** so the submitter sees what to fix and can resubmit.
+
+---
+
+## Reading receipts automatically (optional)
+
+When `ANTHROPIC_API_KEY` is set, picking a receipt photo (or PDF) on the Submit
+screen sends it to Claude's vision model, which reads it and **fills in the
+amount, currency, date, description, and a best-fit category** for the person to
+check and submit. It handles receipts in Czech, Polish, German, and other
+languages, and translates the description to English.
+
+- Get a key at <https://console.anthropic.com/settings/keys> and add it as the
+  `ANTHROPIC_API_KEY` environment variable in Netlify, then redeploy.
+- The key is a secret — it lives only in Netlify's environment (every scan
+  request first verifies the JV sign-in, so only staff can use it).
+- Cost is a fraction of a cent per receipt. Leave the key unset to turn the
+  feature off — the app works exactly the same, people just type the fields in.
+- `SCAN_MODEL` (optional) sets the model. Default `claude-opus-4-8` (most
+  accurate); set `claude-haiku-4-5` for faster, cheaper scans.
 
 ---
 
