@@ -8,6 +8,7 @@
     me: null, // { email, name, role, canApprove }
     view: 'submit',
     loaded: { mine: false, approvals: false },
+    accounts: [],
   };
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -178,7 +179,23 @@
     const dateInput = $('#f-date');
     if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
 
+    loadOptions();
     switchView('submit');
+  }
+
+  async function loadOptions() {
+    const sel = $('#f-account');
+    try {
+      const data = await api('options');
+      state.accounts = (data && data.accounts) || [];
+      const opts = ['<option value="">Choose an account…</option>'];
+      for (const a of state.accounts) {
+        opts.push(`<option value="${escapeHtml(a.code)}">${escapeHtml(a.code)} – ${escapeHtml(a.name)}</option>`);
+      }
+      sel.innerHTML = opts.join('');
+    } catch (e) {
+      sel.innerHTML = '<option value="">Couldn’t load accounts — refresh</option>';
+    }
   }
 
   function switchView(view) {
@@ -215,7 +232,7 @@
     if (s.amount != null) $('#f-amount').value = s.amount;
     if (s.currency && hasOption('#f-currency', s.currency)) $('#f-currency').value = s.currency;
     if (s.date) $('#f-date').value = s.date; // receipt date beats today's default
-    if (s.category && hasOption('#f-category', s.category)) $('#f-category').value = s.category;
+    if (s.account && hasOption('#f-account', s.account)) $('#f-account').value = s.account;
     const desc = s.description || s.merchant;
     if (desc) $('#f-description').value = desc;
   }
@@ -256,7 +273,7 @@
 
     const amount = parseFloat($('#f-amount').value);
     const currency = $('#f-currency').value;
-    const category = $('#f-category').value;
+    const account = $('#f-account').value;
     const date = $('#f-date').value;
     const description = $('#f-description').value.trim();
     const file = el.receiptInput.files[0];
@@ -264,6 +281,7 @@
     if (!description) return toast('Add a short description.', 'bad');
     if (!(amount > 0)) return toast('Amount must be greater than zero.', 'bad');
     if (!date) return toast('Pick the date of the expense.', 'bad');
+    if (!account) return toast('Choose the account to charge this to.', 'bad');
 
     el.submitBtn.disabled = true;
     el.submitBtn.textContent = 'Submitting…';
@@ -280,7 +298,7 @@
 
       const result = await api('submit-expense', {
         method: 'POST',
-        body: { amount, currency, category, date, description, receipt },
+        body: { amount, currency, account, date, description, receipt },
       });
 
       form.reset();
@@ -336,7 +354,7 @@
         <div class="expense-top">
           <div class="expense-main">
             <div class="expense-desc">${escapeHtml(e.description)}</div>
-            <div class="expense-meta">${escapeHtml(e.category)} · ${escapeHtml(fmtDate(e.date))}</div>
+            <div class="expense-meta">${escapeHtml(e.account || e.category)} · ${escapeHtml(fmtDate(e.date))}</div>
           </div>
           ${amountBlock(e)}
         </div>
@@ -372,7 +390,7 @@
         <div class="expense-top">
           <div class="expense-main">
             <div class="expense-desc">${escapeHtml(e.description)}</div>
-            <div class="expense-meta">${escapeHtml(e.submitterName || e.submitterEmail)} · ${escapeHtml(e.category)} · ${escapeHtml(fmtDate(e.date))}</div>
+            <div class="expense-meta">${escapeHtml(e.submitterName || e.submitterEmail)} · ${escapeHtml(e.account || e.category)} · ${escapeHtml(fmtDate(e.date))}</div>
           </div>
           ${amountBlock(e)}
         </div>

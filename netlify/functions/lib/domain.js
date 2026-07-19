@@ -13,6 +13,7 @@ const TABLES = {
   EXPENSES: 'Expenses',
   CURRENCIES: 'Currencies',
   CATEGORIES: 'Categories',
+  ACCOUNTS: 'Accounts',
 };
 
 // Status options that actually exist in the base's Expenses.Status field:
@@ -93,6 +94,26 @@ async function resolveCategoryId(name) {
   );
 }
 
+// Resolve a GL account code (e.g. "8394000") to its record id.
+async function resolveAccountId(code) {
+  if (!code) return null;
+  const rec = await airtable.findFirst(TABLES.ACCOUNTS, {
+    filterByFormula: `{Code} = '${esc(String(code).trim())}'`,
+  });
+  return rec ? rec.id : null;
+}
+
+// The full chart of accounts for the form dropdown, sorted by code.
+async function listAccounts() {
+  const records = await airtable.listRecords(TABLES.ACCOUNTS, {
+    'sort[0][field]': 'Code',
+    'sort[0][direction]': 'asc',
+  });
+  return records
+    .map((r) => ({ id: r.id, code: (r.fields || {}).Code || '', name: (r.fields || {}).Name || '' }))
+    .filter((a) => a.code);
+}
+
 // Build an id→label map for a small lookup table so we can render linked
 // records (which come back from the REST API as bare record ids).
 async function idLabelMap(table, labelField) {
@@ -112,14 +133,25 @@ async function staffMap() {
   return map;
 }
 
-// The three small maps needed to display expenses. Fetched once per request.
+async function accountMap() {
+  const records = await airtable.listRecords(TABLES.ACCOUNTS, {});
+  const map = {};
+  for (const r of records) {
+    const f = r.fields || {};
+    map[r.id] = { code: f.Code || '', name: f.Name || '' };
+  }
+  return map;
+}
+
+// The small maps needed to display expenses. Fetched once per request.
 async function displayMaps() {
-  const [currency, category, staff] = await Promise.all([
+  const [currency, category, staff, account] = await Promise.all([
     idLabelMap(TABLES.CURRENCIES, 'Code'),
     idLabelMap(TABLES.CATEGORIES, 'Category'),
     staffMap(),
+    accountMap(),
   ]);
-  return { currency, category, staff };
+  return { currency, category, staff, account };
 }
 
 // Shape a raw Expenses record into the trimmed object the browser needs,
@@ -128,8 +160,10 @@ function shapeExpense(record, maps = {}) {
   const f = record.fields || {};
   const currencyId = firstLinkId(f.Currency);
   const categoryId = firstLinkId(f.Category);
+  const accountId = firstLinkId(f.Account);
   const submitterId = firstLinkId(f.Submitter);
   const submitter = (maps.staff && submitterId && maps.staff[submitterId]) || {};
+  const account = (maps.account && accountId && maps.account[accountId]) || {};
   const receipts = Array.isArray(f.Receipt) ? f.Receipt : [];
 
   return {
@@ -139,6 +173,8 @@ function shapeExpense(record, maps = {}) {
     currency: (maps.currency && currencyId && maps.currency[currencyId]) || '',
     amountUsd: f['Amount (USD)'] != null ? Number(f['Amount (USD)']) : null,
     category: (maps.category && categoryId && maps.category[categoryId]) || '',
+    account: account.name || '',
+    accountCode: account.code || '',
     date: f['Expense Date'] || null,
     status: f.Status || STATUS.SUBMITTED,
     submitterName: submitter.name || '',
@@ -163,6 +199,8 @@ module.exports = {
   isApprover,
   resolveCurrencyId,
   resolveCategoryId,
+  resolveAccountId,
+  listAccounts,
   displayMaps,
   shapeExpense,
 };

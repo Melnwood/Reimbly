@@ -13,7 +13,7 @@ const {
   DEFAULT_PAYMENT_METHOD,
   ensureStaff,
   resolveCurrencyId,
-  resolveCategoryId,
+  resolveAccountId,
   displayMaps,
   shapeExpense,
 } = require('./lib/domain');
@@ -40,19 +40,21 @@ exports.handler = async (event) => {
     const description = String(body.description || '').trim();
     const amount = Number(body.amount);
     const currency = String(body.currency || 'USD').trim().toUpperCase();
-    const category = String(body.category || '').trim();
+    const account = String(body.account || '').trim();
     const date = String(body.date || '').trim();
     const purpose = String(body.purpose || '').trim();
 
     if (!description) throw badRequest('Please add a short description.');
     if (!isFinite(amount) || amount <= 0) throw badRequest('Amount must be greater than zero.');
     if (!date) throw badRequest('Please pick the date of the expense.');
+    if (!account) throw badRequest('Please choose the account to charge this to.');
 
     const receipt = validateReceipt(body.receipt);
 
     const currencyId = await resolveCurrencyId(currency);
     if (!currencyId) throw badRequest(`Currency "${currency}" isn't set up in the base yet.`);
-    const categoryId = await resolveCategoryId(category);
+    const accountId = await resolveAccountId(account);
+    if (!accountId) throw badRequest(`Account "${account}" isn't in the chart of accounts.`);
 
     const fields = {
       Description: description,
@@ -63,8 +65,8 @@ exports.handler = async (event) => {
       'Submitted On': today(),
       Submitter: [staffId],
       Currency: [currencyId],
+      Account: [accountId],
     };
-    if (categoryId) fields.Category = [categoryId];
     if (purpose) fields['Business Purpose'] = purpose;
 
     const created = await airtable.createRecord(TABLES.EXPENSES, fields);
