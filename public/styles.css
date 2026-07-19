@@ -215,6 +215,8 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .receipt-link { font-size: 0.85rem; color: var(--brand-ink); font-weight: 600; text-decoration: none; }
 .receipt-link:hover { text-decoration: underline; }
 
+.paid-on { font-size: 0.8rem; color: var(--ink-soft); font-weight: 600; }
+
 .sendback-row { display: none; gap: 8px; width: 100%; }
 .sendback-row.open { display: flex; }
 .sendback-row input { flex: 1; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }

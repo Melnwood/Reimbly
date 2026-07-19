@@ -7,7 +7,7 @@
     token: null, // Google ID token (Bearer)
     me: null, // { email, name, role, canApprove }
     view: 'submit',
-    loaded: { mine: false, approvals: false, audit: false, dashboard: false },
+    loaded: { mine: false, approvals: false, audit: false, dashboard: false, archive: false },
     accounts: [],
     mineExpenses: [],
     editingId: null,
@@ -38,6 +38,9 @@
     dashAccounts: $('#dash-accounts'),
     dashStatus: $('#dash-status'),
     dashHistory: $('#dash-history'),
+    archiveReadyWrap: $('#archive-ready-wrap'),
+    archiveReady: $('#archive-ready'),
+    archivePaid: $('#archive-paid'),
     toast: $('#toast'),
   };
 
@@ -185,6 +188,7 @@
     $('.tab[data-view="approvals"]').hidden = !state.me.canApprove;
     $('.tab[data-view="audit"]').hidden = !state.me.canApprove;
     $('.tab[data-view="dashboard"]').hidden = !state.me.canApprove;
+    $('.tab[data-view="archive"]').hidden = !state.me.canApprove;
 
     // Default the date field to today.
     const dateInput = $('#f-date');
@@ -247,6 +251,7 @@
     if (view === 'approvals' && !state.loaded.approvals) loadApprovals();
     if (view === 'audit' && !state.loaded.audit) loadAudit();
     if (view === 'dashboard' && !state.loaded.dashboard) loadDashboard();
+    if (view === 'archive' && !state.loaded.archive) loadArchive();
   }
 
   // ---------- Submit ----------
@@ -573,6 +578,7 @@
   function afterApprovalsChange() {
     state.loaded.mine = false;
     state.loaded.dashboard = false;
+    state.loaded.archive = false; // approved items now show up under "Ready to pay"
   }
 
   // Remove a card (and its now-empty report) with a little animation.
@@ -759,6 +765,110 @@
     }
   }
 
+  // ---------- Paid / archive ----------
+
+  // A read-only expense card (used in the paid history).
+  function paidCard(e) {
+    return `
+      <article class="expense">
+        <div class="expense-top">
+          <div class="expense-main">
+            <div class="expense-desc">${cardTitle(e)}</div>
+            <div class="expense-meta">${cardMeta(e, [e.submitterName || e.submitterEmail, e.account, fmtDate(e.date)])}</div>
+          </div>
+          ${amountBlock(e)}
+        </div>
+        <div class="expense-actions">
+          ${statusBadge(e.status)}
+          ${e.paidOn ? `<span class="paid-on">Paid ${escapeHtml(fmtDate(e.paidOn))}</span>` : ''}
+          ${receiptLink(e)}
+        </div>
+      </article>`;
+  }
+
+  function renderArchive(data) {
+    const ready = data.ready || [];
+    const paid = data.paid || [];
+
+    // "Ready to pay" — grouped by person, Finance marks a whole report paid.
+    if (data.role === 'Finance') {
+      el.archiveReadyWrap.hidden = false;
+      el.archiveReady.innerHTML = ready.length
+        ? groupBySubmitter(ready).map((g) => `
+          <div class="report" data-group="${escapeHtml(g.key)}">
+            <div class="report-head">
+              <div class="report-who">
+                <div class="report-name">${escapeHtml(g.name)}</div>
+                <div class="report-sub">${g.items.length} expense${g.items.length === 1 ? '' : 's'} · ${escapeHtml(money(g.total, 'USD'))}</div>
+              </div>
+              <button class="btn primary small" data-act="mark-paid">Mark paid</button>
+            </div>
+            <div class="report-items">
+              ${g.items.map((e) => `
+                <article class="expense" data-id="${escapeHtml(e.id)}">
+                  <div class="expense-top">
+                    <div class="expense-main">
+                      <div class="expense-desc">${cardTitle(e)}</div>
+                      <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
+                    </div>
+                    ${amountBlock(e)}
+                  </div>
+                  <div class="expense-actions">${receiptLink(e)}</div>
+                </article>`).join('')}
+            </div>
+          </div>`).join('')
+        : `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
+    } else {
+      el.archiveReadyWrap.hidden = true;
+    }
+
+    el.archivePaid.innerHTML = paid.length
+      ? paid.map(paidCard).join('')
+      : `<div class="state"><span class="emoji">🗂️</span>No paid expenses yet.</div>`;
+  }
+
+  async function markPaid(group) {
+    const ids = $$('.expense', group).map((c) => c.dataset.id);
+    const buttons = $$('button', group);
+    buttons.forEach((b) => (b.disabled = true));
+    try {
+      const res = await api('mark-paid', { method: 'POST', body: { ids } });
+      group.style.transition = 'opacity .25s';
+      group.style.opacity = '0';
+      setTimeout(() => {
+        group.remove();
+        if (!$$('.report', el.archiveReady).length) {
+          el.archiveReady.innerHTML = `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
+        }
+      }, 240);
+      state.loaded.dashboard = false; // status counts changed
+      state.loaded.archive = false; // paid history changed
+      toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid 💸`, 'good');
+    } catch (e) {
+      buttons.forEach((b) => (b.disabled = false));
+      toast(e.message, 'bad');
+    }
+  }
+
+  function onArchiveClick(event) {
+    const btn = event.target.closest('button[data-act="mark-paid"]');
+    if (!btn) return;
+    const group = event.target.closest('.report');
+    if (group) markPaid(group);
+  }
+
+  async function loadArchive() {
+    el.archiveReadyWrap.hidden = true;
+    el.archivePaid.innerHTML = `<div class="state">Loading…</div>`;
+    try {
+      const data = await api('archive');
+      state.loaded.archive = true;
+      renderArchive(data);
+    } catch (e) {
+      el.archivePaid.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
   // ---------- Wire up ----------
 
   function bind() {
@@ -776,7 +886,8 @@
     el.mineList.addEventListener('click', onMineClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
-    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard };
+    el.archiveReady.addEventListener('click', onArchiveClick);
+    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())
     );

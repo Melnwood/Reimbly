@@ -22,6 +22,7 @@ const STATUS = {
   SUBMITTED: 'Submitted',
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
+  REIMBURSED: 'Reimbursed',
 };
 
 // Default when the app doesn't ask (Reimbly is for out-of-pocket spend).
@@ -206,6 +207,7 @@ function shapeExpense(record, maps = {}) {
     submitterEmail: firstLookup(f['Submitter Email']) || submitter.email || '',
     submittedOn: f['Submitted On'] || null,
     decidedOn: f['Decided On'] || null,
+    paidOn: f['Paid On'] || null,
     notes: f['Approver Note'] || '',
     receipt: receipts[0]
       ? { url: receipts[0].url, filename: receipts[0].filename, thumb: receipts[0].thumbnails?.small?.url }

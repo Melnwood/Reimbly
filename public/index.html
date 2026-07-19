@@ -49,6 +49,7 @@
           <button class="tab" data-view="approvals" role="tab" hidden>Approvals</button>
           <button class="tab" data-view="audit" role="tab" hidden>Audit</button>
           <button class="tab" data-view="dashboard" role="tab" hidden>Dashboard</button>
+          <button class="tab" data-view="archive" role="tab" hidden>Paid</button>
         </nav>
         <div class="who">
           <span id="who-name" class="who-name"></span>
@@ -181,6 +182,23 @@
             <div id="dash-status" class="dash-status"></div>
             <h3 class="dash-h">History</h3>
             <div id="dash-history" class="list"></div>
+          </div>
+        </section>
+
+        <!-- Paid / archive -->
+        <section id="view-archive" class="view" data-view="archive" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Paid</h2>
+              <button class="link-btn" data-refresh="archive">Refresh</button>
+            </div>
+            <p class="panel-sub">Approved reports waiting to be reimbursed, and an archive of everything already paid.</p>
+            <div id="archive-ready-wrap" hidden>
+              <h3 class="dash-h">Ready to pay</h3>
+              <div id="archive-ready" class="list"></div>
+            </div>
+            <h3 class="dash-h">Paid history</h3>
+            <div id="archive-paid" class="list"></div>
           </div>
         </section>
       </main>
