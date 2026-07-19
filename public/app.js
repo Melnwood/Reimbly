@@ -9,6 +9,8 @@
     view: 'submit',
     loaded: { mine: false, approvals: false, audit: false },
     accounts: [],
+    mineExpenses: [],
+    editingId: null,
   };
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -246,6 +248,8 @@
     el.receiptName.textContent = file ? file.name : '';
     if (!file) return;
 
+    if (state.editingId) return; // during an edit, just attach — don't re-scan/overwrite fields
+
     const type = (file.type || '').toLowerCase();
     if (!type.startsWith('image/') && type !== 'application/pdf') return; // can't scan it — fine
 
@@ -287,8 +291,9 @@
     if (!date) return toast('Pick the date of the expense.', 'bad');
     if (!account) return toast('Choose the account to charge this to.', 'bad');
 
+    const editing = !!state.editingId;
     el.submitBtn.disabled = true;
-    el.submitBtn.textContent = 'Submitting…';
+    el.submitBtn.textContent = editing ? 'Saving…' : 'Submitting…';
 
     try {
       let receipt = null;
@@ -300,30 +305,80 @@
         };
       }
 
-      const result = await api('submit-expense', {
-        method: 'POST',
-        body: { amount, currency, account, date, description, receipt },
-      });
+      const body = { amount, currency, account, date, description, receipt };
+      if (editing) body.id = state.editingId;
 
-      form.reset();
-      $('#f-date').value = new Date().toISOString().slice(0, 10);
-      el.receiptName.textContent = '';
+      const result = await api(editing ? 'update-expense' : 'submit-expense', { method: 'POST', body });
 
-      if (result.warning) {
+      cancelEdit(); // resets form, date, labels, banner, editingId
+
+      if (editing) {
+        toast(result.resubmitted ? 'Saved and resubmitted for approval.' : 'Changes saved.', 'good');
+      } else if (result.warning) {
         toast(result.warning, 'bad');
-      } else if (result.converted === false) {
-        toast('Submitted — no USD rate found, saved at original amount.', '');
       } else {
         toast('Expense submitted 🎉', 'good');
       }
 
       state.loaded.mine = false;
+      state.loaded.audit = false;
       switchView('mine');
     } catch (e) {
       toast(e.message, 'bad');
     } finally {
       el.submitBtn.disabled = false;
-      el.submitBtn.textContent = 'Submit expense';
+      el.submitBtn.textContent = state.editingId ? 'Save changes' : 'Submit expense';
+    }
+  }
+
+  // ---------- Edit / delete ----------
+
+  function startEdit(id) {
+    const e = state.mineExpenses.find((x) => x.id === id);
+    if (!e) return;
+    state.editingId = id;
+    $('#f-amount').value = e.amount != null ? e.amount : '';
+    if (e.currency && hasOption('#f-currency', e.currency)) $('#f-currency').value = e.currency;
+    if (e.accountCode && hasOption('#f-account', e.accountCode)) $('#f-account').value = e.accountCode;
+    $('#f-date').value = e.date || '';
+    $('#f-description').value = e.description || '';
+    el.receiptInput.value = '';
+    el.receiptName.textContent = e.receipt ? `Keeping current receipt (${e.receipt.filename || 'attached'})` : '';
+    $('#submit-title').textContent = 'Edit expense';
+    el.submitBtn.textContent = 'Save changes';
+    $('#edit-banner').hidden = false;
+    switchView('submit');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEdit() {
+    state.editingId = null;
+    el.form.reset();
+    $('#f-date').value = new Date().toISOString().slice(0, 10);
+    el.receiptName.textContent = '';
+    $('#submit-title').textContent = 'New expense';
+    el.submitBtn.textContent = 'Submit expense';
+    $('#edit-banner').hidden = true;
+  }
+
+  async function deleteExpense(id, onDone) {
+    if (!window.confirm('Delete this expense? This can’t be undone.')) return;
+    try {
+      await api('delete-expense', { method: 'POST', body: { id } });
+      toast('Expense deleted.', 'good');
+      if (onDone) onDone();
+    } catch (e) {
+      toast(e.message, 'bad');
+    }
+  }
+
+  function onMineClick(event) {
+    const btn = event.target.closest('button[data-act]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (btn.dataset.act === 'edit') startEdit(id);
+    else if (btn.dataset.act === 'delete') {
+      deleteExpense(id, () => { state.loaded.mine = false; state.loaded.audit = false; loadMine(); });
     }
   }
 
@@ -348,12 +403,16 @@
     return `<div class="expense-amt">${escapeHtml(primary)}${sub}</div>`;
   }
 
+  const EDITABLE = ['Submitted', 'Rejected', 'Draft'];
+
   function renderMine(expenses) {
     if (!expenses.length) {
       el.mineList.innerHTML = `<div class="state"><span class="emoji">🌱</span>No expenses yet. Submit your first one above!</div>`;
       return;
     }
-    el.mineList.innerHTML = expenses.map((e) => `
+    el.mineList.innerHTML = expenses.map((e) => {
+      const editable = EDITABLE.includes(e.status);
+      return `
       <article class="expense">
         <div class="expense-top">
           <div class="expense-main">
@@ -365,10 +424,12 @@
         <div class="expense-actions">
           ${statusBadge(e.status)}
           ${receiptLink(e)}
+          ${editable ? `<button class="link-btn" data-act="edit" data-id="${escapeHtml(e.id)}">Edit</button>` : ''}
+          ${editable ? `<button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>` : ''}
         </div>
         ${e.status === 'Rejected' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
-      </article>
-    `).join('');
+      </article>`;
+    }).join('');
   }
 
   async function loadMine() {
@@ -376,7 +437,8 @@
     try {
       const data = await api('my-expenses');
       state.loaded.mine = true;
-      renderMine(data.expenses || []);
+      state.mineExpenses = data.expenses || [];
+      renderMine(state.mineExpenses);
     } catch (e) {
       el.mineList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
     }
@@ -494,9 +556,16 @@
           ${statusBadge(e.status)}
           ${receiptLink(e)}
           ${e.recordUrl ? `<a class="receipt-link" href="${escapeHtml(e.recordUrl)}" target="_blank" rel="noopener">Open in Airtable ↗</a>` : ''}
+          <button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>
         </div>
       </article>
     `).join('');
+  }
+
+  function onAuditClick(event) {
+    const btn = event.target.closest('button[data-act="delete"]');
+    if (!btn) return;
+    deleteExpense(btn.dataset.id, () => { state.loaded.audit = false; state.loaded.mine = false; loadAudit(); });
   }
 
   async function loadAudit() {
@@ -520,9 +589,12 @@
       if (tab && !tab.hidden) switchView(tab.dataset.view);
     });
     $('#signout').addEventListener('click', () => signOut('Signed out. See you soon!'));
+    $('#cancel-edit').addEventListener('click', cancelEdit);
     el.form.addEventListener('submit', onSubmit);
     el.receiptInput.addEventListener('change', onReceiptChange);
+    el.mineList.addEventListener('click', onMineClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
+    el.auditList.addEventListener('click', onAuditClick);
     const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())

@@ -108,6 +108,12 @@ async function updateRecord(table, id, fields, { typecast = true } = {}) {
   return parseOrThrow(res, `update ${table}`);
 }
 
+async function deleteRecord(table, id) {
+  const url = `${API_BASE}/${baseId()}/${encodeTable(table)}/${id}`;
+  const res = await fetch(url, { method: 'DELETE', headers: authHeaders() });
+  return parseOrThrow(res, `delete ${table}`);
+}
+
 /**
  * Upload a receipt straight onto a record's attachment field via the content
  * API, so the file never lives anywhere but Airtable.
@@ -137,5 +143,6 @@ module.exports = {
   findFirst,
   createRecord,
   updateRecord,
+  deleteRecord,
   uploadAttachment,
 };

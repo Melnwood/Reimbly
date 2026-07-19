@@ -59,8 +59,12 @@
         <!-- Submit -->
         <section id="view-submit" class="view" data-view="submit">
           <div class="panel">
-            <h2>New expense</h2>
+            <h2 id="submit-title">New expense</h2>
             <p class="panel-sub">Reimbursed in USD. Foreign amounts convert automatically.</p>
+            <div id="edit-banner" class="edit-banner" hidden>
+              <span>✏️ Editing an expense — leave the receipt empty to keep the current one.</span>
+              <button type="button" class="link-btn" id="cancel-edit">Cancel</button>
+            </div>
             <form id="expense-form" class="form" novalidate>
               <div class="row">
                 <label class="field amount-field">

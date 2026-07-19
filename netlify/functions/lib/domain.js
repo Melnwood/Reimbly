@@ -54,6 +54,29 @@ async function findStaffByEmail(email) {
   });
 }
 
+// Statuses a submitter may still edit or delete their own expense in.
+const EDITABLE_STATUSES = new Set(['Submitted', 'Rejected', 'Draft']);
+
+async function getExpenseById(id) {
+  return airtable.findFirst(TABLES.EXPENSES, {
+    filterByFormula: `RECORD_ID() = '${esc(String(id))}'`,
+  });
+}
+
+// The submitter's email from the lookup field on a raw Expenses record.
+function submitterEmailOf(fields = {}) {
+  const v = fields['Submitter Email'];
+  return (Array.isArray(v) ? v[0] : v) || '';
+}
+
+// Decide whether `user` (with `role`) may edit/delete a raw expense record.
+function canModify(record, user, role) {
+  const f = record.fields || {};
+  const status = f.Status || 'Submitted';
+  const isOwner = submitterEmailOf(f).toLowerCase() === user.email.toLowerCase();
+  return APPROVER_ROLES.has(role) || (isOwner && EDITABLE_STATUSES.has(status));
+}
+
 /**
  * Find the caller's Staff record, creating a default `Staff` one the first time
  * we see them. Returns { record, role, id }.
@@ -196,6 +219,8 @@ module.exports = {
   CATEGORY_NAMES,
   ensureStaff,
   findStaffByEmail,
+  getExpenseById,
+  canModify,
   isApprover,
   resolveCurrencyId,
   resolveCategoryId,
