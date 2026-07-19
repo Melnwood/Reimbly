@@ -58,10 +58,10 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 
 /* ---------- Wordmark ---------- */
 .wordmark { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; }
-.wordmark .mark { font-size: 1.6em; line-height: 1; }
+.wordmark img.mark { width: 34px; height: 34px; border-radius: 9px; display: block; }
 .wordmark .name { font-size: 1.5rem; color: var(--brand-ink); letter-spacing: -0.02em; }
 .wordmark.small .name { font-size: 1.15rem; }
-.wordmark.small .mark { font-size: 1.3em; }
+.wordmark.small img.mark { width: 27px; height: 27px; border-radius: 7px; }
 
 /* ---------- Sign in ---------- */
 .signin {
