@@ -1,0 +1,16 @@
+{
+  "name": "reimbly",
+  "version": "1.0.0",
+  "description": "Reimbly — a warm, simple expenses app for Josiah Venture. Front-end on Netlify, data in Airtable, Google Workspace sign-in.",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "netlify dev",
+    "check": "node --check netlify/functions/config.js && node --check netlify/functions/me.js && node --check netlify/functions/submit-expense.js && node --check netlify/functions/my-expenses.js && node --check netlify/functions/approvals.js && node --check netlify/functions/decision.js"
+  },
+  "dependencies": {
+    "google-auth-library": "^9.14.1"
+  }
+}

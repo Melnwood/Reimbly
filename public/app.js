@@ -1,0 +1,419 @@
+/* Reimbly front-end. Vanilla JS, no build step. */
+(() => {
+  'use strict';
+
+  const state = {
+    config: null,
+    token: null, // Google ID token (Bearer)
+    me: null, // { email, name, role, canApprove }
+    view: 'submit',
+    loaded: { mine: false, approvals: false },
+  };
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  const el = {
+    boot: $('#boot'),
+    signin: $('#signin'),
+    app: $('#app'),
+    googleBtn: $('#google-btn'),
+    signinHint: $('#signin-hint'),
+    whoName: $('#who-name'),
+    whoRole: $('#who-role'),
+    tabs: $('#tabs'),
+    form: $('#expense-form'),
+    submitBtn: $('#submit-btn'),
+    receiptInput: $('#f-receipt'),
+    receiptName: $('#receipt-name'),
+    mineList: $('#mine-list'),
+    approvalsList: $('#approvals-list'),
+    toast: $('#toast'),
+  };
+
+  // ---------- Helpers ----------
+
+  function money(n, currency) {
+    if (n == null || isNaN(n)) return '—';
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency || 'USD',
+        currencyDisplay: 'narrowSymbol',
+      }).format(n);
+    } catch {
+      return `${Number(n).toFixed(2)} ${currency || ''}`.trim();
+    }
+  }
+
+  function fmtDate(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d)) return String(value);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  let toastTimer;
+  function toast(message, kind = '') {
+    clearTimeout(toastTimer);
+    el.toast.textContent = message;
+    el.toast.className = `toast show ${kind}`;
+    el.toast.hidden = false;
+    toastTimer = setTimeout(() => {
+      el.toast.className = 'toast';
+      setTimeout(() => { el.toast.hidden = true; }, 200);
+    }, 3200);
+  }
+
+  async function api(path, { method = 'GET', body, auth = true } = {}) {
+    const headers = {};
+    if (auth) {
+      if (!state.token) throw new Error('Please sign in again.');
+      headers.Authorization = `Bearer ${state.token}`;
+    }
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+
+    const res = await fetch(`/api/${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+
+    let data = null;
+    try { data = await res.json(); } catch { /* non-JSON */ }
+
+    if (res.status === 401) {
+      // Token expired or invalid — bounce back to sign-in.
+      signOut('Your session expired. Please sign in again.');
+      throw new Error((data && data.error) || 'Session expired.');
+    }
+    if (!res.ok) {
+      throw new Error((data && data.error) || `Request failed (${res.status}).`);
+    }
+    return data;
+  }
+
+  // ---------- Auth ----------
+
+  async function boot() {
+    try {
+      state.config = await api('config', { auth: false });
+    } catch (e) {
+      el.boot.innerHTML = `<p>Reimbly isn't configured yet.<br /><small>${escapeHtml(e.message)}</small></p>`;
+      return;
+    }
+    initGoogle();
+    el.boot.hidden = true;
+    el.signin.hidden = false;
+  }
+
+  function initGoogle() {
+    const start = () => {
+      if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+        return setTimeout(start, 120);
+      }
+      window.google.accounts.id.initialize({
+        client_id: state.config.googleClientId,
+        callback: onCredential,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        hd: state.config.allowedDomain || undefined,
+      });
+      window.google.accounts.id.renderButton(el.googleBtn, {
+        theme: 'filled_black',
+        size: 'large',
+        shape: 'pill',
+        text: 'signin_with',
+        logo_alignment: 'left',
+      });
+      window.google.accounts.id.prompt();
+    };
+    start();
+  }
+
+  async function onCredential(response) {
+    state.token = response.credential;
+    el.signinHint.className = 'hint';
+    el.signinHint.textContent = 'Signing you in…';
+    try {
+      state.me = await api('me');
+      enterApp();
+    } catch (e) {
+      state.token = null;
+      el.signinHint.className = 'hint error';
+      el.signinHint.textContent = e.message;
+    }
+  }
+
+  function signOut(message) {
+    state.token = null;
+    state.me = null;
+    state.loaded = { mine: false, approvals: false };
+    try { window.google?.accounts?.id?.disableAutoSelect(); } catch { /* noop */ }
+    el.app.hidden = true;
+    el.signin.hidden = false;
+    if (message) {
+      el.signinHint.className = 'hint';
+      el.signinHint.textContent = message;
+    }
+  }
+
+  // ---------- App ----------
+
+  function enterApp() {
+    el.signin.hidden = true;
+    el.app.hidden = false;
+    el.whoName.textContent = state.me.name;
+    el.whoRole.textContent = state.me.role;
+
+    $('.tab[data-view="approvals"]').hidden = !state.me.canApprove;
+
+    // Default the date field to today.
+    const dateInput = $('#f-date');
+    if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+
+    switchView('submit');
+  }
+
+  function switchView(view) {
+    state.view = view;
+    $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
+    $$('.view').forEach((v) => { v.hidden = v.dataset.view !== view; });
+
+    if (view === 'mine' && !state.loaded.mine) loadMine();
+    if (view === 'approvals' && !state.loaded.approvals) loadApprovals();
+  }
+
+  // ---------- Submit ----------
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || '');
+        const comma = result.indexOf(',');
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = () => reject(new Error('Could not read that file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function onSubmit(event) {
+    event.preventDefault();
+    const form = el.form;
+
+    const amount = parseFloat($('#f-amount').value);
+    const currency = $('#f-currency').value;
+    const category = $('#f-category').value;
+    const date = $('#f-date').value;
+    const description = $('#f-description').value.trim();
+    const file = el.receiptInput.files[0];
+
+    if (!description) return toast('Add a short description.', 'bad');
+    if (!(amount > 0)) return toast('Amount must be greater than zero.', 'bad');
+    if (!date) return toast('Pick the date of the expense.', 'bad');
+
+    el.submitBtn.disabled = true;
+    el.submitBtn.textContent = 'Submitting…';
+
+    try {
+      let receipt = null;
+      if (file) {
+        receipt = {
+          filename: file.name,
+          contentType: file.type || 'application/octet-stream',
+          base64: await readFileAsBase64(file),
+        };
+      }
+
+      const result = await api('submit-expense', {
+        method: 'POST',
+        body: { amount, currency, category, date, description, receipt },
+      });
+
+      form.reset();
+      $('#f-date').value = new Date().toISOString().slice(0, 10);
+      el.receiptName.textContent = '';
+
+      if (result.warning) {
+        toast(result.warning, 'bad');
+      } else if (result.converted === false) {
+        toast('Submitted — no USD rate found, saved at original amount.', '');
+      } else {
+        toast('Expense submitted 🎉', 'good');
+      }
+
+      state.loaded.mine = false;
+      switchView('mine');
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      el.submitBtn.disabled = false;
+      el.submitBtn.textContent = 'Submit expense';
+    }
+  }
+
+  // ---------- My expenses ----------
+
+  function statusBadge(status) {
+    const key = String(status || '').toLowerCase().replace(/\s+/g, '');
+    const cls = key === 'approved' ? 'approved' : key === 'sentback' ? 'sentback' : 'submitted';
+    return `<span class="badge ${cls}">${escapeHtml(status || 'Submitted')}</span>`;
+  }
+
+  function receiptLink(expense) {
+    if (!expense.receipt || !expense.receipt.url) return '';
+    return `<a class="receipt-link" href="${escapeHtml(expense.receipt.url)}" target="_blank" rel="noopener">📎 Receipt</a>`;
+  }
+
+  function amountBlock(expense) {
+    const primary = expense.amountUsd != null ? money(expense.amountUsd, 'USD') : money(expense.amount, expense.currency);
+    const showOriginal = expense.currency && expense.currency !== 'USD' && expense.amount != null;
+    const sub = showOriginal ? `<small>${escapeHtml(money(expense.amount, expense.currency))}</small>` : '';
+    return `<div class="expense-amt">${escapeHtml(primary)}${sub}</div>`;
+  }
+
+  function renderMine(expenses) {
+    if (!expenses.length) {
+      el.mineList.innerHTML = `<div class="state"><span class="emoji">🌱</span>No expenses yet. Submit your first one above!</div>`;
+      return;
+    }
+    el.mineList.innerHTML = expenses.map((e) => `
+      <article class="expense">
+        <div class="expense-top">
+          <div class="expense-main">
+            <div class="expense-desc">${escapeHtml(e.description)}</div>
+            <div class="expense-meta">${escapeHtml(e.category)} · ${escapeHtml(fmtDate(e.date))}</div>
+          </div>
+          ${amountBlock(e)}
+        </div>
+        <div class="expense-actions">
+          ${statusBadge(e.status)}
+          ${receiptLink(e)}
+        </div>
+        ${e.status === 'Sent Back' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
+      </article>
+    `).join('');
+  }
+
+  async function loadMine() {
+    el.mineList.innerHTML = `<div class="state">Loading…</div>`;
+    try {
+      const data = await api('my-expenses');
+      state.loaded.mine = true;
+      renderMine(data.expenses || []);
+    } catch (e) {
+      el.mineList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  // ---------- Approvals ----------
+
+  function renderApprovals(expenses) {
+    if (!expenses.length) {
+      el.approvalsList.innerHTML = `<div class="state"><span class="emoji">✅</span>All caught up — nothing waiting.</div>`;
+      return;
+    }
+    el.approvalsList.innerHTML = expenses.map((e) => `
+      <article class="expense" data-id="${escapeHtml(e.id)}">
+        <div class="expense-top">
+          <div class="expense-main">
+            <div class="expense-desc">${escapeHtml(e.description)}</div>
+            <div class="expense-meta">${escapeHtml(e.submitterName || e.submitterEmail)} · ${escapeHtml(e.category)} · ${escapeHtml(fmtDate(e.date))}</div>
+          </div>
+          ${amountBlock(e)}
+        </div>
+        <div class="expense-actions">
+          ${receiptLink(e)}
+          <button class="btn ghost small" data-act="sendback-toggle">Send back</button>
+          <button class="btn primary small" data-act="approve">Approve</button>
+        </div>
+        <div class="sendback-row">
+          <input type="text" placeholder="What needs fixing?" data-role="note" maxlength="200" />
+          <button class="btn primary small" data-act="sendback-confirm">Send</button>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  async function loadApprovals() {
+    el.approvalsList.innerHTML = `<div class="state">Loading…</div>`;
+    try {
+      const data = await api('approvals');
+      state.loaded.approvals = true;
+      renderApprovals(data.expenses || []);
+    } catch (e) {
+      el.approvalsList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  async function decide(card, decision, note) {
+    const id = card.dataset.id;
+    const buttons = $$('button', card);
+    buttons.forEach((b) => (b.disabled = true));
+    try {
+      await api('decision', { method: 'POST', body: { id, decision, note } });
+      card.style.transition = 'opacity .25s, transform .25s';
+      card.style.opacity = '0';
+      card.style.transform = 'translateX(12px)';
+      setTimeout(() => {
+        card.remove();
+        if (!$$('.expense', el.approvalsList).length) renderApprovals([]);
+      }, 240);
+      state.loaded.mine = false; // my list may change too
+      toast(decision === 'approve' ? 'Approved ✅' : 'Sent back ↩︎', 'good');
+    } catch (e) {
+      buttons.forEach((b) => (b.disabled = false));
+      toast(e.message, 'bad');
+    }
+  }
+
+  function onApprovalsClick(event) {
+    const btn = event.target.closest('button[data-act]');
+    if (!btn) return;
+    const card = event.target.closest('.expense');
+    if (!card) return;
+    const act = btn.dataset.act;
+
+    if (act === 'approve') {
+      decide(card, 'approve', '');
+    } else if (act === 'sendback-toggle') {
+      const row = $('.sendback-row', card);
+      row.classList.toggle('open');
+      if (row.classList.contains('open')) $('input[data-role="note"]', row).focus();
+    } else if (act === 'sendback-confirm') {
+      const note = $('input[data-role="note"]', card).value.trim();
+      if (!note) return toast('Add a short note so they know what to fix.', 'bad');
+      decide(card, 'sendback', note);
+    }
+  }
+
+  // ---------- Wire up ----------
+
+  function bind() {
+    el.tabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('.tab');
+      if (tab && !tab.hidden) switchView(tab.dataset.view);
+    });
+    $('#signout').addEventListener('click', () => signOut('Signed out. See you soon!'));
+    el.form.addEventListener('submit', onSubmit);
+    el.receiptInput.addEventListener('change', () => {
+      const f = el.receiptInput.files[0];
+      el.receiptName.textContent = f ? f.name : '';
+    });
+    el.approvalsList.addEventListener('click', onApprovalsClick);
+    $$('[data-refresh]').forEach((b) =>
+      b.addEventListener('click', () => (b.dataset.refresh === 'mine' ? loadMine() : loadApprovals()))
+    );
+  }
+
+  bind();
+  boot();
+})();

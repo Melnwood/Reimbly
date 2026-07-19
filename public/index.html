@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#b45309" />
+    <title>Reimbly — Josiah Venture expenses</title>
+    <meta name="description" content="A warm, simple way to submit and approve expenses at Josiah Venture." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%BE%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <!-- Loading splash while we fetch config -->
+    <div id="boot" class="boot">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Warming up Reimbly…</p>
+    </div>
+
+    <!-- Signed-out view -->
+    <main id="signin" class="signin" hidden>
+      <div class="signin-card">
+        <div class="wordmark">
+          <span class="mark" aria-hidden="true">🧾</span>
+          <span class="name">Reimbly</span>
+        </div>
+        <h1>Expenses, the easy way.</h1>
+        <p class="lede">
+          Snap a receipt, submit in under a minute, and track it to reimbursement —
+          all with your Josiah Venture account.
+        </p>
+        <div id="google-btn" class="google-btn"></div>
+        <p id="signin-hint" class="hint"></p>
+      </div>
+      <footer class="signin-foot">Josiah Venture · internal tool</footer>
+    </main>
+
+    <!-- Signed-in app -->
+    <div id="app" class="app" hidden>
+      <header class="topbar">
+        <div class="wordmark small">
+          <span class="mark" aria-hidden="true">🧾</span>
+          <span class="name">Reimbly</span>
+        </div>
+        <nav class="tabs" id="tabs" role="tablist">
+          <button class="tab" data-view="submit" role="tab">Submit</button>
+          <button class="tab" data-view="mine" role="tab">My expenses</button>
+          <button class="tab" data-view="approvals" role="tab" hidden>Approvals</button>
+        </nav>
+        <div class="who">
+          <span id="who-name" class="who-name"></span>
+          <span id="who-role" class="pill"></span>
+          <button id="signout" class="link-btn">Sign out</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <!-- Submit -->
+        <section id="view-submit" class="view" data-view="submit">
+          <div class="panel">
+            <h2>New expense</h2>
+            <p class="panel-sub">Reimbursed in USD. Foreign amounts convert automatically.</p>
+            <form id="expense-form" class="form" novalidate>
+              <div class="row">
+                <label class="field amount-field">
+                  <span>Amount</span>
+                  <input id="f-amount" name="amount" type="number" inputmode="decimal"
+                         step="0.01" min="0" placeholder="0.00" required />
+                </label>
+                <label class="field">
+                  <span>Currency</span>
+                  <select id="f-currency" name="currency">
+                    <option value="USD" selected>USD</option>
+                    <option value="CZK">CZK</option>
+                    <option value="EUR">EUR</option>
+                    <option value="PLN">PLN</option>
+                    <option value="GBP">GBP</option>
+                    <option value="RON">RON</option>
+                    <option value="HUF">HUF</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="row">
+                <label class="field">
+                  <span>Category</span>
+                  <select id="f-category" name="category">
+                    <option value="Travel">Travel</option>
+                    <option value="Meals">Meals</option>
+                    <option value="Lodging">Lodging</option>
+                    <option value="Supplies">Supplies</option>
+                    <option value="Ministry">Ministry</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Date</span>
+                  <input id="f-date" name="date" type="date" required />
+                </label>
+              </div>
+
+              <label class="field">
+                <span>Description</span>
+                <input id="f-description" name="description" type="text"
+                       maxlength="120" placeholder="e.g. Train to Ostrava for camp planning" required />
+              </label>
+
+              <label class="field">
+                <span>Receipt <em class="opt">(photo or PDF)</em></span>
+                <input id="f-receipt" name="receipt" type="file"
+                       accept="image/*,application/pdf" capture="environment" />
+                <span id="receipt-name" class="file-hint"></span>
+              </label>
+
+              <button id="submit-btn" class="btn primary" type="submit">Submit expense</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- My expenses -->
+        <section id="view-mine" class="view" data-view="mine" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>My expenses</h2>
+              <button class="link-btn" data-refresh="mine">Refresh</button>
+            </div>
+            <div id="mine-list" class="list"></div>
+          </div>
+        </section>
+
+        <!-- Approvals -->
+        <section id="view-approvals" class="view" data-view="approvals" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Waiting for approval</h2>
+              <button class="link-btn" data-refresh="approvals">Refresh</button>
+            </div>
+            <div id="approvals-list" class="list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
