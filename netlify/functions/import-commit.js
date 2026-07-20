@@ -9,7 +9,7 @@ const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const {
   TABLES, STATUS, EVENTS, DEFAULT_PAYMENT_METHOD,
-  ensureStaff, resolveCurrencyId, resolveAccountId, dupKey, logActivity,
+  ensureStaff, resolveCurrencyId, accountAccessFor, dupKey, logActivity,
 } = require('./lib/domain');
 
 const MAX_ROWS = 500;
@@ -38,6 +38,7 @@ exports.handler = async (event) => {
     const created = [];
     const skipped = [];
     const batchKeys = new Set(); // guard against the same row twice in one commit
+    const access = await accountAccessFor(user.email); // account access for this person
 
     for (const r of rows) {
       const line = r.line || '?';
@@ -57,8 +58,10 @@ exports.handler = async (event) => {
 
       const currencyId = await resolveCurrencyId(currency);
       if (!currencyId) { skipped.push({ line, reason: `Currency "${currency}" isn't set up` }); continue; }
-      const accountId = await resolveAccountId(account);
-      if (!accountId) { skipped.push({ line, reason: `Account "${account}" isn't in the chart` }); continue; }
+      const acct = access.accounts.find((a) => String(a.code) === account);
+      if (!acct) { skipped.push({ line, reason: `Account "${account}" isn't in the chart` }); continue; }
+      if (!access.visibleIds.has(acct.id)) { skipped.push({ line, reason: `No access to account ${account}` }); continue; }
+      const accountId = acct.id;
 
       const fields = {
         Description: description,

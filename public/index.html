@@ -52,6 +52,7 @@
           <button class="tab" data-view="dashboard" role="tab" hidden>Dashboard</button>
           <button class="tab" data-view="archive" role="tab" hidden>Paid</button>
           <button class="tab" data-view="rates" role="tab" hidden>Rates</button>
+          <button class="tab" data-view="people" role="tab" hidden>People</button>
         </nav>
         <div class="who">
           <span id="who-name" class="who-name"></span>
@@ -309,6 +310,38 @@
 
             <h3 class="dash-h">Current rates</h3>
             <div id="rates-list" class="list"></div>
+          </div>
+        </section>
+
+        <!-- People & access (Finance only) -->
+        <section id="view-people" class="view" data-view="people" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>People &amp; access</h2>
+              <button class="link-btn" data-refresh="people">Refresh</button>
+            </div>
+            <p class="panel-sub">Set everyone's role, upline (who approves them), and which restricted accounts they can charge to — all from one spreadsheet. People are matched by email: existing ones are updated and new ones added (nobody is ever deleted).</p>
+            <div class="import-bar">
+              <button type="button" class="btn ghost small" id="people-choose">📄 Upload people file</button>
+              <button type="button" class="link-btn" id="people-template">Download a template</button>
+              <button type="button" class="link-btn" id="people-copy">Copy instructions for Claude</button>
+              <input id="people-file" type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+              <span id="people-name" class="file-hint"></span>
+            </div>
+            <details class="import-help">
+              <summary>What columns should the file have?</summary>
+              <ul>
+                <li><strong>Name</strong></li>
+                <li><strong>Email</strong> — the key we match on (required)</li>
+                <li><strong>Role</strong> — Staff, Approver, or Finance</li>
+                <li><strong>Upline</strong> — the email of the person who approves them</li>
+                <li><strong>Accounts</strong> — restricted GL codes they may use (e.g. <code>9100000, 9200000</code>); leave blank for people who only use the normal open accounts</li>
+              </ul>
+              <p class="import-note">Only list restricted general-fund accounts. Any account you grant to someone becomes visible to just those people; everything else stays open to all.</p>
+            </details>
+            <div id="people-summary"></div>
+            <h3 class="dash-h">Current people</h3>
+            <div id="people-list" class="list"></div>
           </div>
         </section>
       </main>

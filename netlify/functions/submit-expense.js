@@ -14,7 +14,7 @@ const {
   DEFAULT_PAYMENT_METHOD,
   ensureStaff,
   resolveCurrencyId,
-  resolveAccountId,
+  accountAccessFor,
   getMileageRate,
   round2,
   displayMaps,
@@ -80,8 +80,15 @@ exports.handler = async (event) => {
 
     const receipt = validateReceipt(body.receipt);
 
-    const accountId = await resolveAccountId(account);
-    if (!accountId) throw badRequest(`Account "${account}" isn't in the chart of accounts.`);
+    const access = await accountAccessFor(user.email);
+    const acct = access.accounts.find((a) => String(a.code) === account);
+    if (!acct) throw badRequest(`Account "${account}" isn't in the chart of accounts.`);
+    if (!access.visibleIds.has(acct.id)) {
+      const err = new Error('You don’t have access to that account.');
+      err.statusCode = 403;
+      throw err;
+    }
+    const accountId = acct.id;
 
     const fields = {
       Description: description,

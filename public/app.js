@@ -7,7 +7,7 @@
     token: null, // Google ID token (Bearer)
     me: null, // { email, name, role, canApprove }
     view: 'submit',
-    loaded: { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false },
+    loaded: { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false, people: false },
     accounts: [],
     mileageRates: [],
     rates: [], // full list (Finance management screen)
@@ -52,6 +52,10 @@
     importPreview: $('#import-preview'),
     importActions: $('#import-actions'),
     ratesList: $('#rates-list'),
+    peopleFile: $('#people-file'),
+    peopleName: $('#people-name'),
+    peopleSummary: $('#people-summary'),
+    peopleList: $('#people-list'),
     toast: $('#toast'),
   };
 
@@ -185,7 +189,7 @@
   function signOut(message) {
     state.token = null;
     state.me = null;
-    state.loaded = { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false };
+    state.loaded = { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false, people: false };
     try { window.google?.accounts?.id?.disableAutoSelect(); } catch { /* noop */ }
     el.app.hidden = true;
     el.signin.hidden = false;
@@ -208,6 +212,7 @@
     $('.tab[data-view="dashboard"]').hidden = !state.me.canApprove;
     $('.tab[data-view="archive"]').hidden = !state.me.canApprove;
     $('.tab[data-view="rates"]').hidden = state.me.role !== 'Finance';
+    $('.tab[data-view="people"]').hidden = state.me.role !== 'Finance';
 
     // Default the date field to today.
     const dateInput = $('#f-date');
@@ -324,6 +329,7 @@
     if (view === 'dashboard' && !state.loaded.dashboard) loadDashboard();
     if (view === 'archive' && !state.loaded.archive) loadArchive();
     if (view === 'rates' && !state.loaded.rates) loadRates();
+    if (view === 'people' && !state.loaded.people) loadPeople();
   }
 
   // ---------- Submit ----------
@@ -1413,6 +1419,112 @@
     else if (btn.dataset.act === 'rate-toggle') toggleRate(id);
   }
 
+  // ---------- People & access (Finance management) ----------
+
+  const PEOPLE_TEMPLATE =
+    'Name,Email,Role,Upline,Accounts\n' +
+    'Dana Director,director@josiahventure.com,Finance,,\n' +
+    'Mel Ellenwood,mel@josiahventure.com,Approver,director@josiahventure.com,"9100000, 9200000"\n' +
+    'Jana Novak,jana@josiahventure.com,Staff,mel@josiahventure.com,\n';
+
+  const PEOPLE_INSTRUCTIONS = [
+    'Build me a CSV of our people with ONE row per person and a header row using exactly these columns:',
+    '',
+    'Name, Email, Role, Upline, Accounts',
+    '',
+    '- Name: the person’s full name.',
+    '- Email: their Josiah Venture email (this is how people are matched).',
+    '- Role: one of Staff, Approver, or Finance.',
+    '- Upline: the email of the person who approves their expenses (leave blank for top-level people).',
+    '- Accounts: only for people who may use restricted general-fund accounts — the GL codes separated by commas (e.g. "9100000, 9200000"). Leave blank for everyone else.',
+    '',
+    'One person per row. Output plain CSV.',
+  ].join('\n');
+
+  function roleBadge(role) {
+    const key = String(role || 'Staff').toLowerCase();
+    const cls = key === 'finance' ? 'reimbursed' : key === 'approver' ? 'approved' : 'draft';
+    return `<span class="badge ${cls}">${escapeHtml(role || 'Staff')}</span>`;
+  }
+
+  function renderPeople(people) {
+    if (!people.length) {
+      el.peopleList.innerHTML = `<div class="state">No people yet — upload a file above.</div>`;
+      return;
+    }
+    el.peopleList.innerHTML = people.map((p) => {
+      const meta = [p.email];
+      if (p.uplineName) meta.push(`upline: ${p.uplineName}`);
+      if (p.accounts && p.accounts.length) meta.push(`funds: ${p.accounts.join(', ')}`);
+      return `
+        <article class="expense">
+          <div class="expense-top">
+            <div class="expense-main">
+              <div class="expense-desc">${escapeHtml(p.name || p.email)} ${roleBadge(p.role)}</div>
+              <div class="expense-meta">${escapeHtml(meta.join(' · '))}</div>
+            </div>
+          </div>
+        </article>`;
+    }).join('');
+  }
+
+  async function loadPeople() {
+    el.peopleList.innerHTML = `<div class="state">Loading…</div>`;
+    try {
+      const data = await api('people');
+      state.loaded.people = true;
+      renderPeople(data.people || []);
+    } catch (e) {
+      el.peopleList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  async function onPeopleFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    el.peopleName.textContent = `${file.name} · reading…`;
+    el.peopleSummary.innerHTML = '';
+    try {
+      const base64 = await readFileAsBase64(file);
+      const data = await api('people-upload', {
+        method: 'POST',
+        body: { file: { filename: file.name, contentType: file.type || 'text/csv', base64 } },
+      });
+      el.peopleName.textContent = file.name;
+      const warnHtml = (data.warnings || []).length
+        ? `<details class="import-help"><summary>${data.warnings.length} note${data.warnings.length === 1 ? '' : 's'}</summary><ul>${data.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('')}</ul></details>`
+        : '';
+      el.peopleSummary.innerHTML = `<div class="recon-summary good">✓ ${data.created} added · ${data.updated} updated</div>${warnHtml}`;
+      renderPeople(data.people || []);
+      el.peopleFile.value = '';
+      loadOptions(); // the caller's own account picker may have changed
+    } catch (e) {
+      el.peopleName.textContent = file.name;
+      el.peopleSummary.innerHTML = `<div class="recon-summary warn">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function downloadPeopleTemplate() {
+    const blob = new Blob([PEOPLE_TEMPLATE], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reimbly-people-template.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function copyPeopleInstructions() {
+    try {
+      await navigator.clipboard.writeText(PEOPLE_INSTRUCTIONS);
+      toast('Instructions copied.', 'good');
+    } catch {
+      window.prompt('Copy these instructions:', PEOPLE_INSTRUCTIONS);
+    }
+  }
+
   // ---------- History / activity trail ----------
 
   const EVENT_ICON = {
@@ -1496,13 +1608,17 @@
     $('#rate-form').addEventListener('submit', saveRate);
     $('#rate-cancel').addEventListener('click', resetRateForm);
     el.ratesList.addEventListener('click', onRatesClick);
+    $('#people-choose').addEventListener('click', () => el.peopleFile.click());
+    $('#people-template').addEventListener('click', downloadPeopleTemplate);
+    $('#people-copy').addEventListener('click', copyPeopleInstructions);
+    el.peopleFile.addEventListener('change', onPeopleFile);
     el.mineList.addEventListener('click', onMineClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
     el.archiveReady.addEventListener('click', onArchiveClick);
     // One delegated listener covers "History" toggles on every card, everywhere.
     el.app.addEventListener('click', onHistoryClick);
-    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, rates: loadRates };
+    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, rates: loadRates, people: loadPeople };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())
     );

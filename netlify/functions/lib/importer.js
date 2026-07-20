@@ -143,4 +143,4 @@ function parseSpreadsheet(file) {
   return { rows, headers: Object.keys(map), unmatched };
 }
 
-module.exports = { parseSpreadsheet, normAmount, normDate };
+module.exports = { parseSpreadsheet, fileToGrid, normAmount, normDate };

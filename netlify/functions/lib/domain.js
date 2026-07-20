@@ -241,9 +241,63 @@ async function staffMap() {
   const map = {};
   for (const r of records) {
     const f = r.fields || {};
-    map[r.id] = { name: f.Name || '', email: f.Email || '', uplineId: firstLinkId(f.Upline) };
+    map[r.id] = {
+      name: f.Name || '',
+      email: f.Email || '',
+      uplineId: firstLinkId(f.Upline),
+      allowedAccountIds: Array.isArray(f['Allowed Accounts']) ? f['Allowed Accounts'] : [],
+    };
   }
   return map;
+}
+
+/**
+ * Work out which accounts a person may charge to. Model: any account granted to
+ * anyone (via Staff "Allowed Accounts") becomes restricted — visible only to the
+ * people it's granted to. Accounts granted to no one stay open to everyone.
+ * Returns { accounts, visibleIds:Set, allowedIds:Set, restrictedIds:Set }.
+ */
+async function accountAccessFor(email) {
+  const [accounts, staff] = await Promise.all([listAccounts(), staffMap()]);
+  const restrictedIds = new Set();
+  let allowedIds = new Set();
+  const target = String(email || '').toLowerCase();
+  for (const id of Object.keys(staff)) {
+    const s = staff[id];
+    (s.allowedAccountIds || []).forEach((aid) => restrictedIds.add(aid));
+    if ((s.email || '').toLowerCase() === target) allowedIds = new Set(s.allowedAccountIds || []);
+  }
+  const visibleIds = new Set(
+    accounts.filter((a) => !restrictedIds.has(a.id) || allowedIds.has(a.id)).map((a) => a.id),
+  );
+  return { accounts, visibleIds, allowedIds, restrictedIds };
+}
+
+// People list for the Finance management screen.
+async function listPeople() {
+  const [records, accounts] = await Promise.all([
+    airtable.listRecords(TABLES.STAFF, {}),
+    listAccounts(),
+  ]);
+  const codeById = {};
+  for (const a of accounts) codeById[a.id] = a.code;
+  const nameById = {};
+  for (const r of records) nameById[r.id] = (r.fields || {}).Name || (r.fields || {}).Email || '';
+  return records.map((r) => {
+    const f = r.fields || {};
+    return {
+      id: r.id,
+      name: f.Name || '',
+      email: f.Email || '',
+      role: f.Role || 'Staff',
+      uplineEmail: '',
+      uplineName: (() => {
+        const up = firstLinkId(f.Upline);
+        return up ? nameById[up] || '' : '';
+      })(),
+      accounts: (Array.isArray(f['Allowed Accounts']) ? f['Allowed Accounts'] : []).map((id) => codeById[id]).filter(Boolean),
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function accountMap() {
@@ -374,6 +428,9 @@ module.exports = {
   resolveCategoryId,
   resolveAccountId,
   listAccounts,
+  staffMap,
+  accountAccessFor,
+  listPeople,
   listMileageRates,
   listMileageRatesAdmin,
   getMileageRate,
