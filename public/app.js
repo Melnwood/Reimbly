@@ -74,6 +74,13 @@
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function fmtDateShort(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d)) return String(value);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -505,9 +512,19 @@
   function onMineClick(event) {
     const btn = event.target.closest('button[data-act]');
     if (!btn) return;
+    const act = btn.dataset.act;
+    if (act === 'toggle') {
+      const card = btn.closest('.expense');
+      const details = $('.mini-details', card);
+      const open = details.hasAttribute('hidden');
+      details.toggleAttribute('hidden', !open);
+      btn.setAttribute('aria-expanded', String(open));
+      card.classList.toggle('open', open);
+      return;
+    }
     const id = btn.dataset.id;
-    if (btn.dataset.act === 'edit') startEdit(id);
-    else if (btn.dataset.act === 'delete') {
+    if (act === 'edit') startEdit(id);
+    else if (act === 'delete') {
       deleteExpense(id, () => { state.loaded.mine = false; state.loaded.audit = false; loadMine(); });
     }
   }
@@ -519,6 +536,13 @@
     const known = ['draft', 'submitted', 'approved', 'rejected', 'reimbursed'];
     const cls = known.includes(key) ? key : 'submitted';
     return `<span class="badge ${cls}">${escapeHtml(status || 'Submitted')}</span>`;
+  }
+
+  function statusDot(status) {
+    const key = String(status || '').toLowerCase().replace(/[^a-z]/g, '');
+    const known = ['draft', 'submitted', 'approved', 'rejected', 'reimbursed'];
+    const cls = known.includes(key) ? key : 'submitted';
+    return `<span class="dot ${cls}" title="${escapeHtml(status || 'Submitted')}"></span>`;
   }
 
   function receiptLink(expense) {
@@ -558,23 +582,33 @@
     }
     el.mineList.innerHTML = expenses.map((e) => {
       const editable = EDITABLE.includes(e.status);
+      const who = e.merchant || e.description || '(no description)';
+      const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
+      const mileageMeta = e.distance != null && e.mileageRate != null
+        ? `<div class="expense-meta">${escapeHtml(`${e.distance} ${e.distanceUnit} × ${money(e.mileageRate, e.currency)}`)}</div>`
+        : '';
       return `
-      <article class="expense">
-        <div class="expense-top">
-          <div class="expense-main">
-            <div class="expense-desc">${cardTitle(e)}</div>
-            <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
+      <article class="expense mini" data-id="${escapeHtml(e.id)}">
+        <button type="button" class="mini-row" data-act="toggle" aria-expanded="false">
+          <span class="mini-date">${escapeHtml(fmtDateShort(e.date))}</span>
+          <span class="mini-who">${escapeHtml(who)}</span>
+          <span class="mini-amt">${escapeHtml(amt)}</span>
+          ${statusDot(e.status)}
+          <span class="mini-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="mini-details" hidden>
+          <div class="mini-desc">${cardTitle(e)}</div>
+          <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
+          ${mileageMeta}
+          <div class="expense-actions">
+            ${statusBadge(e.status)}
+            ${receiptLink(e)}
+            ${historyBtn(e.id)}
+            ${editable ? `<button class="link-btn" data-act="edit" data-id="${escapeHtml(e.id)}">Edit</button>` : ''}
+            ${editable ? `<button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>` : ''}
           </div>
-          ${amountBlock(e)}
+          ${e.status === 'Rejected' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
         </div>
-        <div class="expense-actions">
-          ${statusBadge(e.status)}
-          ${receiptLink(e)}
-          ${historyBtn(e.id)}
-          ${editable ? `<button class="link-btn" data-act="edit" data-id="${escapeHtml(e.id)}">Edit</button>` : ''}
-          ${editable ? `<button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>` : ''}
-        </div>
-        ${e.status === 'Rejected' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
       </article>`;
     }).join('');
   }
