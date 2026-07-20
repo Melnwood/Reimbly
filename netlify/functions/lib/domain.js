@@ -223,7 +223,12 @@ async function listAccounts() {
     'sort[0][direction]': 'asc',
   });
   return records
-    .map((r) => ({ id: r.id, code: (r.fields || {}).Code || '', name: (r.fields || {}).Name || '' }))
+    .map((r) => ({
+      id: r.id,
+      code: (r.fields || {}).Code || '',
+      name: (r.fields || {}).Name || '',
+      restricted: !!(r.fields || {}).Restricted,
+    }))
     .filter((a) => a.code);
 }
 
@@ -252,20 +257,21 @@ async function staffMap() {
 }
 
 /**
- * Work out which accounts a person may charge to. Model: any account granted to
- * anyone (via Staff "Allowed Accounts") becomes restricted — visible only to the
- * people it's granted to. Accounts granted to no one stay open to everyone.
- * Returns { accounts, visibleIds:Set, allowedIds:Set, restrictedIds:Set }.
+ * Work out which accounts a person may charge to. An account flagged
+ * "Restricted" is a general-fund line: hidden from everyone except the people
+ * it's granted to (via Staff "Allowed Accounts"). Un-flagged accounts are open
+ * to all. Returns { accounts, visibleIds:Set, allowedIds:Set, restrictedIds:Set }.
  */
 async function accountAccessFor(email) {
   const [accounts, staff] = await Promise.all([listAccounts(), staffMap()]);
-  const restrictedIds = new Set();
+  const restrictedIds = new Set(accounts.filter((a) => a.restricted).map((a) => a.id));
   let allowedIds = new Set();
   const target = String(email || '').toLowerCase();
   for (const id of Object.keys(staff)) {
-    const s = staff[id];
-    (s.allowedAccountIds || []).forEach((aid) => restrictedIds.add(aid));
-    if ((s.email || '').toLowerCase() === target) allowedIds = new Set(s.allowedAccountIds || []);
+    if ((staff[id].email || '').toLowerCase() === target) {
+      allowedIds = new Set(staff[id].allowedAccountIds || []);
+      break;
+    }
   }
   const visibleIds = new Set(
     accounts.filter((a) => !restrictedIds.has(a.id) || allowedIds.has(a.id)).map((a) => a.id),
