@@ -11,6 +11,7 @@
     accounts: [],
     mineExpenses: [],
     editingId: null,
+    importRows: [],
   };
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -41,6 +42,11 @@
     archiveReadyWrap: $('#archive-ready-wrap'),
     archiveReady: $('#archive-ready'),
     archivePaid: $('#archive-paid'),
+    importFile: $('#import-file'),
+    importName: $('#import-name'),
+    importSummary: $('#import-summary'),
+    importPreview: $('#import-preview'),
+    importActions: $('#import-actions'),
     toast: $('#toast'),
   };
 
@@ -931,6 +937,138 @@
     }
   }
 
+  // ---------- Import from spreadsheet ----------
+
+  const IMPORT_TEMPLATE =
+    'Date,Amount,Currency,Merchant,Description,Account\n' +
+    '2026-07-01,12.50,USD,Uber,Airport ride to camp,8395000\n' +
+    '2026-07-03,1930,CZK,Restaurace Imrvére,Team dinner,8147000\n';
+
+  function downloadTemplate() {
+    const blob = new Blob([IMPORT_TEMPLATE], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reimbly-import-template.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function accountOptionsHtml(selected) {
+    const opt = (a) => `<option value="${escapeHtml(a.code)}"${a.code === selected ? ' selected' : ''}>${escapeHtml(a.code)} – ${escapeHtml(a.name)}</option>`;
+    return `<option value="">Choose account…</option>${state.accounts.map(opt).join('')}`;
+  }
+
+  function clearImport() {
+    state.importRows = [];
+    el.importFile.value = '';
+    el.importName.textContent = '';
+    el.importSummary.innerHTML = '';
+    el.importPreview.innerHTML = '';
+    el.importActions.hidden = true;
+  }
+
+  function renderImportPreview(data) {
+    state.importRows = data.rows || [];
+    const s = data.summary || { total: 0, duplicates: 0, ready: 0 };
+    const bits = [`${s.total} row${s.total === 1 ? '' : 's'}`];
+    if (s.duplicates) bits.push(`${s.duplicates} possible duplicate${s.duplicates === 1 ? '' : 's'}`);
+    bits.push(`${s.ready} ready`);
+    let summary = `<div class="import-summary-line">${escapeHtml(bits.join(' · '))}</div>`;
+    if (data.unmatched && data.unmatched.length) {
+      summary += `<div class="import-note">Columns not used: ${escapeHtml(data.unmatched.join(', '))}</div>`;
+    }
+    el.importSummary.innerHTML = summary;
+
+    if (!state.importRows.length) {
+      el.importPreview.innerHTML = `<div class="state">No rows to import.</div>`;
+      el.importActions.hidden = true;
+      return;
+    }
+
+    el.importPreview.innerHTML = state.importRows.map((r) => {
+      const bad = !r.importable;
+      const checked = !bad && !r.duplicate;
+      const flags = [];
+      if (r.duplicate) flags.push(`<span class="badge rejected">Duplicate · ${escapeHtml(r.dupReason)}</span>`);
+      (r.issues || []).forEach((i) => { if (i !== 'Currency') flags.push(`<span class="issue">Missing ${escapeHtml(i.toLowerCase())}</span>`); });
+      const title = r.merchant || r.description || '(no merchant)';
+      const amt = r.amount != null ? `${money(r.amount, r.currency)}` : '—';
+      return `
+        <div class="import-row ${bad ? 'bad' : ''} ${r.duplicate ? 'dup' : ''}" data-line="${escapeHtml(String(r.line))}">
+          <input type="checkbox" class="ir-check" ${checked ? 'checked' : ''} ${bad ? 'disabled' : ''} />
+          <div class="ir-main">
+            <div class="ir-top"><strong>${escapeHtml(title)}</strong><span class="ir-amt">${escapeHtml(amt)}</span></div>
+            <div class="ir-meta">${escapeHtml([fmtDate(r.date) || 'no date', r.merchant && r.description ? r.description : ''].filter(Boolean).join(' · '))}</div>
+            ${flags.length ? `<div class="ir-flags">${flags.join(' ')}</div>` : ''}
+          </div>
+          <select class="ir-acct" ${bad ? 'disabled' : ''}>${accountOptionsHtml(r.accountCode)}</select>
+        </div>`;
+    }).join('');
+    el.importActions.hidden = false;
+  }
+
+  async function onImportFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    el.importName.textContent = `${file.name} · reading…`;
+    el.importPreview.innerHTML = `<div class="state">Reading your file…</div>`;
+    el.importSummary.innerHTML = '';
+    el.importActions.hidden = true;
+    try {
+      const base64 = await readFileAsBase64(file);
+      const data = await api('import-parse', {
+        method: 'POST',
+        body: { file: { filename: file.name, contentType: file.type || 'text/csv', base64 } },
+      });
+      el.importName.textContent = file.name;
+      renderImportPreview(data);
+    } catch (e) {
+      el.importName.textContent = file.name;
+      el.importPreview.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  async function commitImport() {
+    const rowsById = new Map(state.importRows.map((r) => [String(r.line), r]));
+    const picked = [];
+    let missingAccount = false;
+    $$('.import-row', el.importPreview).forEach((el2) => {
+      const check = $('.ir-check', el2);
+      if (!check || !check.checked || check.disabled) return;
+      const r = rowsById.get(el2.dataset.line);
+      if (!r) return;
+      const account = ($('.ir-acct', el2) || {}).value || '';
+      if (!account) missingAccount = true;
+      picked.push({ line: r.line, date: r.date, amount: r.amount, currency: r.currency, merchant: r.merchant, description: r.description || r.merchant, account });
+    });
+
+    if (!picked.length) return toast('Tick at least one row to import.', 'bad');
+    if (missingAccount) return toast('Pick an account for every row you’re importing.', 'bad');
+
+    const btn = $('#import-commit-btn');
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Importing…';
+    try {
+      const res = await api('import-commit', { method: 'POST', body: { rows: picked, source: el.importName.textContent || 'spreadsheet' } });
+      const extra = res.skipped && res.skipped.length ? ` · ${res.skipped.length} skipped` : '';
+      toast(`Imported ${res.created} expense${res.created === 1 ? '' : 's'}${extra} 🎉`, 'good');
+      clearImport();
+      state.loaded.mine = false;
+      state.loaded.audit = false;
+      state.loaded.dashboard = false;
+      switchView('mine');
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+
   // ---------- History / activity trail ----------
 
   const EVENT_ICON = {
@@ -1001,6 +1139,11 @@
     el.receiptCamera.addEventListener('change', onReceiptChange);
     $('#btn-choose').addEventListener('click', () => el.receiptInput.click());
     $('#btn-camera').addEventListener('click', () => el.receiptCamera.click());
+    $('#import-choose').addEventListener('click', () => el.importFile.click());
+    $('#import-template').addEventListener('click', downloadTemplate);
+    $('#import-commit-btn').addEventListener('click', commitImport);
+    $('#import-cancel').addEventListener('click', clearImport);
+    el.importFile.addEventListener('change', onImportFile);
     el.mineList.addEventListener('click', onMineClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);

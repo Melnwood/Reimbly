@@ -46,6 +46,7 @@
         <nav class="tabs" id="tabs" role="tablist">
           <button class="tab" data-view="submit" role="tab">Submit</button>
           <button class="tab" data-view="mine" role="tab">My expenses</button>
+          <button class="tab" data-view="import" role="tab">Import</button>
           <button class="tab" data-view="approvals" role="tab" hidden>Approvals</button>
           <button class="tab" data-view="audit" role="tab" hidden>Audit</button>
           <button class="tab" data-view="dashboard" role="tab" hidden>Dashboard</button>
@@ -130,6 +131,26 @@
 
               <button id="submit-btn" class="btn primary" type="submit">Submit expense</button>
             </form>
+          </div>
+        </section>
+
+        <!-- Import from spreadsheet -->
+        <section id="view-import" class="view" data-view="import" hidden>
+          <div class="panel">
+            <h2>Import from a spreadsheet</h2>
+            <p class="panel-sub">Upload a CSV or Excel file — like your monthly summary of expenses that came in by email. Reimbly reads it, flags likely duplicates, and lets you review everything before anything is added.</p>
+            <div class="import-bar">
+              <button type="button" class="btn ghost small" id="import-choose">📄 Choose a file</button>
+              <button type="button" class="link-btn" id="import-template">Download a template</button>
+              <input id="import-file" type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+              <span id="import-name" class="file-hint"></span>
+            </div>
+            <div id="import-summary"></div>
+            <div id="import-preview" class="import-preview"></div>
+            <div id="import-actions" class="import-actions" hidden>
+              <button type="button" class="btn primary" id="import-commit-btn">Import selected</button>
+              <button type="button" class="link-btn" id="import-cancel">Clear</button>
+            </div>
           </div>
         </section>
 

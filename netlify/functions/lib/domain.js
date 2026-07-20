@@ -59,6 +59,16 @@ const CATEGORY_NAMES = [
 
 const APPROVER_ROLES = new Set(['Approver', 'Finance']);
 const esc = (s) => String(s).replace(/'/g, "\\'");
+
+// ---- Duplicate detection ----------------------------------------------
+// Two expenses are "probably the same" when the money, the day, and the
+// merchant match. Used by the audit and the spreadsheet importer.
+const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+const normMerchant = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+function dupKey({ amount, date, merchant } = {}) {
+  if (amount == null || !date) return null; // not enough to compare on
+  return `${round2(amount)}|${String(date).slice(0, 10)}|${normMerchant(merchant)}`;
+}
 const firstLinkId = (v) => (Array.isArray(v) && v.length ? v[0] : null);
 const firstLookup = (v) => (Array.isArray(v) ? v[0] : v);
 
@@ -279,6 +289,8 @@ module.exports = {
   TABLES,
   STATUS,
   EVENTS,
+  round2,
+  dupKey,
   logActivity,
   listActivity,
   DEFAULT_PAYMENT_METHOD,

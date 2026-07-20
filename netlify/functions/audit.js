@@ -8,7 +8,7 @@
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, ensureStaff, isApprover, displayMaps, shapeExpense } = require('./lib/domain');
+const { TABLES, ensureStaff, isApprover, displayMaps, shapeExpense, dupKey } = require('./lib/domain');
 
 const EXPENSES_TABLE_ID = process.env.EXPENSES_TABLE_ID || 'tbliyYWAryk0Om7vn';
 
@@ -56,6 +56,20 @@ exports.handler = async (event) => {
       const e = shapeExpense(r, maps);
       return { ...e, issues: auditExpense(e), recordUrl: recordUrl(r.id) };
     });
+
+    // Flag likely duplicates: same person + same amount + day + merchant.
+    const groups = new Map();
+    for (const e of items) {
+      const k = dupKey({ amount: e.amount, date: e.date, merchant: e.merchant });
+      if (!k) continue;
+      const key = `${(e.submitterEmail || '').toLowerCase()}|${k}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(e);
+    }
+    for (const arr of groups.values()) {
+      if (arr.length > 1) arr.forEach((e) => e.issues.push('Possible duplicate'));
+    }
+
     const flagged = items.filter((i) => i.issues.length > 0);
 
     return ok({

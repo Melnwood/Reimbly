@@ -73,6 +73,20 @@ exports.handler = async (event) => {
     if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
 
+    // Soft duplicate heads-up — same person, same amount, same day. Never blocks.
+    let dupWarning = null;
+    try {
+      const emailEsc = user.email.toLowerCase().replace(/'/g, "\\'");
+      const existing = await airtable.findFirst(TABLES.EXPENSES, {
+        filterByFormula: `AND(LOWER(ARRAYJOIN({Submitter Email})) = '${emailEsc}', {Amount} = ${amount}, {Expense Date} = '${date}')`,
+      });
+      if (existing) {
+        dupWarning = `Heads up: you already have an expense for ${amount} ${currency} on ${date}. If this isn’t a duplicate, you’re all set.`;
+      }
+    } catch (e) {
+      // best-effort; a failed check must never block a submission
+    }
+
     const created = await airtable.createRecord(TABLES.EXPENSES, fields);
     await logActivity({ expenseId: created.id, event: EVENTS.SUBMITTED, user });
 
@@ -96,7 +110,7 @@ exports.handler = async (event) => {
 
     return ok({
       expense: shapeExpense(fresh || created, maps),
-      warning: receiptWarning,
+      warning: receiptWarning || dupWarning,
     });
   } catch (err) {
     return error(err);
