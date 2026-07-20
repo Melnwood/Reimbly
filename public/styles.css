@@ -92,7 +92,7 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 
 /* Login: big mark on top, wordmark under it, then the tagline. */
 .brand-stack { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.hero-mark { width: 116px; height: 116px; border-radius: 28px; display: block; filter: drop-shadow(0 10px 22px rgba(245, 50, 127, 0.25)); }
+.hero-mark { width: 136px; height: 136px; display: block; }
 .hero-name { font-size: 2.4rem; font-weight: 800; color: var(--ink); letter-spacing: -0.03em; text-transform: lowercase; line-height: 1; }
 .brand-stack .tagline { justify-content: center; margin: 2px 0 0; }
 
