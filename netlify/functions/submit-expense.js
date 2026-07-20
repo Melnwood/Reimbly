@@ -10,12 +10,14 @@ const airtable = require('./lib/airtable');
 const {
   TABLES,
   STATUS,
+  EVENTS,
   DEFAULT_PAYMENT_METHOD,
   ensureStaff,
   resolveCurrencyId,
   resolveAccountId,
   displayMaps,
   shapeExpense,
+  logActivity,
 } = require('./lib/domain');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024; // ~8 MB decoded
@@ -72,6 +74,7 @@ exports.handler = async (event) => {
     if (purpose) fields['Business Purpose'] = purpose;
 
     const created = await airtable.createRecord(TABLES.EXPENSES, fields);
+    await logActivity({ expenseId: created.id, event: EVENTS.SUBMITTED, user });
 
     let receiptWarning = null;
     if (receipt) {

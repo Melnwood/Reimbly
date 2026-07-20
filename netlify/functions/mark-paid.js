@@ -7,7 +7,7 @@
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, STATUS, ensureStaff } = require('./lib/domain');
+const { TABLES, STATUS, EVENTS, ensureStaff, logActivity } = require('./lib/domain');
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -46,6 +46,7 @@ exports.handler = async (event) => {
         Status: STATUS.REIMBURSED,
         'Paid On': today(),
       });
+      await logActivity({ expenseId: id, event: EVENTS.PAID, user });
       paid += 1;
     }
 

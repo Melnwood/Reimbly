@@ -6,7 +6,7 @@
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, STATUS, ensureStaff, isApprover } = require('./lib/domain');
+const { TABLES, STATUS, EVENTS, ensureStaff, isApprover, logActivity } = require('./lib/domain');
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -52,6 +52,7 @@ exports.handler = async (event) => {
         'Decided On': today(),
         Approver: [approverId],
       });
+      await logActivity({ expenseId: id, event: EVENTS.APPROVED, user });
       approved += 1;
     }
 

@@ -10,6 +10,7 @@ const airtable = require('./lib/airtable');
 const {
   TABLES,
   STATUS,
+  EVENTS,
   ensureStaff,
   getExpenseById,
   canModify,
@@ -17,6 +18,7 @@ const {
   resolveAccountId,
   displayMaps,
   shapeExpense,
+  logActivity,
 } = require('./lib/domain');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
@@ -101,6 +103,11 @@ exports.handler = async (event) => {
     }
 
     await airtable.updateRecord(TABLES.EXPENSES, id, fields);
+    await logActivity({
+      expenseId: id,
+      event: wasRejected ? EVENTS.RESUBMITTED : EVENTS.EDITED,
+      user,
+    });
 
     const [fresh, maps] = await Promise.all([getExpenseById(id), displayMaps()]);
     return ok({ expense: shapeExpense(fresh || current, maps), resubmitted: wasRejected });

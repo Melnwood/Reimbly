@@ -7,7 +7,7 @@
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, STATUS, ensureStaff, isApprover, displayMaps, shapeExpense } = require('./lib/domain');
+const { TABLES, STATUS, EVENTS, ensureStaff, isApprover, displayMaps, shapeExpense, logActivity } = require('./lib/domain');
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -65,6 +65,12 @@ exports.handler = async (event) => {
       airtable.updateRecord(TABLES.EXPENSES, id, fields),
       displayMaps(),
     ]);
+    await logActivity({
+      expenseId: id,
+      event: decision === 'approve' ? EVENTS.APPROVED : EVENTS.SENT_BACK,
+      user,
+      note,
+    });
     return ok({ expense: shapeExpense(updated, maps) });
   } catch (err) {
     return error(err);

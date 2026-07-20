@@ -14,6 +14,19 @@ const TABLES = {
   CURRENCIES: 'Currencies',
   CATEGORIES: 'Categories',
   ACCOUNTS: 'Accounts',
+  ACTIVITY: 'Activity Log',
+};
+
+// Event names in the Activity Log's "Event" single-select. This is the trail
+// every expense carries: who did what, when, and why.
+const EVENTS = {
+  SUBMITTED: 'Submitted',
+  APPROVED: 'Approved',
+  SENT_BACK: 'Sent back',
+  KICKED_BACK: 'Kicked back',
+  RESUBMITTED: 'Resubmitted',
+  EDITED: 'Edited',
+  PAID: 'Paid',
 };
 
 // Status options that actually exist in the base's Expenses.Status field:
@@ -215,9 +228,59 @@ function shapeExpense(record, maps = {}) {
   };
 }
 
+// ---- Activity trail ----------------------------------------------------
+
+// Record one event on an expense's trail. Best-effort: logging must never
+// break the real action, so this swallows its own errors.
+async function logActivity({ expenseId, event, user = {}, note = '' } = {}) {
+  try {
+    const actor = user.name || user.email || 'Someone';
+    const summary = event === EVENTS.SUBMITTED || event === EVENTS.RESUBMITTED || event === EVENTS.EDITED
+      ? `${event} by ${actor}`
+      : `${event} by ${actor}`;
+    await airtable.createRecord(TABLES.ACTIVITY, {
+      Summary: summary,
+      Expense: [expenseId],
+      'Expense ID': expenseId,
+      Event: event,
+      Actor: actor,
+      'Actor Email': user.email || '',
+      Note: note || '',
+      At: new Date().toISOString(),
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('logActivity failed:', err && err.message);
+  }
+}
+
+// The full trail for one expense, oldest event first.
+async function listActivity(expenseId) {
+  const records = await airtable.listRecords(TABLES.ACTIVITY, {
+    filterByFormula: `{Expense ID} = '${esc(String(expenseId))}'`,
+    'sort[0][field]': 'At',
+    'sort[0][direction]': 'asc',
+  });
+  return records.map((r) => {
+    const f = r.fields || {};
+    return {
+      id: r.id,
+      event: f.Event || '',
+      summary: f.Summary || '',
+      actor: f.Actor || '',
+      actorEmail: f['Actor Email'] || '',
+      note: f.Note || '',
+      at: f.At || null,
+    };
+  });
+}
+
 module.exports = {
   TABLES,
   STATUS,
+  EVENTS,
+  logActivity,
+  listActivity,
   DEFAULT_PAYMENT_METHOD,
   CURRENCY_CODES,
   CATEGORY_NAMES,

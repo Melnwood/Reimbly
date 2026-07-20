@@ -217,6 +217,18 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 
 .paid-on { font-size: 0.8rem; color: var(--ink-soft); font-weight: 600; }
 
+/* ---------- Activity trail ---------- */
+.trail-box { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.state.small { font-size: 0.85rem; padding: 6px 0; }
+.trail { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.trail-item { display: flex; gap: 10px; align-items: flex-start; }
+.trail-icon { flex: none; width: 22px; text-align: center; }
+.trail-body { flex: 1; }
+.trail-line { font-size: 0.9rem; }
+.trail-when { font-size: 0.78rem; color: var(--ink-soft); margin-top: 1px; }
+.trail-note { font-size: 0.85rem; color: var(--ink-soft); font-style: italic; margin-top: 3px; }
+.trail-empty { font-size: 0.85rem; color: var(--ink-soft); }
+
 .sendback-row { display: none; gap: 8px; width: 100%; }
 .sendback-row.open { display: flex; }
 .sendback-row input { flex: 1; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }

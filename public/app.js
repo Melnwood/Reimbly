@@ -449,6 +449,11 @@
     return `<a class="receipt-link" href="${escapeHtml(expense.receipt.url)}" target="_blank" rel="noopener">📎 Receipt</a>`;
   }
 
+  // A "History" toggle for any expense card. The trail loads lazily on click.
+  function historyBtn(id) {
+    return `<button class="link-btn" data-act="history" data-id="${escapeHtml(id)}">History</button>`;
+  }
+
   // Business name is the headline; the description drops to the meta line.
   function cardTitle(e) {
     return escapeHtml(e.merchant || e.description || '(no description)');
@@ -488,6 +493,7 @@
         <div class="expense-actions">
           ${statusBadge(e.status)}
           ${receiptLink(e)}
+          ${historyBtn(e.id)}
           ${editable ? `<button class="link-btn" data-act="edit" data-id="${escapeHtml(e.id)}">Edit</button>` : ''}
           ${editable ? `<button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>` : ''}
         </div>
@@ -552,6 +558,7 @@
               </div>
               <div class="expense-actions">
                 ${receiptLink(e)}
+                ${historyBtn(e.id)}
                 <button class="btn ghost small" data-act="sendback-toggle">Send back</button>
               </div>
               <div class="sendback-row">
@@ -782,6 +789,7 @@
           ${statusBadge(e.status)}
           ${e.paidOn ? `<span class="paid-on">Paid ${escapeHtml(fmtDate(e.paidOn))}</span>` : ''}
           ${receiptLink(e)}
+          ${historyBtn(e.id)}
         </div>
       </article>`;
   }
@@ -813,7 +821,15 @@
                     </div>
                     ${amountBlock(e)}
                   </div>
-                  <div class="expense-actions">${receiptLink(e)}</div>
+                  <div class="expense-actions">
+                    ${receiptLink(e)}
+                    ${historyBtn(e.id)}
+                    <button class="btn ghost small" data-act="kickback-toggle">Kick back</button>
+                  </div>
+                  <div class="sendback-row">
+                    <input type="text" placeholder="What needs fixing?" data-role="note" maxlength="200" />
+                    <button class="btn primary small" data-act="kickback-confirm">Send back</button>
+                  </div>
                 </article>`).join('')}
             </div>
           </div>`).join('')
@@ -850,11 +866,57 @@
     }
   }
 
+  function removeReadyCard(card) {
+    const group = card.closest('.report');
+    card.style.transition = 'opacity .25s, transform .25s';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(12px)';
+    setTimeout(() => {
+      card.remove();
+      if (group && !$$('.expense', group).length) group.remove();
+      if (!$$('.report', el.archiveReady).length) {
+        el.archiveReady.innerHTML = `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
+      }
+    }, 240);
+  }
+
+  async function kickBack(card, note) {
+    const buttons = $$('button', card);
+    buttons.forEach((b) => (b.disabled = true));
+    try {
+      await api('kick-back', { method: 'POST', body: { id: card.dataset.id, note } });
+      removeReadyCard(card);
+      state.loaded.mine = false; // submitter now sees it as sent back
+      state.loaded.dashboard = false;
+      toast('Kicked back to the submitter ↩︎', 'good');
+    } catch (e) {
+      buttons.forEach((b) => (b.disabled = false));
+      toast(e.message, 'bad');
+    }
+  }
+
   function onArchiveClick(event) {
-    const btn = event.target.closest('button[data-act="mark-paid"]');
+    const btn = event.target.closest('button[data-act]');
     if (!btn) return;
-    const group = event.target.closest('.report');
-    if (group) markPaid(group);
+    const act = btn.dataset.act;
+
+    if (act === 'mark-paid') {
+      const group = event.target.closest('.report');
+      if (group) markPaid(group);
+      return;
+    }
+
+    const card = event.target.closest('.expense');
+    if (!card) return;
+    if (act === 'kickback-toggle') {
+      const row = $('.sendback-row', card);
+      row.classList.toggle('open');
+      if (row.classList.contains('open')) $('input[data-role="note"]', row).focus();
+    } else if (act === 'kickback-confirm') {
+      const note = $('input[data-role="note"]', card).value.trim();
+      if (!note) return toast('Add a short note so they know what to fix.', 'bad');
+      kickBack(card, note);
+    }
   }
 
   async function loadArchive() {
@@ -867,6 +929,62 @@
     } catch (e) {
       el.archivePaid.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
     }
+  }
+
+  // ---------- History / activity trail ----------
+
+  const EVENT_ICON = {
+    Submitted: '📝', Approved: '✅', 'Sent back': '↩︎', 'Kicked back': '↩︎',
+    Resubmitted: '🔁', Edited: '✏️', Paid: '💸',
+  };
+
+  function fmtDateTime(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d)) return String(value);
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  function renderTrail(items) {
+    if (!items.length) return `<div class="trail-empty">No history recorded yet.</div>`;
+    return `<ol class="trail">${items.map((a) => `
+      <li class="trail-item">
+        <span class="trail-icon">${EVENT_ICON[a.event] || '•'}</span>
+        <div class="trail-body">
+          <div class="trail-line"><strong>${escapeHtml(a.event)}</strong> by ${escapeHtml(a.actor || '—')}</div>
+          <div class="trail-when">${escapeHtml(fmtDateTime(a.at))}</div>
+          ${a.note ? `<div class="trail-note">“${escapeHtml(a.note)}”</div>` : ''}
+        </div>
+      </li>`).join('')}</ol>`;
+  }
+
+  async function toggleHistory(btn) {
+    const card = btn.closest('.expense');
+    if (!card) return;
+    let box = $('.trail-box', card);
+    if (box) { // already loaded — just toggle
+      const show = box.hasAttribute('hidden');
+      box.toggleAttribute('hidden', !show);
+      btn.textContent = show ? 'Hide history' : 'History';
+      return;
+    }
+    box = document.createElement('div');
+    box.className = 'trail-box';
+    box.innerHTML = `<div class="state small">Loading history…</div>`;
+    card.appendChild(box);
+    btn.textContent = 'Hide history';
+    try {
+      const data = await api(`activity?id=${encodeURIComponent(btn.dataset.id)}`);
+      box.innerHTML = renderTrail(data.activity || []);
+    } catch (e) {
+      box.innerHTML = `<div class="state small">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  // One delegated listener so "History" works on every card, in every list.
+  function onHistoryClick(event) {
+    const btn = event.target.closest('button[data-act="history"]');
+    if (btn) toggleHistory(btn);
   }
 
   // ---------- Wire up ----------
@@ -887,6 +1005,8 @@
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
     el.archiveReady.addEventListener('click', onArchiveClick);
+    // One delegated listener covers "History" toggles on every card, everywhere.
+    el.app.addEventListener('click', onHistoryClick);
     const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())
