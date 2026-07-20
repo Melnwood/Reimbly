@@ -69,12 +69,30 @@
               <span>✏️ Editing an expense — leave the receipt empty to keep the current one.</span>
               <button type="button" class="link-btn" id="cancel-edit">Cancel</button>
             </div>
+            <div class="type-toggle" role="group" aria-label="Expense type">
+              <button type="button" class="type-btn active" data-type="receipt">🧾 Receipt</button>
+              <button type="button" class="type-btn" data-type="mileage">🚗 Mileage</button>
+            </div>
+
             <form id="expense-form" class="form" novalidate>
-              <div class="row">
+              <!-- Snap-a-receipt hero — the main thing you need on a phone -->
+              <div id="receipt-hero" class="receipt-hero">
+                <button type="button" class="btn primary big" id="btn-camera">
+                  📷 <span>Take a photo of your receipt</span>
+                </button>
+                <button type="button" class="btn ghost small" id="btn-choose">📎 Choose a file or PDF instead</button>
+                <input id="f-camera" type="file" accept="image/*" capture="environment" hidden />
+                <input id="f-receipt" type="file" accept="image/*,application/pdf" hidden />
+                <span id="receipt-name" class="file-hint"></span>
+                <p class="hero-hint">We’ll read the receipt and fill in the details for you.</p>
+              </div>
+
+              <!-- Amount + currency (receipt mode) -->
+              <div class="row mode-receipt">
                 <label class="field amount-field">
                   <span>Amount</span>
                   <input id="f-amount" name="amount" type="number" inputmode="decimal"
-                         step="0.01" min="0" placeholder="0.00" required />
+                         step="0.01" min="0" placeholder="0.00" />
                 </label>
                 <label class="field">
                   <span>Currency</span>
@@ -93,6 +111,21 @@
                 </label>
               </div>
 
+              <!-- Distance + rate (mileage mode) -->
+              <div class="mode-mileage" hidden>
+                <div class="row">
+                  <label class="field amount-field">
+                    <span>Distance</span>
+                    <input id="f-distance" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0" />
+                  </label>
+                  <label class="field">
+                    <span>Rate</span>
+                    <select id="f-rate"><option value="">Loading rates…</option></select>
+                  </label>
+                </div>
+                <div id="mileage-calc" class="mileage-calc" hidden></div>
+              </div>
+
               <div class="row">
                 <label class="field">
                   <span>Account</span>
@@ -106,28 +139,17 @@
                 </label>
               </div>
 
-              <label class="field">
+              <label class="field mode-receipt">
                 <span>Business <em class="opt">(where you spent)</em></span>
                 <input id="f-business" name="business" type="text"
                        maxlength="80" placeholder="e.g. Restaurace Imrvére" />
               </label>
 
               <label class="field">
-                <span>Description</span>
+                <span>Description <em class="opt mode-mileage-hint" hidden>(e.g. trip from Frýdlant to Ostrava)</em></span>
                 <input id="f-description" name="description" type="text"
-                       maxlength="120" placeholder="e.g. Team dinner after camp planning" required />
+                       maxlength="120" placeholder="e.g. Team dinner after camp planning" />
               </label>
-
-              <div class="field">
-                <span>Receipt <em class="opt">(photo or PDF)</em></span>
-                <div class="receipt-buttons">
-                  <button type="button" class="btn ghost small" id="btn-camera">📷 Take a photo</button>
-                  <button type="button" class="btn ghost small" id="btn-choose">📎 Choose a file</button>
-                </div>
-                <input id="f-camera" type="file" accept="image/*" capture="environment" hidden />
-                <input id="f-receipt" type="file" accept="image/*,application/pdf" hidden />
-                <span id="receipt-name" class="file-hint"></span>
-              </div>
 
               <button id="submit-btn" class="btn primary" type="submit">Submit expense</button>
             </form>
@@ -142,9 +164,23 @@
             <div class="import-bar">
               <button type="button" class="btn ghost small" id="import-choose">📄 Choose a file</button>
               <button type="button" class="link-btn" id="import-template">Download a template</button>
+              <button type="button" class="link-btn" id="import-copy">Copy instructions for Claude</button>
               <input id="import-file" type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
               <span id="import-name" class="file-hint"></span>
             </div>
+            <details class="import-help">
+              <summary>What columns should the file have?</summary>
+              <p>One row per expense, with a header row on top. Reimbly recognizes these columns (extra columns are ignored):</p>
+              <ul>
+                <li><strong>Date</strong> — best as <code>YYYY-MM-DD</code> (e.g. 2026-07-01)</li>
+                <li><strong>Amount</strong> — the number only, in the original currency</li>
+                <li><strong>Currency</strong> — USD, EUR, CZK, PLN, GBP, RON, HUF, BGN, RSD, UAH (defaults to USD)</li>
+                <li><strong>Merchant</strong> — where it was spent</li>
+                <li><strong>Description</strong> — what it was for</li>
+                <li><strong>Account</strong> — the GL code (e.g. 8147000); leave blank to choose it here</li>
+              </ul>
+              <p class="import-note">Use “Copy instructions for Claude” to paste these rules into whatever puts your monthly file together.</p>
+            </details>
             <div id="import-summary"></div>
             <div id="import-preview" class="import-preview"></div>
             <div id="import-actions" class="import-actions" hidden>

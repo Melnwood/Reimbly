@@ -15,6 +15,8 @@ const {
   ensureStaff,
   resolveCurrencyId,
   resolveAccountId,
+  getMileageRate,
+  round2,
   displayMaps,
   shapeExpense,
   logActivity,
@@ -39,23 +41,45 @@ exports.handler = async (event) => {
     const { id: staffId } = await ensureStaff(user);
     const body = parseBody(event);
 
-    const description = String(body.description || '').trim();
+    let description = String(body.description || '').trim();
     const merchant = String(body.merchant || '').trim();
-    const amount = Number(body.amount);
-    const currency = String(body.currency || 'USD').trim().toUpperCase();
     const account = String(body.account || '').trim();
     const date = String(body.date || '').trim();
     const purpose = String(body.purpose || '').trim();
+    const mileage = body.mileage && typeof body.mileage === 'object' ? body.mileage : null;
+
+    // A mileage expense computes its amount from distance × rate (in the rate's
+    // currency); a regular one takes the amount/currency straight from the form.
+    let amount;
+    let currency;
+    let currencyId;
+    const mileageFields = {};
+    if (mileage) {
+      const distance = Number(mileage.distance);
+      if (!isFinite(distance) || distance <= 0) throw badRequest('Enter the distance you drove.');
+      const rate = await getMileageRate(String(mileage.rateId || '').trim());
+      if (!rate || !rate.active) throw badRequest('Please pick a mileage rate.');
+      if (rate.rate == null || !rate.currencyId) throw badRequest('That mileage rate is misconfigured in Airtable (needs a rate and a currency).');
+      amount = round2(distance * rate.rate);
+      currencyId = rate.currencyId;
+      mileageFields.Distance = distance;
+      mileageFields['Distance Unit'] = rate.unit;
+      mileageFields['Mileage Rate'] = rate.rate;
+      if (!description) description = `Mileage: ${distance} ${rate.unit}`;
+    } else {
+      amount = Number(body.amount);
+      currency = String(body.currency || 'USD').trim().toUpperCase();
+      if (!isFinite(amount) || amount <= 0) throw badRequest('Amount must be greater than zero.');
+      currencyId = await resolveCurrencyId(currency);
+      if (!currencyId) throw badRequest(`Currency "${currency}" isn't set up in the base yet.`);
+    }
 
     if (!description) throw badRequest('Please add a short description.');
-    if (!isFinite(amount) || amount <= 0) throw badRequest('Amount must be greater than zero.');
     if (!date) throw badRequest('Please pick the date of the expense.');
     if (!account) throw badRequest('Please choose the account to charge this to.');
 
     const receipt = validateReceipt(body.receipt);
 
-    const currencyId = await resolveCurrencyId(currency);
-    if (!currencyId) throw badRequest(`Currency "${currency}" isn't set up in the base yet.`);
     const accountId = await resolveAccountId(account);
     if (!accountId) throw badRequest(`Account "${account}" isn't in the chart of accounts.`);
 
@@ -69,6 +93,7 @@ exports.handler = async (event) => {
       Submitter: [staffId],
       Currency: [currencyId],
       Account: [accountId],
+      ...mileageFields,
     };
     if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
@@ -81,7 +106,7 @@ exports.handler = async (event) => {
         filterByFormula: `AND(LOWER(ARRAYJOIN({Submitter Email})) = '${emailEsc}', {Amount} = ${amount}, {Expense Date} = '${date}')`,
       });
       if (existing) {
-        dupWarning = `Heads up: you already have an expense for ${amount} ${currency} on ${date}. If this isn’t a duplicate, you’re all set.`;
+        dupWarning = `Heads up: you already have an expense for ${amount}${currency ? ` ${currency}` : ''} on ${date}. If this isn’t a duplicate, you’re all set.`;
       }
     } catch (e) {
       // best-effort; a failed check must never block a submission

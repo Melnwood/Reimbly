@@ -249,6 +249,23 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
   .import-row { flex-wrap: wrap; }
   .ir-acct { max-width: none; width: 100%; }
 }
+.import-help { margin: 4px 0 16px; font-size: 0.88rem; color: var(--ink-soft); }
+.import-help summary { cursor: pointer; font-weight: 700; color: var(--brand-ink); }
+.import-help ul { margin: 8px 0; padding-left: 20px; }
+.import-help li { margin: 3px 0; }
+.import-help code { background: var(--bg-soft); padding: 1px 5px; border-radius: 5px; font-size: 0.85em; }
+
+/* ---------- Expense type toggle + photo hero + mileage ---------- */
+.type-toggle { display: flex; gap: 6px; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 999px; padding: 4px; margin: 6px 0 18px; }
+.type-btn { flex: 1; font: inherit; font-weight: 700; font-size: 0.95rem; padding: 10px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-soft); cursor: pointer; transition: background .15s, color .15s; }
+.type-btn.active { background: var(--card); color: var(--brand-ink); box-shadow: 0 1px 3px rgba(44,35,24,.12); }
+
+.receipt-hero { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 18px; }
+.btn.big { font-size: 1.1rem; padding: 18px 20px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.hero-hint { text-align: center; font-size: 0.82rem; color: var(--ink-soft); margin: 2px 0 0; }
+
+.mileage-calc { background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 0.95rem; color: var(--ink-soft); margin-top: 4px; }
+.mileage-calc strong { color: var(--brand-ink); font-size: 1.1rem; }
 
 .sendback-row { display: none; gap: 8px; width: 100%; }
 .sendback-row.open { display: flex; }

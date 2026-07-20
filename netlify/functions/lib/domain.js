@@ -15,6 +15,7 @@ const TABLES = {
   CATEGORIES: 'Categories',
   ACCOUNTS: 'Accounts',
   ACTIVITY: 'Activity Log',
+  MILEAGE_RATES: 'Mileage Rates',
 };
 
 // Event names in the Activity Log's "Event" single-select. This is the trail
@@ -150,6 +151,48 @@ async function resolveAccountId(code) {
   return rec ? rec.id : null;
 }
 
+// Active mileage rates for the expense form, cheapest field set for display.
+async function listMileageRates() {
+  const [records, currency] = await Promise.all([
+    airtable.listRecords(TABLES.MILEAGE_RATES, {}),
+    idLabelMap(TABLES.CURRENCIES, 'Code'),
+  ]);
+  return records
+    .map((r) => {
+      const f = r.fields || {};
+      const currencyId = firstLinkId(f.Currency);
+      return {
+        id: r.id,
+        name: f.Name || '',
+        unit: f.Unit || 'miles',
+        rate: f.Rate != null ? Number(f.Rate) : null,
+        currencyId,
+        currency: (currencyId && currency[currencyId]) || 'USD',
+        active: !!f.Active,
+      };
+    })
+    .filter((r) => r.active && r.rate != null && r.rate > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// One mileage rate by id (for the submit calculation). Null if gone/inactive.
+async function getMileageRate(id) {
+  if (!id) return null;
+  const rec = await airtable.findFirst(TABLES.MILEAGE_RATES, {
+    filterByFormula: `RECORD_ID() = '${esc(String(id))}'`,
+  });
+  if (!rec) return null;
+  const f = rec.fields || {};
+  return {
+    id: rec.id,
+    name: f.Name || '',
+    unit: f.Unit || 'miles',
+    rate: f.Rate != null ? Number(f.Rate) : null,
+    currencyId: firstLinkId(f.Currency),
+    active: !!f.Active,
+  };
+}
+
 // The full chart of accounts for the form dropdown, sorted by code.
 async function listAccounts() {
   const records = await airtable.listRecords(TABLES.ACCOUNTS, {
@@ -225,6 +268,9 @@ function shapeExpense(record, maps = {}) {
     account: account.name || '',
     accountCode: account.code || '',
     date: f['Expense Date'] || null,
+    distance: f.Distance != null ? Number(f.Distance) : null,
+    distanceUnit: f['Distance Unit'] || '',
+    mileageRate: f['Mileage Rate'] != null ? Number(f['Mileage Rate']) : null,
     status: f.Status || STATUS.SUBMITTED,
     submitterName: submitter.name || '',
     submitterEmail: firstLookup(f['Submitter Email']) || submitter.email || '',
@@ -305,6 +351,8 @@ module.exports = {
   resolveCategoryId,
   resolveAccountId,
   listAccounts,
+  listMileageRates,
+  getMileageRate,
   displayMaps,
   shapeExpense,
 };

@@ -5,7 +5,7 @@
 
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
-const { listAccounts } = require('./lib/domain');
+const { listAccounts, listMileageRates } = require('./lib/domain');
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
@@ -13,8 +13,8 @@ exports.handler = async (event) => {
 
   try {
     await verifyRequest(event.headers);
-    const accounts = await listAccounts();
-    return ok({ accounts });
+    const [accounts, mileageRates] = await Promise.all([listAccounts(), listMileageRates()]);
+    return ok({ accounts, mileageRates });
   } catch (err) {
     return error(err);
   }

@@ -9,6 +9,8 @@
     view: 'submit',
     loaded: { mine: false, approvals: false, audit: false, dashboard: false, archive: false },
     accounts: [],
+    mileageRates: [],
+    expenseType: 'receipt', // 'receipt' | 'mileage'
     mineExpenses: [],
     editingId: null,
     importRows: [],
@@ -238,14 +240,66 @@
     sel.innerHTML = html;
   }
 
+  function populateRates() {
+    const sel = $('#f-rate');
+    if (!sel) return;
+    if (!state.mileageRates.length) {
+      sel.innerHTML = '<option value="">No rates set up yet</option>';
+      return;
+    }
+    sel.innerHTML = state.mileageRates
+      .map((r) => `<option value="${escapeHtml(r.id)}" data-rate="${escapeHtml(String(r.rate))}" data-unit="${escapeHtml(r.unit)}" data-currency="${escapeHtml(r.currency)}">${escapeHtml(r.name)} — ${escapeHtml(money(r.rate, r.currency))}/${escapeHtml(r.unit === 'miles' ? 'mi' : 'km')}</option>`)
+      .join('');
+    updateMileageCalc();
+  }
+
   async function loadOptions() {
     try {
       const data = await api('options');
       state.accounts = (data && data.accounts) || [];
+      state.mileageRates = (data && data.mileageRates) || [];
       populateAccounts();
+      populateRates();
     } catch (e) {
       $('#f-account').innerHTML = '<option value="">Couldn’t load accounts — refresh</option>';
     }
+  }
+
+  // ---------- Expense type: receipt vs mileage ----------
+
+  function selectedRate() {
+    const sel = $('#f-rate');
+    const opt = sel && sel.options[sel.selectedIndex];
+    if (!opt || !opt.value) return null;
+    return { id: opt.value, rate: Number(opt.dataset.rate), unit: opt.dataset.unit, currency: opt.dataset.currency };
+  }
+
+  function updateMileageCalc() {
+    const box = $('#mileage-calc');
+    if (!box) return;
+    const rate = selectedRate();
+    const distance = parseFloat($('#f-distance').value);
+    if (rate && distance > 0) {
+      const amount = Math.round(distance * rate.rate * 100) / 100;
+      box.innerHTML = `${distance} ${escapeHtml(rate.unit)} × ${escapeHtml(money(rate.rate, rate.currency))} = <strong>${escapeHtml(money(amount, rate.currency))}</strong>`;
+      box.hidden = false;
+    } else {
+      box.hidden = true;
+    }
+  }
+
+  function setExpenseType(type) {
+    state.expenseType = type;
+    $$('.type-btn').forEach((b) => b.classList.toggle('active', b.dataset.type === type));
+    const mileage = type === 'mileage';
+    $('#receipt-hero').hidden = mileage;
+    $$('.mode-receipt').forEach((n) => { n.hidden = mileage; });
+    $$('.mode-mileage').forEach((n) => { n.hidden = !mileage; });
+    $$('.mode-mileage-hint').forEach((n) => { n.hidden = !mileage; });
+    $('#f-description').placeholder = mileage
+      ? 'e.g. trip from Frýdlant to Ostrava (optional)'
+      : 'e.g. Team dinner after camp planning';
+    if (mileage) updateMileageCalc();
   }
 
   function switchView(view) {
@@ -333,34 +387,44 @@
     event.preventDefault();
     const form = el.form;
 
-    const amount = parseFloat($('#f-amount').value);
-    const currency = $('#f-currency').value;
+    const editing = !!state.editingId;
+    const mileageMode = !editing && state.expenseType === 'mileage';
     const account = $('#f-account').value;
     const date = $('#f-date').value;
     const description = $('#f-description').value.trim();
     const merchant = $('#f-business').value.trim();
     const file = currentReceipt();
 
-    if (!description) return toast('Add a short description.', 'bad');
-    if (!(amount > 0)) return toast('Amount must be greater than zero.', 'bad');
-    if (!date) return toast('Pick the date of the expense.', 'bad');
-    if (!account) return toast('Choose the account to charge this to.', 'bad');
+    let body;
+    if (mileageMode) {
+      const rate = selectedRate();
+      const distance = parseFloat($('#f-distance').value);
+      if (!rate) return toast('Pick a mileage rate.', 'bad');
+      if (!(distance > 0)) return toast('Enter the distance you drove.', 'bad');
+      if (!date) return toast('Pick the date.', 'bad');
+      if (!account) return toast('Choose the account to charge this to.', 'bad');
+      body = { mileage: { distance, rateId: rate.id }, account, date, description, merchant };
+    } else {
+      const amount = parseFloat($('#f-amount').value);
+      const currency = $('#f-currency').value;
+      if (!description) return toast('Add a short description.', 'bad');
+      if (!(amount > 0)) return toast('Amount must be greater than zero.', 'bad');
+      if (!date) return toast('Pick the date of the expense.', 'bad');
+      if (!account) return toast('Choose the account to charge this to.', 'bad');
+      body = { amount, currency, account, date, description, merchant };
+    }
 
-    const editing = !!state.editingId;
     el.submitBtn.disabled = true;
     el.submitBtn.textContent = editing ? 'Saving…' : 'Submitting…';
 
     try {
-      let receipt = null;
       if (file) {
-        receipt = {
+        body.receipt = {
           filename: file.name,
           contentType: file.type || 'application/octet-stream',
           base64: await readFileAsBase64(file),
         };
       }
-
-      const body = { amount, currency, account, date, description, merchant, receipt };
       if (editing) body.id = state.editingId;
 
       const result = await api(editing ? 'update-expense' : 'submit-expense', { method: 'POST', body });
@@ -394,6 +458,10 @@
     const e = state.mineExpenses.find((x) => x.id === id);
     if (!e) return;
     state.editingId = id;
+    // Edits are always in receipt/amount mode (you adjust the amount directly),
+    // even for a mileage expense. The type toggle is hidden while editing.
+    setExpenseType('receipt');
+    $('.type-toggle').hidden = true;
     $('#f-amount').value = e.amount != null ? e.amount : '';
     if (e.currency && hasOption('#f-currency', e.currency)) $('#f-currency').value = e.currency;
     if (e.accountCode && hasOption('#f-account', e.accountCode)) $('#f-account').value = e.accountCode;
@@ -418,6 +486,9 @@
     $('#submit-title').textContent = 'New expense';
     el.submitBtn.textContent = 'Submit expense';
     $('#edit-banner').hidden = true;
+    $('.type-toggle').hidden = false;
+    $('#mileage-calc').hidden = true;
+    setExpenseType('receipt');
   }
 
   async function deleteExpense(id, onDone) {
@@ -942,7 +1013,23 @@
   const IMPORT_TEMPLATE =
     'Date,Amount,Currency,Merchant,Description,Account\n' +
     '2026-07-01,12.50,USD,Uber,Airport ride to camp,8395000\n' +
-    '2026-07-03,1930,CZK,Restaurace Imrvére,Team dinner,8147000\n';
+    '2026-07-03,1930,CZK,Restaurace Imrvére,Team dinner,8147000\n' +
+    '2026-07-05,9.99,USD,Adobe,Design software subscription,\n';
+
+  const IMPORT_INSTRUCTIONS = [
+    'Build me a spreadsheet (CSV) of my expenses with ONE row per expense and a header row using exactly these columns:',
+    '',
+    'Date, Amount, Currency, Merchant, Description, Account',
+    '',
+    '- Date: format as YYYY-MM-DD (e.g. 2026-07-01).',
+    '- Amount: the number only, in the original currency (no currency symbols).',
+    '- Currency: one of USD, EUR, CZK, PLN, GBP, RON, HUF, BGN, RSD, UAH. If unknown, use USD.',
+    '- Merchant: where the money was spent.',
+    '- Description: a short note on what it was for.',
+    '- Account: the JV GL code (e.g. 8147000) if you know it; otherwise leave it blank.',
+    '',
+    'One expense per row. Do not merge cells or add totals. Output plain CSV.',
+  ].join('\n');
 
   function downloadTemplate() {
     const blob = new Blob([IMPORT_TEMPLATE], { type: 'text/csv' });
@@ -954,6 +1041,16 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function copyImportInstructions() {
+    try {
+      await navigator.clipboard.writeText(IMPORT_INSTRUCTIONS);
+      toast('Instructions copied — paste them wherever you build your file.', 'good');
+    } catch {
+      // Clipboard blocked (e.g. insecure context) — show them to copy by hand.
+      window.prompt('Copy these instructions:', IMPORT_INSTRUCTIONS);
+    }
   }
 
   function accountOptionsHtml(selected) {
@@ -1141,9 +1238,13 @@
     $('#btn-camera').addEventListener('click', () => el.receiptCamera.click());
     $('#import-choose').addEventListener('click', () => el.importFile.click());
     $('#import-template').addEventListener('click', downloadTemplate);
+    $('#import-copy').addEventListener('click', copyImportInstructions);
     $('#import-commit-btn').addEventListener('click', commitImport);
     $('#import-cancel').addEventListener('click', clearImport);
     el.importFile.addEventListener('change', onImportFile);
+    $$('.type-btn').forEach((b) => b.addEventListener('click', () => setExpenseType(b.dataset.type)));
+    $('#f-distance').addEventListener('input', updateMileageCalc);
+    $('#f-rate').addEventListener('change', updateMileageCalc);
     el.mineList.addEventListener('click', onMineClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
