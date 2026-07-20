@@ -289,6 +289,13 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .mileage-calc { background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 0.95rem; color: var(--ink-soft); margin-top: 4px; }
 .mileage-calc strong { color: var(--brand-ink); font-size: 1.1rem; }
 
+/* ---------- Mileage rate management ---------- */
+.rate-form { margin-bottom: 8px; }
+.check-row { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; cursor: pointer; }
+.check-row input { width: 18px; height: 18px; accent-color: var(--brand-ink); }
+.rate-form-actions { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+.rate-row.off { opacity: 0.6; }
+
 .sendback-row { display: none; gap: 8px; width: 100%; }
 .sendback-row.open { display: flex; }
 .sendback-row input { flex: 1; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }

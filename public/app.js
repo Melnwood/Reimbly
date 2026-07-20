@@ -7,9 +7,10 @@
     token: null, // Google ID token (Bearer)
     me: null, // { email, name, role, canApprove }
     view: 'submit',
-    loaded: { mine: false, approvals: false, audit: false, dashboard: false, archive: false },
+    loaded: { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false },
     accounts: [],
     mileageRates: [],
+    rates: [], // full list (Finance management screen)
     expenseType: 'receipt', // 'receipt' | 'mileage'
     mineExpenses: [],
     editingId: null,
@@ -49,6 +50,7 @@
     importSummary: $('#import-summary'),
     importPreview: $('#import-preview'),
     importActions: $('#import-actions'),
+    ratesList: $('#rates-list'),
     toast: $('#toast'),
   };
 
@@ -182,7 +184,7 @@
   function signOut(message) {
     state.token = null;
     state.me = null;
-    state.loaded = { mine: false, approvals: false, audit: false, dashboard: false };
+    state.loaded = { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false };
     try { window.google?.accounts?.id?.disableAutoSelect(); } catch { /* noop */ }
     el.app.hidden = true;
     el.signin.hidden = false;
@@ -204,6 +206,7 @@
     $('.tab[data-view="audit"]').hidden = !state.me.canApprove;
     $('.tab[data-view="dashboard"]').hidden = !state.me.canApprove;
     $('.tab[data-view="archive"]').hidden = !state.me.canApprove;
+    $('.tab[data-view="rates"]').hidden = state.me.role !== 'Finance';
 
     // Default the date field to today.
     const dateInput = $('#f-date');
@@ -319,6 +322,7 @@
     if (view === 'audit' && !state.loaded.audit) loadAudit();
     if (view === 'dashboard' && !state.loaded.dashboard) loadDashboard();
     if (view === 'archive' && !state.loaded.archive) loadArchive();
+    if (view === 'rates' && !state.loaded.rates) loadRates();
   }
 
   // ---------- Submit ----------
@@ -1200,6 +1204,140 @@
     }
   }
 
+  // ---------- Mileage rates (Finance management) ----------
+
+  function renderRates(rates, currencies) {
+    const cur = $('#rate-currency');
+    if (cur && currencies && currencies.length && !cur.options.length) {
+      cur.innerHTML = currencies.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    }
+    if (!rates.length) {
+      el.ratesList.innerHTML = `<div class="state">No rates yet — add one above.</div>`;
+      return;
+    }
+    el.ratesList.innerHTML = rates.map((r) => `
+      <article class="expense rate-row ${r.active ? '' : 'off'}" data-id="${escapeHtml(r.id)}">
+        <div class="expense-top">
+          <div class="expense-main">
+            <div class="expense-desc">${escapeHtml(r.name)} ${r.active ? '' : '<span class="badge draft">Off</span>'}</div>
+            <div class="expense-meta">${escapeHtml(money(r.rate, r.currency))} per ${escapeHtml(r.unit === 'miles' ? 'mile' : 'km')}</div>
+          </div>
+        </div>
+        <div class="expense-actions">
+          <button class="link-btn" data-act="rate-edit">Edit</button>
+          <button class="link-btn" data-act="rate-toggle">${r.active ? 'Turn off' : 'Turn on'}</button>
+          <button class="link-btn danger" data-act="rate-delete">Delete</button>
+        </div>
+      </article>`).join('');
+  }
+
+  async function loadRates() {
+    el.ratesList.innerHTML = `<div class="state">Loading…</div>`;
+    try {
+      const data = await api('mileage-rates');
+      state.loaded.rates = true;
+      state.rates = data.rates || [];
+      renderRates(state.rates, data.currencies || []);
+    } catch (e) {
+      el.ratesList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function resetRateForm() {
+    $('#rate-id').value = '';
+    $('#rate-name').value = '';
+    $('#rate-unit').value = 'miles';
+    $('#rate-amount').value = '';
+    $('#rate-active').checked = true;
+    $('#rate-form-title').textContent = 'Add a rate';
+    $('#rate-save').textContent = 'Add rate';
+    $('#rate-cancel').hidden = true;
+  }
+
+  function editRate(id) {
+    const r = state.rates.find((x) => x.id === id);
+    if (!r) return;
+    $('#rate-id').value = r.id;
+    $('#rate-name').value = r.name;
+    $('#rate-unit').value = r.unit;
+    $('#rate-amount').value = r.rate != null ? r.rate : '';
+    if (hasOption('#rate-currency', r.currency)) $('#rate-currency').value = r.currency;
+    $('#rate-active').checked = r.active;
+    $('#rate-form-title').textContent = 'Edit rate';
+    $('#rate-save').textContent = 'Save rate';
+    $('#rate-cancel').hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function afterRateChange() {
+    state.loaded.rates = false;
+    await loadRates();
+    loadOptions(); // refresh the rate dropdown on the submit form too
+  }
+
+  async function saveRate(event) {
+    event.preventDefault();
+    const body = {
+      id: $('#rate-id').value || undefined,
+      name: $('#rate-name').value.trim(),
+      unit: $('#rate-unit').value,
+      rate: parseFloat($('#rate-amount').value),
+      currency: $('#rate-currency').value,
+      active: $('#rate-active').checked,
+    };
+    if (!body.name) return toast('Give the rate a name.', 'bad');
+    if (!(body.rate > 0)) return toast('Rate must be greater than zero.', 'bad');
+    if (!body.currency) return toast('Pick a currency.', 'bad');
+    const btn = $('#rate-save');
+    btn.disabled = true;
+    try {
+      await api('save-mileage-rate', { method: 'POST', body });
+      toast(body.id ? 'Rate saved.' : 'Rate added.', 'good');
+      resetRateForm();
+      await afterRateChange();
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteRate(id) {
+    if (!window.confirm('Delete this rate? Past expenses keep the rate they used.')) return;
+    try {
+      await api('save-mileage-rate', { method: 'POST', body: { id, delete: true } });
+      toast('Rate deleted.', 'good');
+      await afterRateChange();
+    } catch (e) {
+      toast(e.message, 'bad');
+    }
+  }
+
+  async function toggleRate(id) {
+    const r = state.rates.find((x) => x.id === id);
+    if (!r) return;
+    try {
+      await api('save-mileage-rate', {
+        method: 'POST',
+        body: { id: r.id, name: r.name, unit: r.unit, rate: r.rate, currency: r.currency, active: !r.active },
+      });
+      await afterRateChange();
+    } catch (e) {
+      toast(e.message, 'bad');
+    }
+  }
+
+  function onRatesClick(event) {
+    const btn = event.target.closest('button[data-act]');
+    if (!btn) return;
+    const card = event.target.closest('[data-id]');
+    const id = card && card.dataset.id;
+    if (!id) return;
+    if (btn.dataset.act === 'rate-edit') editRate(id);
+    else if (btn.dataset.act === 'rate-delete') deleteRate(id);
+    else if (btn.dataset.act === 'rate-toggle') toggleRate(id);
+  }
+
   // ---------- History / activity trail ----------
 
   const EVENT_ICON = {
@@ -1279,13 +1417,16 @@
     $$('.type-btn').forEach((b) => b.addEventListener('click', () => setExpenseType(b.dataset.type)));
     $('#f-distance').addEventListener('input', updateMileageCalc);
     $('#f-rate').addEventListener('change', updateMileageCalc);
+    $('#rate-form').addEventListener('submit', saveRate);
+    $('#rate-cancel').addEventListener('click', resetRateForm);
+    el.ratesList.addEventListener('click', onRatesClick);
     el.mineList.addEventListener('click', onMineClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
     el.archiveReady.addEventListener('click', onArchiveClick);
     // One delegated listener covers "History" toggles on every card, everywhere.
     el.app.addEventListener('click', onHistoryClick);
-    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive };
+    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, rates: loadRates };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())
     );

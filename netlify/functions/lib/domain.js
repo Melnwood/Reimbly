@@ -175,6 +175,29 @@ async function listMileageRates() {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// Every mileage rate (active and inactive) for the Finance management screen.
+async function listMileageRatesAdmin() {
+  const [records, currency] = await Promise.all([
+    airtable.listRecords(TABLES.MILEAGE_RATES, {}),
+    idLabelMap(TABLES.CURRENCIES, 'Code'),
+  ]);
+  return records
+    .map((r) => {
+      const f = r.fields || {};
+      const currencyId = firstLinkId(f.Currency);
+      return {
+        id: r.id,
+        name: f.Name || '',
+        unit: f.Unit || 'miles',
+        rate: f.Rate != null ? Number(f.Rate) : null,
+        currencyId,
+        currency: (currencyId && currency[currencyId]) || '',
+        active: !!f.Active,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // One mileage rate by id (for the submit calculation). Null if gone/inactive.
 async function getMileageRate(id) {
   if (!id) return null;
@@ -352,6 +375,7 @@ module.exports = {
   resolveAccountId,
   listAccounts,
   listMileageRates,
+  listMileageRatesAdmin,
   getMileageRate,
   displayMaps,
   shapeExpense,

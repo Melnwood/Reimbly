@@ -51,6 +51,7 @@
           <button class="tab" data-view="audit" role="tab" hidden>Audit</button>
           <button class="tab" data-view="dashboard" role="tab" hidden>Dashboard</button>
           <button class="tab" data-view="archive" role="tab" hidden>Paid</button>
+          <button class="tab" data-view="rates" role="tab" hidden>Rates</button>
         </nav>
         <div class="who">
           <span id="who-name" class="who-name"></span>
@@ -256,6 +257,54 @@
             </div>
             <h3 class="dash-h">Paid history</h3>
             <div id="archive-paid" class="list"></div>
+          </div>
+        </section>
+
+        <!-- Mileage rates (Finance only) -->
+        <section id="view-rates" class="view" data-view="rates" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Mileage rates</h2>
+              <button class="link-btn" data-refresh="rates">Refresh</button>
+            </div>
+            <p class="panel-sub">The driving reimbursement rates staff pick from. Add new ones when rates change; turn old ones off to hide them from the form (past expenses keep the rate they used).</p>
+
+            <form id="rate-form" class="form rate-form" novalidate>
+              <h3 id="rate-form-title" class="dash-h">Add a rate</h3>
+              <input type="hidden" id="rate-id" />
+              <label class="field">
+                <span>Name <em class="opt">(what staff see)</em></span>
+                <input id="rate-name" type="text" maxlength="80" placeholder="e.g. US – Car (per mile)" />
+              </label>
+              <div class="row">
+                <label class="field">
+                  <span>Per</span>
+                  <select id="rate-unit">
+                    <option value="miles">mile</option>
+                    <option value="km">km</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Rate</span>
+                  <input id="rate-amount" type="number" inputmode="decimal" step="0.001" min="0" placeholder="0.70" />
+                </label>
+                <label class="field">
+                  <span>Currency</span>
+                  <select id="rate-currency"></select>
+                </label>
+              </div>
+              <label class="check-row">
+                <input type="checkbox" id="rate-active" checked />
+                <span>Active (shown on the expense form)</span>
+              </label>
+              <div class="rate-form-actions">
+                <button type="submit" class="btn primary" id="rate-save">Add rate</button>
+                <button type="button" class="link-btn" id="rate-cancel" hidden>Cancel</button>
+              </div>
+            </form>
+
+            <h3 class="dash-h">Current rates</h3>
+            <div id="rates-list" class="list"></div>
           </div>
         </section>
       </main>
