@@ -15,6 +15,7 @@
     mineExpenses: [],
     editingId: null,
     importRows: [],
+    importMode: 'add', // 'add' | 'reconcile'
   };
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -1123,46 +1124,120 @@
       return;
     }
 
-    el.importPreview.innerHTML = state.importRows.map((r) => {
-      const bad = !r.importable;
-      const checked = !bad && !r.duplicate;
-      const flags = [];
-      if (r.duplicate) flags.push(`<span class="badge rejected">Duplicate · ${escapeHtml(r.dupReason)}</span>`);
-      (r.issues || []).forEach((i) => { if (i !== 'Currency') flags.push(`<span class="issue">Missing ${escapeHtml(i.toLowerCase())}</span>`); });
-      const title = r.merchant || r.description || '(no merchant)';
-      const amt = r.amount != null ? `${money(r.amount, r.currency)}` : '—';
-      return `
-        <div class="import-row ${bad ? 'bad' : ''} ${r.duplicate ? 'dup' : ''}" data-line="${escapeHtml(String(r.line))}">
-          <input type="checkbox" class="ir-check" ${checked ? 'checked' : ''} ${bad ? 'disabled' : ''} />
-          <div class="ir-main">
-            <div class="ir-top"><strong>${escapeHtml(title)}</strong><span class="ir-amt">${escapeHtml(amt)}</span></div>
-            <div class="ir-meta">${escapeHtml([fmtDate(r.date) || 'no date', r.merchant && r.description ? r.description : ''].filter(Boolean).join(' · '))}</div>
-            ${flags.length ? `<div class="ir-flags">${flags.join(' ')}</div>` : ''}
-          </div>
-          <select class="ir-acct" ${bad ? 'disabled' : ''}>${accountOptionsHtml(r.accountCode)}</select>
-        </div>`;
-    }).join('');
+    el.importPreview.innerHTML = state.importRows.map(importRowHtml).join('');
+    $('#import-commit-btn').textContent = 'Import selected';
     el.importActions.hidden = false;
+  }
+
+  // One selectable row (checkbox + details + account picker), shared by the
+  // "add" preview and the reconcile "missing" list.
+  function importRowHtml(r) {
+    const bad = !r.importable;
+    const checked = !bad && !r.duplicate;
+    const flags = [];
+    if (r.duplicate) flags.push(`<span class="badge rejected">Duplicate · ${escapeHtml(r.dupReason)}</span>`);
+    (r.issues || []).forEach((i) => { if (i !== 'Currency') flags.push(`<span class="issue">Missing ${escapeHtml(i.toLowerCase())}</span>`); });
+    const title = r.merchant || r.description || '(no merchant)';
+    const amt = r.amount != null ? `${money(r.amount, r.currency)}` : '—';
+    return `
+      <div class="import-row ${bad ? 'bad' : ''} ${r.duplicate ? 'dup' : ''}" data-line="${escapeHtml(String(r.line))}">
+        <input type="checkbox" class="ir-check" ${checked ? 'checked' : ''} ${bad ? 'disabled' : ''} />
+        <div class="ir-main">
+          <div class="ir-top"><strong>${escapeHtml(title)}</strong><span class="ir-amt">${escapeHtml(amt)}</span></div>
+          <div class="ir-meta">${escapeHtml([fmtDate(r.date) || 'no date', r.merchant && r.description ? r.description : ''].filter(Boolean).join(' · '))}</div>
+          ${flags.length ? `<div class="ir-flags">${flags.join(' ')}</div>` : ''}
+        </div>
+        <select class="ir-acct" ${bad ? 'disabled' : ''}>${accountOptionsHtml(r.accountCode)}</select>
+      </div>`;
+  }
+
+  // A plain, read-only line (matched / extra lists in reconcile).
+  function reconcileLine(r, tail) {
+    const title = r.merchant || r.description || '(no merchant)';
+    const amt = r.amount != null ? money(r.amount, r.currency) : '—';
+    return `
+      <div class="recon-line">
+        <div class="recon-main">
+          <div class="recon-title">${escapeHtml(title)}</div>
+          <div class="expense-meta">${escapeHtml([fmtDate(r.date), tail].filter(Boolean).join(' · '))}</div>
+        </div>
+        <div class="recon-amt">${escapeHtml(amt)}</div>
+      </div>`;
+  }
+
+  const IMPORT_HINTS = {
+    add: 'Upload a CSV or Excel file — like your monthly summary of expenses that came in by email. Reimbly reads it, flags likely duplicates, and lets you review everything before anything is added.',
+    reconcile: 'Upload the list of reimbursable expenses from your budget app. Reimbly checks each one against what you’ve already submitted and shows you exactly what’s still missing for the period.',
+  };
+
+  function setImportMode(mode) {
+    state.importMode = mode;
+    $$('.import-mode .type-btn').forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
+    $('#import-mode-hint').textContent = IMPORT_HINTS[mode] || '';
+    clearImport();
   }
 
   async function onImportFile(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
+    const reconciling = state.importMode === 'reconcile';
     el.importName.textContent = `${file.name} · reading…`;
-    el.importPreview.innerHTML = `<div class="state">Reading your file…</div>`;
+    el.importPreview.innerHTML = `<div class="state">${reconciling ? 'Checking coverage…' : 'Reading your file…'}</div>`;
     el.importSummary.innerHTML = '';
     el.importActions.hidden = true;
     try {
       const base64 = await readFileAsBase64(file);
-      const data = await api('import-parse', {
-        method: 'POST',
-        body: { file: { filename: file.name, contentType: file.type || 'text/csv', base64 } },
-      });
+      const body = { file: { filename: file.name, contentType: file.type || 'text/csv', base64 } };
+      const data = await api(reconciling ? 'reconcile' : 'import-parse', { method: 'POST', body });
       el.importName.textContent = file.name;
-      renderImportPreview(data);
+      if (reconciling) renderReconcile(data);
+      else renderImportPreview(data);
     } catch (e) {
       el.importName.textContent = file.name;
       el.importPreview.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function renderReconcile(data) {
+    const s = data.summary || { total: 0, matched: 0, missing: 0, extra: 0 };
+    const matched = data.matched || [];
+    const missing = data.missing || [];
+    const extra = data.extra || [];
+    // The missing rows become the selectable list (reusing the import commit path).
+    state.importRows = missing;
+
+    const period = s.from && s.to ? ` · ${escapeHtml(fmtDate(s.from))}–${escapeHtml(fmtDate(s.to))}` : '';
+    const cls = s.missing === 0 ? 'good' : 'warn';
+    el.importSummary.innerHTML = `
+      <div class="recon-summary ${cls}">
+        ${s.missing === 0
+          ? `✓ All ${s.total} expense${s.total === 1 ? '' : 's'} from your budget file are already in Reimbly${period}.`
+          : `⚠ ${s.missing} of ${s.total} not in Reimbly yet · ${s.matched} already captured${period}.`}
+      </div>`;
+
+    let html = '';
+    if (missing.length) {
+      html += `<h3 class="dash-h">Missing — not in Reimbly yet (${missing.length})</h3>`;
+      html += `<p class="import-note">Tick the ones to add. They come in as Submitted expenses (add receipts after).</p>`;
+      html += missing.map(importRowHtml).join('');
+    }
+    if (matched.length) {
+      html += `<details class="import-help"><summary>✓ Already captured (${matched.length})</summary>${
+        matched.map((m) => reconcileLine(m, `matched to your ${escapeHtml(m.matchedTo.status || 'submitted').toLowerCase()} expense`)).join('')
+      }</details>`;
+    }
+    if (extra.length) {
+      html += `<details class="import-help"><summary>In Reimbly but not on your budget list (${extra.length})</summary>${
+        extra.map((x) => reconcileLine(x, escapeHtml((x.status || '').toLowerCase()))).join('')
+      }</details>`;
+    }
+    el.importPreview.innerHTML = html || `<div class="state">Nothing to reconcile.</div>`;
+
+    if (missing.length) {
+      $('#import-commit-btn').textContent = `Add the ${missing.length} missing`;
+      el.importActions.hidden = false;
+    } else {
+      el.importActions.hidden = true;
     }
   }
 
@@ -1411,6 +1486,7 @@
     $('#import-choose').addEventListener('click', () => el.importFile.click());
     $('#import-template').addEventListener('click', downloadTemplate);
     $('#import-copy').addEventListener('click', copyImportInstructions);
+    $$('.import-mode .type-btn').forEach((b) => b.addEventListener('click', () => setImportMode(b.dataset.mode)));
     $('#import-commit-btn').addEventListener('click', commitImport);
     $('#import-cancel').addEventListener('click', clearImport);
     el.importFile.addEventListener('change', onImportFile);

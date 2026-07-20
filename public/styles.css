@@ -271,6 +271,14 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
   .import-row { flex-wrap: wrap; }
   .ir-acct { max-width: none; width: 100%; }
 }
+.recon-summary { border-radius: var(--radius-sm); padding: 12px 14px; font-weight: 700; margin-bottom: 4px; }
+.recon-summary.good { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+.recon-summary.warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.recon-line { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.recon-line:last-child { border-bottom: 0; }
+.recon-title { font-weight: 700; }
+.recon-amt { font-weight: 800; white-space: nowrap; }
+
 .import-help { margin: 4px 0 16px; font-size: 0.88rem; color: var(--ink-soft); }
 .import-help summary { cursor: pointer; font-weight: 700; color: var(--brand-ink); }
 .import-help ul { margin: 8px 0; padding-left: 20px; }

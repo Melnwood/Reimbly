@@ -161,7 +161,11 @@
         <section id="view-import" class="view" data-view="import" hidden>
           <div class="panel">
             <h2>Import from a spreadsheet</h2>
-            <p class="panel-sub">Upload a CSV or Excel file — like your monthly summary of expenses that came in by email. Reimbly reads it, flags likely duplicates, and lets you review everything before anything is added.</p>
+            <div class="type-toggle import-mode" role="group" aria-label="Import mode">
+              <button type="button" class="type-btn active" data-mode="add">➕ Add expenses</button>
+              <button type="button" class="type-btn" data-mode="reconcile">✓ Check coverage</button>
+            </div>
+            <p id="import-mode-hint" class="panel-sub">Upload a CSV or Excel file — like your monthly summary of expenses that came in by email. Reimbly reads it, flags likely duplicates, and lets you review everything before anything is added.</p>
             <div class="import-bar">
               <button type="button" class="btn ghost small" id="import-choose">📄 Choose a file</button>
               <button type="button" class="link-btn" id="import-template">Download a template</button>
