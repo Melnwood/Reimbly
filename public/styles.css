@@ -1,19 +1,21 @@
 /* Reimbly — warm, simple, friendly. */
 
 :root {
-  --bg: #fbf7f0;
-  --bg-soft: #f4ecdf;
+  --bg: #f6f7fb;
+  --bg-soft: #eef0f7;
   --card: #ffffff;
-  --ink: #2c2318;
-  --ink-soft: #6b5d4a;
-  --line: #ece3d4;
-  --brand: #b45309; /* warm amber */
-  --brand-ink: #9a4708;
-  --brand-soft: #fdefdc;
-  --accent: #0f766e; /* teal for approved */
-  --danger: #b91c1c;
-  --warn: #a16207;
-  --shadow: 0 1px 2px rgba(44, 35, 24, 0.06), 0 8px 24px rgba(44, 35, 24, 0.08);
+  --ink: #17223b; /* deep navy (wordmark) */
+  --ink-soft: #5c6580;
+  --line: #e6e8f1;
+  --brand: #e11d74; /* magenta — primary actions */
+  --brand-ink: #c4155f; /* darker magenta — text / hover */
+  --brand-soft: #ffe6f1; /* light pink tint */
+  --accent: #0e9d8c; /* brand teal (approved) */
+  --danger: #dc2626;
+  --warn: #d97706;
+  /* Brand gradient (teal → yellow → orange → magenta) for the logo + accents. */
+  --grad: linear-gradient(120deg, #17c0a6 0%, #f7c948 36%, #fb7a1e 64%, #f5327f 100%);
+  --shadow: 0 1px 2px rgba(23, 34, 59, 0.06), 0 8px 24px rgba(23, 34, 59, 0.10);
   --radius: 16px;
   --radius-sm: 10px;
   font-synthesis: none;
@@ -29,7 +31,7 @@ html, body { height: 100%; }
 
 body {
   margin: 0;
-  background: radial-gradient(1200px 600px at 50% -10%, #fff6e6 0%, var(--bg) 55%) fixed;
+  background: radial-gradient(1200px 600px at 50% -10%, #fdeaf3 0%, var(--bg) 55%) fixed;
   color: var(--ink);
   font-family: ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -59,7 +61,11 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 /* ---------- Wordmark ---------- */
 .wordmark { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; }
 .wordmark img.mark { width: 34px; height: 34px; border-radius: 9px; display: block; }
-.wordmark .name { font-size: 1.5rem; color: var(--brand-ink); letter-spacing: -0.02em; }
+.tagline { display: flex; gap: 8px; margin: 6px 0 0; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.tagline span:nth-child(1) { color: #f5327f; }
+.tagline span:nth-child(2) { color: #fb7a1e; }
+.tagline span:nth-child(3) { color: #17c0a6; }
+.wordmark .name { font-size: 1.5rem; color: var(--ink); letter-spacing: -0.02em; text-transform: lowercase; }
 .wordmark.small .name { font-size: 1.15rem; }
 .wordmark.small img.mark { width: 27px; height: 27px; border-radius: 7px; }
 
@@ -341,7 +347,7 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .bar-label { font-weight: 600; }
 .bar-val { color: var(--ink-soft); font-weight: 700; white-space: nowrap; }
 .bar-track { height: 9px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; }
-.bar-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #b4530a); border-radius: 999px; }
+.bar-fill { height: 100%; background: var(--grad); border-radius: 999px; }
 .dash-status { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ---------- Empty / loading states ---------- */
