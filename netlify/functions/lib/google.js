@@ -68,7 +68,7 @@ async function verifyRequest(headers) {
   const domain = email.split('@')[1];
   const expected = (allowedDomain || '').toLowerCase();
   if (expected && domain !== expected) {
-    const err = new Error(`Only ${expected} accounts can use Reimbly.`);
+    const err = new Error(`Only ${expected} accounts can use Rembly.`);
     err.statusCode = 403;
     throw err;
   }

@@ -18,7 +18,7 @@ exports.handler = async (event) => {
     return ok({
       googleClientId,
       allowedDomain: process.env.ALLOWED_DOMAIN || '',
-      appName: 'Reimbly',
+      appName: 'Rembly',
     });
   } catch (err) {
     return error(err);

@@ -87,7 +87,7 @@ exports.handler = async (event) => {
       let dupReason = '';
       if (key && existingKeys.has(key)) {
         duplicate = true;
-        dupReason = 'Already in Reimbly';
+        dupReason = 'Already in Rembly';
       } else if (key && seen.has(key)) {
         duplicate = true;
         dupReason = 'Repeated in this file';

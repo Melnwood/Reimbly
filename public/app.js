@@ -140,7 +140,7 @@
     try {
       state.config = await api('config', { auth: false });
     } catch (e) {
-      el.boot.innerHTML = `<p>Reimbly isn't configured yet.<br /><small>${escapeHtml(e.message)}</small></p>`;
+      el.boot.innerHTML = `<p>Rembly isn't configured yet.<br /><small>${escapeHtml(e.message)}</small></p>`;
       return;
     }
     initGoogle();
@@ -1081,7 +1081,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'reimbly-import-template.csv';
+    a.download = 'rembly-import-template.csv';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1172,8 +1172,8 @@
   }
 
   const IMPORT_HINTS = {
-    add: 'Upload a CSV or Excel file — like your monthly summary of expenses that came in by email. Reimbly reads it, flags likely duplicates, and lets you review everything before anything is added.',
-    reconcile: 'Upload the list of reimbursable expenses from your budget app. Reimbly checks each one against what you’ve already submitted and shows you exactly what’s still missing for the period.',
+    add: 'Upload a CSV or Excel file — like your monthly summary of expenses that came in by email. Rembly reads it, flags likely duplicates, and lets you review everything before anything is added.',
+    reconcile: 'Upload the list of reimbursable expenses from your budget app. Rembly checks each one against what you’ve already submitted and shows you exactly what’s still missing for the period.',
   };
 
   function setImportMode(mode) {
@@ -1217,13 +1217,13 @@
     el.importSummary.innerHTML = `
       <div class="recon-summary ${cls}">
         ${s.missing === 0
-          ? `✓ All ${s.total} expense${s.total === 1 ? '' : 's'} from your budget file are already in Reimbly${period}.`
-          : `⚠ ${s.missing} of ${s.total} not in Reimbly yet · ${s.matched} already captured${period}.`}
+          ? `✓ All ${s.total} expense${s.total === 1 ? '' : 's'} from your budget file are already in Rembly${period}.`
+          : `⚠ ${s.missing} of ${s.total} not in Rembly yet · ${s.matched} already captured${period}.`}
       </div>`;
 
     let html = '';
     if (missing.length) {
-      html += `<h3 class="dash-h">Missing — not in Reimbly yet (${missing.length})</h3>`;
+      html += `<h3 class="dash-h">Missing — not in Rembly yet (${missing.length})</h3>`;
       html += `<p class="import-note">Tick the ones to add. They come in as Submitted expenses (add receipts after).</p>`;
       html += missing.map(importRowHtml).join('');
     }
@@ -1233,7 +1233,7 @@
       }</details>`;
     }
     if (extra.length) {
-      html += `<details class="import-help"><summary>In Reimbly but not on your budget list (${extra.length})</summary>${
+      html += `<details class="import-help"><summary>In Rembly but not on your budget list (${extra.length})</summary>${
         extra.map((x) => reconcileLine(x, escapeHtml((x.status || '').toLowerCase()))).join('')
       }</details>`;
     }
@@ -1509,7 +1509,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'reimbly-people-template.csv';
+    a.download = 'rembly-people-template.csv';
     document.body.appendChild(a);
     a.click();
     a.remove();
