@@ -8,8 +8,10 @@ const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const { TABLES, STATUS, EVENTS, ensureStaff, logActivity } = require('./lib/domain');
+const notify = require('./lib/notify');
 
 const today = () => new Date().toISOString().slice(0, 10);
+const firstLookup = (v) => (Array.isArray(v) ? v[0] : v);
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'POST');
@@ -34,6 +36,7 @@ exports.handler = async (event) => {
 
     let paid = 0;
     const skipped = [];
+    const perSubmitter = new Map(); // email -> { count, totalUsd }
     for (const id of ids) {
       const rec = await airtable.findFirst(TABLES.EXPENSES, {
         filterByFormula: `RECORD_ID() = '${id.replace(/'/g, "\\'")}'`,
@@ -48,6 +51,22 @@ exports.handler = async (event) => {
       });
       await logActivity({ expenseId: id, event: EVENTS.PAID, user });
       paid += 1;
+      const email = (firstLookup(rec.fields['Submitter Email']) || '').toLowerCase();
+      if (email) {
+        const g = perSubmitter.get(email) || { count: 0, totalUsd: 0 };
+        g.count += 1;
+        g.totalUsd += Number(rec.fields['Amount (USD)']) || 0;
+        perSubmitter.set(email, g);
+      }
+    }
+
+    // Tell each person they've been reimbursed (best-effort).
+    try {
+      for (const [email, g] of perSubmitter) {
+        await notify.submitterPaid({ submitter: { email }, count: g.count, totalUsd: g.totalUsd });
+      }
+    } catch (e) {
+      console.error('[rembly] paid notify failed', e && e.message);
     }
 
     return ok({ paid, skipped });

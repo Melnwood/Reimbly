@@ -7,8 +7,10 @@ const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const { TABLES, STATUS, EVENTS, ensureStaff, isApprover, logActivity } = require('./lib/domain');
+const notify = require('./lib/notify');
 
 const today = () => new Date().toISOString().slice(0, 10);
+const firstLookup = (v) => (Array.isArray(v) ? v[0] : v);
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'POST');
@@ -39,6 +41,7 @@ exports.handler = async (event) => {
 
     let approved = 0;
     const skipped = [];
+    const perSubmitter = new Map(); // email -> { name, count, totalUsd }
     for (const id of ids) {
       const rec = await airtable.findFirst(TABLES.EXPENSES, {
         filterByFormula: `RECORD_ID() = '${id.replace(/'/g, "\\'")}'`,
@@ -54,6 +57,22 @@ exports.handler = async (event) => {
       });
       await logActivity({ expenseId: id, event: EVENTS.APPROVED, user });
       approved += 1;
+      const email = (firstLookup(rec.fields['Submitter Email']) || '').toLowerCase();
+      if (email) {
+        const g = perSubmitter.get(email) || { name: '', count: 0, totalUsd: 0 };
+        g.count += 1;
+        g.totalUsd += Number(rec.fields['Amount (USD)']) || 0;
+        perSubmitter.set(email, g);
+      }
+    }
+
+    // Tell each person their report was approved (best-effort).
+    try {
+      for (const [email, g] of perSubmitter) {
+        await notify.submitterApproved({ submitter: { email }, count: g.count, totalUsd: g.totalUsd });
+      }
+    } catch (e) {
+      console.error('[rembly] batch notify failed', e && e.message);
     }
 
     return ok({ approved, skipped });

@@ -9,6 +9,7 @@ const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const { TABLES, STATUS, EVENTS, ensureStaff, displayMaps, shapeExpense, logActivity } = require('./lib/domain');
+const notify = require('./lib/notify');
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -59,7 +60,14 @@ exports.handler = async (event) => {
     ]);
     await logActivity({ expenseId: id, event: EVENTS.KICKED_BACK, user, note });
 
-    return ok({ expense: shapeExpense(updated, maps) });
+    const shaped = shapeExpense(updated, maps);
+    try {
+      await notify.submitterSentBack({ submitter: { email: shaped.submitterEmail, name: shaped.submitterName }, expense: shaped, note });
+    } catch (e) {
+      console.error('[rembly] kickback notify failed', e && e.message);
+    }
+
+    return ok({ expense: shaped });
   } catch (err) {
     return error(err);
   }

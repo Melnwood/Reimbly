@@ -79,6 +79,17 @@ async function findStaffByEmail(email) {
   });
 }
 
+// A staff member by record id → { id, name, email, uplineId }, or null.
+async function staffById(id) {
+  if (!id) return null;
+  const rec = await airtable.findFirst(TABLES.STAFF, {
+    filterByFormula: `RECORD_ID() = '${esc(String(id))}'`,
+  });
+  if (!rec) return null;
+  const f = rec.fields || {};
+  return { id: rec.id, name: f.Name || '', email: f.Email || '', uplineId: firstLinkId(f.Upline) };
+}
+
 // Statuses a submitter may still edit or delete their own expense in.
 const EDITABLE_STATUSES = new Set(['Submitted', 'Rejected', 'Draft']);
 
@@ -427,6 +438,7 @@ module.exports = {
   CATEGORY_NAMES,
   ensureStaff,
   findStaffByEmail,
+  staffById,
   getExpenseById,
   canModify,
   isApprover,

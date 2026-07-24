@@ -20,7 +20,9 @@ const {
   displayMaps,
   shapeExpense,
   logActivity,
+  staffById,
 } = require('./lib/domain');
+const notify = require('./lib/notify');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024; // ~8 MB decoded
 
@@ -38,7 +40,7 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { id: staffId } = await ensureStaff(user);
+    const { id: staffId, record: staffRec } = await ensureStaff(user);
     const body = parseBody(event);
 
     let description = String(body.description || '').trim();
@@ -140,10 +142,20 @@ exports.handler = async (event) => {
       displayMaps(),
     ]);
 
-    return ok({
-      expense: shapeExpense(fresh || created, maps),
-      warning: receiptWarning || dupWarning,
-    });
+    const shaped = shapeExpense(fresh || created, maps);
+
+    // Let the approver know something's waiting (best-effort).
+    try {
+      const uplineId = Array.isArray(staffRec.fields && staffRec.fields.Upline) ? staffRec.fields.Upline[0] : null;
+      if (uplineId) {
+        const approver = await staffById(uplineId);
+        await notify.approverNewExpense({ approver, submitterName: user.name, expense: shaped });
+      }
+    } catch (e) {
+      console.error('[rembly] submit notify failed', e && e.message);
+    }
+
+    return ok({ expense: shaped, warning: receiptWarning || dupWarning });
   } catch (err) {
     return error(err);
   }

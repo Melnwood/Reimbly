@@ -152,6 +152,34 @@ languages, and translates the description to English.
 
 ---
 
+## Email notifications (optional)
+
+Rembly can email people the moment something needs them, so nobody has to keep
+checking the app:
+
+- **A new expense to approve** → the submitter's upline (approver) gets an email.
+- **Approved** → the submitter is told.
+- **Sent back** → the submitter gets the note explaining what to fix.
+- **Reimbursed** → the submitter is told they've been paid.
+
+It's off until you add a mail key, and every send is best-effort — a failed
+email never blocks the expense from going through.
+
+- Sign up at <https://resend.com> (free tier is plenty), verify your
+  `josiahventure.com` domain, and create an API key.
+- Add these environment variables in Netlify, then redeploy:
+
+  | Key | Value |
+  |---|---|
+  | `RESEND_API_KEY` | your `re_…` key from Resend |
+  | `NOTIFY_FROM` | *(optional)* the sender, e.g. `Rembly <rembly@josiahventure.com>` (must be on a verified domain) |
+  | `APP_URL` | *(optional)* your live URL, so the email's button links back — e.g. `https://reimbly.netlify.app` |
+
+- Leave `RESEND_API_KEY` unset to keep notifications off — the app works exactly
+  the same, people just check the app themselves.
+
+---
+
 ## Set who can approve
 
 Approving is controlled by the **Role** field in the **Staff** table of the base:
