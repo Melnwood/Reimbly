@@ -280,6 +280,76 @@
     btn.onclick = on ? disableFaceId : enrollFaceId;
   }
 
+  // ---------- Push notifications (iPhone / browser alerts) ----------
+  // Works on Android/desktop browsers and on iOS 16.4+ once Rembly is added to
+  // the Home Screen. Feature-flagged by the server's VAPID public key.
+
+  let swReg = null;
+  const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const pushConfigured = () => !!(state.config && state.config.vapidPublicKey);
+
+  function urlB64ToUint8Array(base64) {
+    const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+    const b = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(b);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i += 1) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  async function registerSW() {
+    if (!pushSupported()) return null;
+    if (swReg) return swReg;
+    try { swReg = await navigator.serviceWorker.register('/sw.js'); } catch { swReg = null; }
+    return swReg;
+  }
+
+  async function enablePush() {
+    if (!pushSupported() || !pushConfigured()) return;
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { toast('Notifications are blocked for this app in your settings.', 'bad'); return; }
+      const reg = await registerSW();
+      if (!reg) throw new Error('no sw');
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToUint8Array(state.config.vapidPublicKey),
+      });
+      await api('save-push-subscription', { method: 'POST', body: { subscription: sub.toJSON() } });
+      toast('Alerts are on for this device.', 'good');
+    } catch (e) {
+      toast('Couldn’t turn on alerts on this device.', 'bad');
+    }
+    updatePushToggle();
+  }
+
+  async function disablePush() {
+    try {
+      const reg = await registerSW();
+      const sub = reg && (await reg.pushManager.getSubscription());
+      if (sub) {
+        await api('save-push-subscription', { method: 'POST', body: { unsubscribe: sub.endpoint } }).catch(() => {});
+        await sub.unsubscribe().catch(() => {});
+      }
+      toast('Alerts turned off.', 'good');
+    } catch { /* best-effort */ }
+    updatePushToggle();
+  }
+
+  async function updatePushToggle() {
+    const btn = $('#push-toggle');
+    if (!btn) return;
+    if (!pushSupported() || !pushConfigured()) { btn.hidden = true; return; }
+    let on = false;
+    try {
+      const reg = await registerSW();
+      on = !!(reg && (await reg.pushManager.getSubscription())) && Notification.permission === 'granted';
+    } catch { on = false; }
+    btn.hidden = false;
+    btn.textContent = on ? '🔔 Alerts on' : 'Turn on alerts';
+    btn.onclick = on ? disablePush : enablePush;
+  }
+
   async function unlockWithFaceId() {
     const email = (safeGet(LS.last) || '').toLowerCase();
     const credId = email && safeGet(LS.cred(email));
@@ -321,6 +391,7 @@
     el.app.hidden = false;
     saveSession(); // remember this session so Face ID can restore it
     updateFaceIdToggle();
+    updatePushToggle();
     el.whoName.textContent = state.me.name;
     el.whoRole.textContent = state.me.role;
 

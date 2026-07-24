@@ -178,6 +178,35 @@ email never blocks the expense from going through.
 - Leave `RESEND_API_KEY` unset to keep notifications off — the app works exactly
   the same, people just check the app themselves.
 
+### iPhone / phone push alerts (optional)
+
+On top of email, Rembly can pop a notification straight onto someone's phone the
+same moment — approver gets "new expense to approve", submitter gets approved /
+sent-back / reimbursed. It uses the same four moments as email.
+
+Turning it on:
+
+1. **Make VAPID keys once.** On any computer with Node: `npx web-push generate-vapid-keys`.
+   You get a **public** key and a **private** key.
+2. Add these environment variables in Netlify, then redeploy:
+
+   | Key | Value |
+   |---|---|
+   | `VAPID_PUBLIC_KEY` | the public key from step 1 |
+   | `VAPID_PRIVATE_KEY` | the private key from step 1 (secret) |
+   | `VAPID_SUBJECT` | a contact, e.g. `mailto:it@josiahventure.com` |
+
+3. In the app, each person taps **"Turn on alerts"** (top-right) on the device
+   they want to be notified on, and allows notifications.
+
+**On iPhone there's one extra step Apple requires:** open Rembly in Safari, tap
+the **Share** button → **Add to Home Screen**, then open Rembly from that new
+home-screen icon and tap "Turn on alerts". (iOS only delivers web push to apps
+added to the Home Screen, on iOS 16.4 or newer.) Android and desktop browsers
+work right in the browser with no extra step.
+
+Leave the VAPID keys unset to keep push off — email (or neither) still works.
+
 ---
 
 ## Set who can approve

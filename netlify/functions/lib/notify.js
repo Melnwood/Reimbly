@@ -1,16 +1,24 @@
 'use strict';
 
-// Email notifications. Feature-flagged: if RESEND_API_KEY isn't set, every
-// send is a silent no-op, so the app runs fine without it. Sends are always
-// best-effort — a failed email never blocks the action that triggered it.
+// Notifications — email and iPhone/browser push. Both are feature-flagged: with
+// no keys set every send is a silent no-op, so the app runs fine without them.
+// Sends are always best-effort — a failed notification never blocks the action
+// that triggered it.
 //
 // Env:
-//   RESEND_API_KEY   turn notifications on (https://resend.com)
-//   NOTIFY_FROM      e.g. "Rembly <rembly@josiahventure.com>" (verified sender)
-//   APP_URL          link back to the app (default the Netlify site)
+//   RESEND_API_KEY      turn email on (https://resend.com)
+//   NOTIFY_FROM         e.g. "Rembly <rembly@josiahventure.com>" (verified sender)
+//   APP_URL             link back to the app (default the Netlify site)
+//   VAPID_PUBLIC_KEY    turn push on (generate with: npx web-push generate-vapid-keys)
+//   VAPID_PRIVATE_KEY   the matching private key (secret)
+//   VAPID_SUBJECT       a contact URL or mailto, e.g. mailto:it@josiahventure.com
+
+const domain = require('./domain');
 
 const APP_NAME = 'Rembly';
 const appUrl = () => process.env.APP_URL || 'https://reimbly.netlify.app';
+
+const pushOn = () => !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
 
 function usd(n) {
   const v = Number(n);
@@ -71,6 +79,41 @@ async function sendEmail({ to, subject, html, text }) {
   }
 }
 
+// Send a push to every device a person has registered. Off unless the VAPID
+// keys are set. Prunes subscriptions the push service reports as gone (404/410).
+async function sendPush({ to, title, body, url }) {
+  if (!pushOn() || !to) return false;
+  let subs;
+  try {
+    subs = await domain.getPushSubs(to);
+  } catch (e) {
+    return false;
+  }
+  if (!subs.length) return false;
+
+  const webpush = require('web-push');
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || 'mailto:it@josiahventure.com',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY,
+  );
+  const payload = JSON.stringify({ title: title || APP_NAME, body: body || '', url: url || appUrl() });
+  const dead = [];
+  await Promise.all(subs.map(async (sub) => {
+    try {
+      await webpush.sendNotification(sub, payload);
+    } catch (e) {
+      const code = e && e.statusCode;
+      if (code === 404 || code === 410) dead.push(sub.endpoint); // gone for good
+      else console.error('[rembly] push failed', code || (e && e.message));
+    }
+  }));
+  if (dead.length) {
+    try { await domain.removePushSubs(to, dead); } catch (e) { /* best-effort */ }
+  }
+  return true;
+}
+
 // ---- the notifications ------------------------------------------------
 
 // A new expense is waiting for an approver.
@@ -83,7 +126,10 @@ async function approverNewExpense({ approver, submitterName, expense }) {
     cta: `${appUrl()}/#approvals`,
     ctaLabel: 'Review it',
   });
-  await sendEmail({ to: approver.email, subject: `${submitterName || 'A staff member'} submitted an expense to approve`, html, text });
+  await Promise.all([
+    sendEmail({ to: approver.email, subject: `${submitterName || 'A staff member'} submitted an expense to approve`, html, text }),
+    sendPush({ to: approver.email, title: 'New expense to approve', body: `${submitterName || 'A staff member'} — ${amountOf(expense) || labelOf(expense)}`, url: `${appUrl()}/#approvals` }),
+  ]);
 }
 
 // A submitter's expense(s) were approved.
@@ -99,7 +145,10 @@ async function submitterApproved({ submitter, expense, count = 1, totalUsd }) {
     cta: `${appUrl()}/#mine`,
     ctaLabel: 'View in Rembly',
   });
-  await sendEmail({ to: submitter.email, subject: many ? `${count} expenses approved` : 'Your expense was approved', html, text });
+  await Promise.all([
+    sendEmail({ to: submitter.email, subject: many ? `${count} expenses approved` : 'Your expense was approved', html, text }),
+    sendPush({ to: submitter.email, title: many ? `${count} expenses approved` : 'Expense approved', body: many ? `Total ${usd(totalUsd)}`.trim() : `${labelOf(expense)}${amountOf(expense) ? ` — ${amountOf(expense)}` : ''}`, url: `${appUrl()}/#mine` }),
+  ]);
 }
 
 // A submitter's expense was sent back / kicked back.
@@ -112,7 +161,10 @@ async function submitterSentBack({ submitter, expense, note }) {
     cta: `${appUrl()}/#mine`,
     ctaLabel: 'Fix &amp; resubmit',
   });
-  await sendEmail({ to: submitter.email, subject: 'Your expense needs a quick fix', html, text });
+  await Promise.all([
+    sendEmail({ to: submitter.email, subject: 'Your expense needs a quick fix', html, text }),
+    sendPush({ to: submitter.email, title: 'Expense sent back', body: note ? `“${note}”` : `${labelOf(expense)} needs a quick fix`, url: `${appUrl()}/#mine` }),
+  ]);
 }
 
 // A submitter was reimbursed.
@@ -124,7 +176,10 @@ async function submitterPaid({ submitter, count = 1, totalUsd }) {
     cta: `${appUrl()}/#mine`,
     ctaLabel: 'See details',
   });
-  await sendEmail({ to: submitter.email, subject: "You've been reimbursed", html, text });
+  await Promise.all([
+    sendEmail({ to: submitter.email, subject: "You've been reimbursed", html, text }),
+    sendPush({ to: submitter.email, title: "You've been reimbursed 💸", body: `${count} expense${count === 1 ? '' : 's'}${totalUsd != null ? ` — ${usd(totalUsd)}` : ''}`, url: `${appUrl()}/#mine` }),
+  ]);
 }
 
-module.exports = { sendEmail, approverNewExpense, submitterApproved, submitterSentBack, submitterPaid };
+module.exports = { sendEmail, sendPush, approverNewExpense, submitterApproved, submitterSentBack, submitterPaid };

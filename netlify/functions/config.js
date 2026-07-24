@@ -19,6 +19,8 @@ exports.handler = async (event) => {
       googleClientId,
       allowedDomain: process.env.ALLOWED_DOMAIN || '',
       appName: 'Rembly',
+      // Public VAPID key lets the browser subscribe to push. Empty = push off.
+      vapidPublicKey: process.env.VAPID_PUBLIC_KEY || '',
     });
   } catch (err) {
     return error(err);

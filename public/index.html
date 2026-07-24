@@ -8,6 +8,9 @@
     <meta name="description" content="A warm, simple way to submit and approve expenses at Josiah Venture." />
     <link rel="icon" type="image/png" href="logo-mark.png" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Rembly" />
     <link rel="stylesheet" href="styles.css" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
@@ -69,6 +72,7 @@
           <span id="who-name" class="who-name"></span>
           <span id="who-role" class="pill"></span>
           <button id="faceid-toggle" class="link-btn" hidden></button>
+          <button id="push-toggle" class="link-btn" hidden></button>
           <button id="signout" class="link-btn">Sign out</button>
         </div>
       </header>

@@ -90,6 +90,52 @@ async function staffById(id) {
   return { id: rec.id, name: f.Name || '', email: f.Email || '', uplineId: firstLinkId(f.Upline) };
 }
 
+// ---- push subscriptions (for iPhone / browser notifications) ----------
+// Each person's device push subscriptions live as a JSON array in a single
+// "Push Subscriptions" long-text field on their Staff row. No new table needed.
+
+function parseSubs(raw) {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((s) => s && s.endpoint) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Every push subscription on file for a person, by email.
+async function getPushSubs(email) {
+  const rec = await findStaffByEmail(String(email || ''));
+  return rec ? parseSubs(rec.fields && rec.fields['Push Subscriptions']) : [];
+}
+
+// Register a device's subscription (idempotent — replaces one with the same
+// endpoint). Returns true once saved, false if the person isn't in Staff yet.
+async function savePushSub(email, sub) {
+  if (!sub || !sub.endpoint) return false;
+  const rec = await findStaffByEmail(String(email || ''));
+  if (!rec) return false;
+  const subs = parseSubs(rec.fields && rec.fields['Push Subscriptions']).filter((s) => s.endpoint !== sub.endpoint);
+  subs.push(sub);
+  await airtable.updateRecord(TABLES.STAFF, rec.id, { 'Push Subscriptions': JSON.stringify(subs) });
+  return true;
+}
+
+// Drop specific endpoints (a device unsubscribed, or the push service says the
+// subscription is gone). No-op if there's nothing to remove.
+async function removePushSubs(email, endpoints) {
+  const drop = new Set((endpoints || []).filter(Boolean));
+  if (!drop.size) return;
+  const rec = await findStaffByEmail(String(email || ''));
+  if (!rec) return;
+  const subs = parseSubs(rec.fields && rec.fields['Push Subscriptions']);
+  const kept = subs.filter((s) => !drop.has(s.endpoint));
+  if (kept.length !== subs.length) {
+    await airtable.updateRecord(TABLES.STAFF, rec.id, { 'Push Subscriptions': JSON.stringify(kept) });
+  }
+}
+
 // Statuses a submitter may still edit or delete their own expense in.
 const EDITABLE_STATUSES = new Set(['Submitted', 'Rejected', 'Draft']);
 
@@ -439,6 +485,9 @@ module.exports = {
   ensureStaff,
   findStaffByEmail,
   staffById,
+  getPushSubs,
+  savePushSub,
+  removePushSubs,
   getExpenseById,
   canModify,
   isApprover,
