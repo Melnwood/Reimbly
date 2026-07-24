@@ -33,6 +33,20 @@
       <footer class="signin-foot">Josiah Venture · internal tool</footer>
     </main>
 
+    <!-- Face ID lock -->
+    <main id="lock" class="signin" hidden>
+      <div class="signin-card">
+        <div class="brand-stack">
+          <img class="hero-mark" src="logo-mark.png" alt="Rembly" />
+          <span class="hero-name">rembly</span>
+        </div>
+        <p class="lede" id="lock-hint">Locked. Unlock with Face ID to continue.</p>
+        <button id="lock-unlock" class="btn primary big">🔓 <span>Unlock with Face&nbsp;ID</span></button>
+        <button id="lock-google" class="link-btn" style="margin-top:14px">Use Google sign-in instead</button>
+      </div>
+      <footer class="signin-foot">Josiah Venture · internal tool</footer>
+    </main>
+
     <!-- Signed-in app -->
     <div id="app" class="app" hidden>
       <header class="topbar">
@@ -54,6 +68,7 @@
         <div class="who">
           <span id="who-name" class="who-name"></span>
           <span id="who-role" class="pill"></span>
+          <button id="faceid-toggle" class="link-btn" hidden></button>
           <button id="signout" class="link-btn">Sign out</button>
         </div>
       </header>

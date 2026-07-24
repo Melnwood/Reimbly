@@ -24,6 +24,7 @@
   const el = {
     boot: $('#boot'),
     signin: $('#signin'),
+    lock: $('#lock'),
     app: $('#app'),
     googleBtn: $('#google-btn'),
     signinHint: $('#signin-hint'),
@@ -145,7 +146,15 @@
     }
     initGoogle();
     el.boot.hidden = true;
-    el.signin.hidden = false;
+    // If this device has Face ID set up for the last person, lock instead of
+    // showing the sign-in button.
+    const last = (safeGet(LS.last) || '').toLowerCase();
+    if (webauthnOK() && last && faceIdEnrolled(last)) {
+      el.lock.hidden = false;
+      setTimeout(unlockWithFaceId, 350); // auto-prompt Face ID
+    } else {
+      el.signin.hidden = false;
+    }
   }
 
   function initGoogle() {
@@ -190,8 +199,10 @@
     state.token = null;
     state.me = null;
     state.loaded = { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false, people: false };
+    clearSession(); // full log-out: don't auto-unlock back in until they sign in again
     try { window.google?.accounts?.id?.disableAutoSelect(); } catch { /* noop */ }
     el.app.hidden = true;
+    el.lock.hidden = true;
     el.signin.hidden = false;
     if (message) {
       el.signinHint.className = 'hint';
@@ -199,11 +210,117 @@
     }
   }
 
+  // ---------- Face ID (device unlock via WebAuthn) ----------
+  // A convenience lock on top of Google sign-in: the phone's Face ID / passcode
+  // reveals the already-signed-in session on this device. Google stays the
+  // identity; nothing here weakens the server-side check on every request.
+
+  const LS = {
+    cred: (email) => `rembly.faceid.${String(email || '').toLowerCase()}`,
+    session: 'rembly.session',
+    last: 'rembly.lastuser',
+  };
+  const webauthnOK = () => !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
+  const safeGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+  const safeSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
+  const safeDel = (k) => { try { localStorage.removeItem(k); } catch { /* noop */ } };
+
+  function rand(n) { const a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
+  function b64u(buf) { const b = new Uint8Array(buf); let s = ''; b.forEach((x) => { s += String.fromCharCode(x); }); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function unb64u(str) { let s = str.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; const bin = atob(s); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i += 1) a[i] = bin.charCodeAt(i); return a; }
+  function jwtExpMs(token) { try { const p = JSON.parse(atob(String(token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); return (p.exp || 0) * 1000; } catch { return 0; } }
+
+  function saveSession() {
+    if (!state.token) return;
+    safeSet(LS.session, JSON.stringify({ token: state.token, exp: jwtExpMs(state.token), me: state.me }));
+    safeSet(LS.last, (state.me && state.me.email) || '');
+  }
+  function loadSession() { try { return JSON.parse(safeGet(LS.session) || 'null'); } catch { return null; } }
+  function clearSession() { safeDel(LS.session); safeDel(LS.last); }
+  const faceIdEnrolled = (email) => !!safeGet(LS.cred(email));
+
+  function showSignin() {
+    el.lock.hidden = true;
+    el.signin.hidden = false;
+  }
+
+  async function enrollFaceId() {
+    if (!webauthnOK() || !state.me) return;
+    try {
+      const cred = await navigator.credentials.create({ publicKey: {
+        challenge: rand(16),
+        rp: { name: 'Rembly', id: location.hostname },
+        user: { id: new TextEncoder().encode(state.me.email), name: state.me.email, displayName: state.me.name || state.me.email },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 60000,
+      } });
+      safeSet(LS.cred(state.me.email), b64u(cred.rawId));
+      saveSession();
+      updateFaceIdToggle();
+      toast('Face ID is on for this device.', 'good');
+    } catch (e) {
+      toast('Couldn’t turn on Face ID on this device.', 'bad');
+    }
+  }
+
+  function disableFaceId() {
+    if (state.me) safeDel(LS.cred(state.me.email));
+    updateFaceIdToggle();
+    toast('Face ID turned off.', 'good');
+  }
+
+  function updateFaceIdToggle() {
+    const btn = $('#faceid-toggle');
+    if (!btn) return;
+    if (!webauthnOK()) { btn.hidden = true; return; }
+    const on = state.me && faceIdEnrolled(state.me.email);
+    btn.hidden = false;
+    btn.textContent = on ? '🔒 Face ID on' : 'Turn on Face ID';
+    btn.onclick = on ? disableFaceId : enrollFaceId;
+  }
+
+  async function unlockWithFaceId() {
+    const email = (safeGet(LS.last) || '').toLowerCase();
+    const credId = email && safeGet(LS.cred(email));
+    if (!credId) return showSignin();
+    const hint = $('#lock-hint');
+    hint.textContent = 'Reading your face…';
+    try {
+      await navigator.credentials.get({ publicKey: {
+        challenge: rand(16),
+        rpId: location.hostname,
+        allowCredentials: [{ type: 'public-key', id: unb64u(credId) }],
+        userVerification: 'required',
+        timeout: 60000,
+      } });
+    } catch (e) {
+      hint.textContent = 'Face ID didn’t match. Try again, or use Google.';
+      return;
+    }
+    // Biometric passed — restore the session if the Google token is still valid.
+    const s = loadSession();
+    if (s && s.token && s.exp > Date.now() + 30000) {
+      state.token = s.token;
+      try {
+        state.me = s.me || await api('me');
+        el.lock.hidden = true;
+        enterApp();
+        return;
+      } catch { /* token rejected — fall through to Google */ }
+    }
+    hint.textContent = 'Unlocked — just refresh your sign-in below.';
+    showSignin();
+  }
+
   // ---------- App ----------
 
   function enterApp() {
     el.signin.hidden = true;
+    el.lock.hidden = true;
     el.app.hidden = false;
+    saveSession(); // remember this session so Face ID can restore it
+    updateFaceIdToggle();
     el.whoName.textContent = state.me.name;
     el.whoRole.textContent = state.me.role;
 
@@ -1589,6 +1706,8 @@
       if (tab && !tab.hidden) switchView(tab.dataset.view);
     });
     $('#signout').addEventListener('click', () => signOut('Signed out. See you soon!'));
+    $('#lock-unlock').addEventListener('click', unlockWithFaceId);
+    $('#lock-google').addEventListener('click', showSignin);
     $('#cancel-edit').addEventListener('click', cancelEdit);
     el.form.addEventListener('submit', onSubmit);
     el.receiptInput.addEventListener('change', onReceiptChange);
