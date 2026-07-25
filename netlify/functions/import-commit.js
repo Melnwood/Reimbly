@@ -13,6 +13,7 @@ const { pickBest } = require('./lib/matching');
 const {
   TABLES, STATUS, EVENTS, DEFAULT_PAYMENT_METHOD,
   ensureStaff, resolveCurrencyId, accountAccessFor, dupKey, logActivity, heldReceiptsFor,
+  getReportById, reportOwnedBy,
 } = require('./lib/domain');
 
 const MAX_ROWS = 500;
@@ -40,6 +41,13 @@ exports.handler = async (event) => {
     const originNote = `Imported from ${kind} · ${source}`;
     if (!rows.length) throw badRequest('Nothing was selected to import.');
     if (rows.length > MAX_ROWS) throw badRequest(`Too many rows at once (max ${MAX_ROWS}).`);
+
+    // Optional: drop every imported row into one of the person's reports.
+    const reportId = String(body.reportId || '').trim();
+    if (reportId) {
+      const report = await getReportById(reportId);
+      if (!report || !reportOwnedBy(report, staffId)) throw badRequest('That isn’t one of your reports.');
+    }
 
     const created = [];
     const skipped = [];
@@ -105,6 +113,7 @@ exports.handler = async (event) => {
         Currency: [currencyId],
       };
       if (accountId) fields.Account = [accountId];
+      if (reportId) fields.Report = [reportId];
       if (merchant) fields.Merchant = merchant;
 
       // If a held email receipt matches this row, adopt it (promote that Draft to

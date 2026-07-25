@@ -36,10 +36,11 @@
     receiptInput: $('#f-receipt'),
     receiptCamera: $('#f-camera'),
     receiptName: $('#receipt-name'),
-    mineList: $('#mine-list'),
     approvalsList: $('#approvals-list'),
     auditSummary: $('#audit-summary'),
     auditList: $('#audit-list'),
+    addList: $('#add-list'),
+    reportsList: $('#reports-list'),
     dashboard: $('#view-dashboard'),
     archiveReadyWrap: $('#archive-ready-wrap'),
     archiveReady: $('#archive-ready'),
@@ -512,7 +513,8 @@
     $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
     $$('.view').forEach((v) => { v.hidden = v.dataset.view !== view; });
 
-    if (view === 'mine' && !state.loaded.mine) loadMine();
+    if (view === 'submit') showAddExpense();
+    if (view === 'mine') showReports();
     if (view === 'approvals' && !state.loaded.approvals) loadApprovals();
     if (view === 'audit' && !state.loaded.audit) loadAudit();
     if (view === 'dashboard' && !state.loaded.dashboard) loadDashboard();
@@ -765,6 +767,11 @@
       body = { amount, currency, account, date, description, merchant };
     }
 
+    // A brand-new expense can go straight into a report (then it waits there,
+    // Unsubmitted, until the report is submitted).
+    const reportId = !editing ? ($('#f-report') && $('#f-report').value) : '';
+    if (reportId && reportId !== '__new__') body.reportId = reportId;
+
     el.submitBtn.disabled = true;
     el.submitBtn.textContent = editing ? 'Saving…' : 'Submitting…';
 
@@ -788,6 +795,8 @@
         toast(result.resubmitted ? 'Saved and resubmitted for approval.' : 'Changes saved.', 'good');
       } else if (result.warning) {
         toast(result.warning, 'bad');
+      } else if (body.reportId) {
+        toast('Added to your report — submit the report when you’re ready.', 'good');
       } else {
         toast('Expense submitted 🎉', 'good');
       }
@@ -795,7 +804,9 @@
       state.loaded.mine = false;
       state.loaded.audit = false;
       state.loaded.approvals = false;
-      const back = state.editReturn && state.editReturn !== 'submit' ? state.editReturn : 'mine';
+      // After adding, stay on Add expense so they can add more and see the list;
+      // after an edit, go back to wherever they started.
+      const back = editing ? (state.editReturn && state.editReturn !== 'submit' ? state.editReturn : 'mine') : 'submit';
       state.editReturn = null;
       switchView(back);
     } catch (e) {
@@ -860,7 +871,8 @@
     }
   }
 
-  function onMineClick(event) {
+  // Clicks inside the "Your expenses" list on the Add-expense tab.
+  function onAddListClick(event) {
     const btn = event.target.closest('button[data-act]');
     if (!btn) return;
     const act = btn.dataset.act;
@@ -875,33 +887,121 @@
     }
     const id = btn.dataset.id;
     if (act === 'edit') startEdit(id);
-    else if (act === 'submit') submitBatch({ ids: [id] }, btn);
     else if (act === 'delete') {
-      deleteExpense(id, () => { state.loaded.mine = false; state.loaded.audit = false; loadMine(); });
+      deleteExpense(id, () => { invalidateReports(); showAddExpense(); });
     }
   }
 
-  // Send unsubmitted expenses (one, or all of them) for approval. Moves them
-  // from "Unsubmitted" to "Pending approval" and tells the approver.
-  async function submitBatch(body, btn) {
-    const count = body.all ? (state.mineExpenses || []).filter(isUnsubmitted).length : (body.ids || []).length;
-    if (!count) return;
-    if (body.all && !window.confirm(`Submit ${count} expense${count === 1 ? '' : 's'} for approval?`)) return;
-    const buttons = btn ? [btn] : $$('#submit-all-btn, #mine-list button[data-act="submit"]');
-    buttons.forEach((b) => { if (b) b.disabled = true; });
+  // The per-expense "which report?" picker changed.
+  function onAddListChange(event) {
+    const sel = event.target.closest('select[data-role="report-pick"]');
+    if (!sel) return;
+    const id = sel.getAttribute('data-id');
+    assignExpense(id, sel.value, sel);
+  }
+
+  async function assignExpense(expenseId, value, sel) {
+    if (sel) sel.disabled = true;
     try {
-      const res = await api('submit-batch', { method: 'POST', body });
-      const n = res.submitted || 0;
-      toast(n ? `Submitted ${n} expense${n === 1 ? '' : 's'} for approval 🎉` : 'Nothing to submit.', n ? 'good' : 'bad');
-      state.loaded.mine = false;
-      state.loaded.approvals = false;
-      state.loaded.audit = false;
-      state.loaded.dashboard = false;
-      loadMine();
+      let reportId = value || null;
+      if (value === '__new__') {
+        const name = (window.prompt('Name the new report (e.g. “General Fund – July”):') || '').trim();
+        if (!name) { if (sel) sel.disabled = false; renderAddList(); return; }
+        const made = await api('reports', { method: 'POST', body: { action: 'create', name } });
+        reportId = made.report.id;
+      }
+      await api('reports', { method: 'POST', body: { action: 'assign', expenseId, reportId } });
+      toast(reportId ? 'Added to the report.' : 'Removed from the report.', 'good');
+      invalidateReports();
+      await ensureReportsData(true);
+      populateReportPicker();
+      renderAddList();
     } catch (e) {
-      buttons.forEach((b) => { if (b) b.disabled = false; });
+      toast(e.message, 'bad');
+      if (sel) sel.disabled = false;
+      renderAddList();
+    }
+  }
+
+  async function createReportPrompt() {
+    const name = (window.prompt('Name this report (e.g. “General Fund – July”):') || '').trim();
+    if (!name) return;
+    try {
+      await api('reports', { method: 'POST', body: { action: 'create', name } });
+      toast('Report created — now add expenses to it.', 'good');
+      invalidateReports();
+      await ensureReportsData(true);
+      populateReportPicker();
+      renderReports();
+    } catch (e) { toast(e.message, 'bad'); }
+  }
+
+  // Clicks inside the "My reports" list.
+  function onReportsClick(event) {
+    const btn = event.target.closest('button[data-act]');
+    if (!btn) return;
+    const act = btn.dataset.act;
+    if (act === 'report-toggle') {
+      const card = btn.closest('.report-card');
+      const body = $('.rc-body', card);
+      const open = body.hasAttribute('hidden');
+      body.toggleAttribute('hidden', !open);
+      card.classList.toggle('open', open);
+      return;
+    }
+    const id = btn.dataset.id;
+    if (act === 'report-submit') submitReport(id, btn);
+    else if (act === 'report-rename') renameReportUi(id);
+    else if (act === 'report-delete') deleteReportUi(id);
+  }
+
+  async function submitReport(id, btn) {
+    const roll = reportRollup(id);
+    const n = roll.counts.unsubmitted;
+    if (!n) return;
+    if (!window.confirm(`Submit this report — ${n} expense${n === 1 ? '' : 's'} — for approval?`)) return;
+    if (btn) btn.disabled = true;
+    try {
+      const res = await api('reports', { method: 'POST', body: { action: 'submit', id } });
+      toast(`Submitted ${res.submitted} expense${res.submitted === 1 ? '' : 's'} for approval 🎉`, 'good');
+      state.loaded.approvals = false; state.loaded.audit = false; state.loaded.dashboard = false;
+      invalidateReports();
+      await ensureReportsData(true);
+      renderReports();
+    } catch (e) {
+      if (btn) btn.disabled = false;
       toast(e.message, 'bad');
     }
+  }
+
+  async function renameReportUi(id) {
+    const rep = (state.reports || []).find((r) => r.id === id);
+    const name = (window.prompt('Rename this report:', rep ? rep.name : '') || '').trim();
+    if (!name) return;
+    try {
+      await api('reports', { method: 'POST', body: { action: 'rename', id, name } });
+      invalidateReports();
+      await ensureReportsData(true);
+      populateReportPicker();
+      renderReports();
+    } catch (e) { toast(e.message, 'bad'); }
+  }
+
+  async function deleteReportUi(id) {
+    if (!window.confirm('Delete this empty report?')) return;
+    try {
+      await api('reports', { method: 'POST', body: { action: 'delete', id } });
+      toast('Report deleted.', 'good');
+      invalidateReports();
+      await ensureReportsData(true);
+      populateReportPicker();
+      renderReports();
+    } catch (e) { toast(e.message, 'bad'); }
+  }
+
+  function invalidateReports() {
+    state.loaded.mine = false;
+    state.loaded.audit = false;
   }
 
   // ---------- My expenses ----------
@@ -981,29 +1081,59 @@
 
   const EDITABLE = ['Submitted', 'Rejected', 'Draft'];
 
-  // "Unsubmitted" = a Draft the person entered/imported but hasn't sent for
-  // approval yet. (Held email receipts never reach this list.)
-  const isUnsubmitted = (e) => e.status === 'Draft';
+  // ----- Reports data (shared by the Add-expense list and My-reports view) -----
 
-  function updateSubmitBar(expenses) {
-    const bar = $('#submit-bar');
-    if (!bar) return;
-    const n = (expenses || []).filter(isUnsubmitted).length;
-    if (!n) { bar.hidden = true; return; }
-    $('#submit-bar-count').textContent = `You have ${n} unsubmitted expense${n === 1 ? '' : 's'}.`;
-    $('#submit-all-btn').textContent = `Submit ${n === 1 ? 'it' : `all ${n}`} for approval`;
-    bar.hidden = false;
+  async function ensureReportsData(force) {
+    if (state.loaded.mine && !force) return;
+    const [rep, mine] = await Promise.all([api('reports'), api('my-expenses')]);
+    state.reports = rep.reports || [];
+    state.mineExpenses = mine.expenses || [];
+    state.loaded.mine = true;
   }
 
-  function renderMine(expenses) {
-    updateSubmitBar(expenses);
+  // The "which report?" dropdown, shared by the form and each list row.
+  function reportSelectHtml(currentId, dataAttrs) {
+    const opts = ['<option value="">— Not in a report —</option>']
+      .concat((state.reports || []).map((r) => `<option value="${escapeHtml(r.id)}"${r.id === currentId ? ' selected' : ''}>${escapeHtml(r.name)}</option>`))
+      .concat('<option value="__new__">＋ New report…</option>');
+    return `<select class="report-pick" ${dataAttrs || ''}>${opts.join('')}</select>`;
+  }
+
+  function populateReportPicker() {
+    const sel = $('#f-report');
+    if (!sel) return;
+    const keep = sel.value;
+    sel.innerHTML = reportSelectHtml(keep).replace(/^<select[^>]*>|<\/select>$/g, '');
+  }
+
+  // Choosing "＋ New report…" on the add form creates one on the spot.
+  async function onFormReportChange(event) {
+    const sel = event.target;
+    if (sel.value !== '__new__') return;
+    const name = (window.prompt('Name the new report (e.g. “General Fund – July”):') || '').trim();
+    if (!name) { sel.value = ''; return; }
+    try {
+      const made = await api('reports', { method: 'POST', body: { action: 'create', name } });
+      invalidateReports();
+      await ensureReportsData(true);
+      populateReportPicker();
+      sel.value = made.report.id;
+      renderAddList();
+    } catch (e) { toast(e.message, 'bad'); sel.value = ''; }
+  }
+
+  // ----- Add-expense tab: the flat, editable list of your expenses -----
+
+  function renderAddList() {
+    const box = el.addList;
+    if (!box) return;
+    const expenses = state.mineExpenses || [];
     if (!expenses.length) {
-      el.mineList.innerHTML = `<div class="state"><span class="emoji">🌱</span>No expenses yet. Submit your first one above!</div>`;
+      box.innerHTML = `<div class="state"><span class="emoji">🌱</span>No expenses yet — add your first one above!</div>`;
       return;
     }
-    el.mineList.innerHTML = expenses.map((e) => {
+    box.innerHTML = expenses.map((e) => {
       const editable = EDITABLE.includes(e.status);
-      const unsubmitted = isUnsubmitted(e);
       const who = e.merchant || e.description || '(no description)';
       const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
       const mileageMeta = e.distance != null && e.mileageRate != null
@@ -1023,12 +1153,12 @@
           <div class="mini-desc">${cardTitle(e)}</div>
           <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
           ${mileageMeta}
+          <label class="report-row"><span>Report</span>${reportSelectHtml(e.reportId, `data-role="report-pick" data-id="${escapeHtml(e.id)}"`)}</label>
           <div class="expense-actions">
             ${statusBadge(e.status)}
             ${sourceBadge(e.source)}
             ${receiptLink(e)}
             ${historyBtn(e.id)}
-            ${unsubmitted ? `<button class="btn primary small" data-act="submit" data-id="${escapeHtml(e.id)}">Submit</button>` : ''}
             ${editable ? `<button class="link-btn" data-act="edit" data-id="${escapeHtml(e.id)}">Edit</button>` : ''}
             ${editable ? `<button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>` : ''}
           </div>
@@ -1038,15 +1168,105 @@
     }).join('');
   }
 
-  async function loadMine() {
-    el.mineList.innerHTML = `<div class="state">Loading…</div>`;
+  async function showAddExpense() {
+    if (el.addList) el.addList.innerHTML = `<div class="state">Loading…</div>`;
     try {
-      const data = await api('my-expenses');
-      state.loaded.mine = true;
-      state.mineExpenses = data.expenses || [];
-      renderMine(state.mineExpenses);
+      await ensureReportsData();
+      populateReportPicker();
+      renderAddList();
     } catch (e) {
-      el.mineList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+      if (el.addList) el.addList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  // ----- My-reports tab: report cards with status + Submit -----
+
+  // Roll a report's member expenses into a count, total, and one overall status
+  // (the least-advanced meaningful stage, so "still needs submitting" wins).
+  function reportRollup(reportId) {
+    const items = (state.mineExpenses || []).filter((e) => e.reportId === reportId);
+    const counts = { unsubmitted: 0, pending: 0, approved: 0, paid: 0 };
+    let total = 0;
+    items.forEach((e) => {
+      total += Number(e.amountUsd) || 0;
+      if (e.status === 'Draft' || e.status === 'Rejected') counts.unsubmitted += 1;
+      else if (e.status === 'Submitted') counts.pending += 1;
+      else if (e.status === 'Approved') counts.approved += 1;
+      else if (e.status === 'Reimbursed') counts.paid += 1;
+    });
+    let status = 'Empty';
+    if (items.length) {
+      if (counts.unsubmitted) status = 'Draft';
+      else if (counts.pending) status = 'Submitted';
+      else if (counts.approved) status = 'Approved';
+      else status = 'Reimbursed';
+    }
+    return { items, counts, total, status };
+  }
+
+  function memberRowHtml(e) {
+    const who = e.merchant || e.description || '(no description)';
+    const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
+    return `
+      <div class="rc-item">
+        <span class="mini-date">${escapeHtml(fmtDateShort(e.date))}</span>
+        <span class="mini-who">${escapeHtml(who)}</span>
+        <span class="mini-amt">${escapeHtml(amt)}</span>
+        ${statusDot(e.status)}
+      </div>`;
+  }
+
+  function reportCardHtml(r) {
+    const { items, total, counts, status } = reportRollup(r.id);
+    const badge = status === 'Empty' ? '<span class="badge draft">Empty</span>' : statusBadge(status);
+    const canSubmit = counts.unsubmitted > 0;
+    return `
+      <div class="report-card" data-report="${escapeHtml(r.id)}">
+        <button type="button" class="rc-head" data-act="report-toggle">
+          <div class="rc-main">
+            <div class="rc-name">${escapeHtml(r.name)}</div>
+            <div class="rc-sub">${items.length} expense${items.length === 1 ? '' : 's'} · ${escapeHtml(money(total, 'USD'))}</div>
+          </div>
+          ${badge}
+          <span class="mini-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="rc-body" hidden>
+          ${items.length ? items.map(memberRowHtml).join('') : '<div class="state small">No expenses yet — add some on the “Add expense” tab.</div>'}
+          <div class="rc-actions">
+            ${canSubmit ? `<button class="btn primary small" data-act="report-submit" data-id="${escapeHtml(r.id)}">Submit report for approval</button>` : ''}
+            <button class="link-btn" data-act="report-rename" data-id="${escapeHtml(r.id)}">Rename</button>
+            ${!items.length ? `<button class="link-btn danger" data-act="report-delete" data-id="${escapeHtml(r.id)}">Delete</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderReports() {
+    const box = el.reportsList;
+    if (!box) return;
+    const reports = state.reports || [];
+    const unfiled = (state.mineExpenses || []).filter((e) => !e.reportId);
+    let html = '';
+    if (!reports.length) {
+      html += `<div class="state"><span class="emoji">🗂️</span>No reports yet. Tap “＋ New report”, then add expenses to it on the “Add expense” tab.</div>`;
+    } else {
+      html += reports.map(reportCardHtml).join('');
+    }
+    if (unfiled.length) {
+      html += `<h3 class="dash-h">Not in a report yet (${unfiled.length})</h3>`;
+      html += `<p class="import-note">Put these into a report on the “Add expense” tab.</p>`;
+      html += unfiled.map(memberRowHtml).join('');
+    }
+    box.innerHTML = html;
+  }
+
+  async function showReports() {
+    if (el.reportsList) el.reportsList.innerHTML = `<div class="state">Loading…</div>`;
+    try {
+      await ensureReportsData();
+      renderReports();
+    } catch (e) {
+      if (el.reportsList) el.reportsList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
     }
   }
 
@@ -1078,7 +1298,7 @@
         changes.map((c) => `<strong>${escapeHtml(c.merchant || 'receipt')}</strong> ${escapeHtml(c.old || '—')} → ${escapeHtml(c.date)}`).join('; ');
       toast(`Fixed ${changes.length} date${changes.length === 1 ? '' : 's'} from the receipts.`, 'good');
       state.loaded.mine = false;
-      loadMine();
+      showAddExpense();
     } else {
       note.textContent = '✅ Re-read every receipt — all the dates already matched. Nothing to change.';
       toast('All receipt dates already matched.', 'good');
@@ -2368,7 +2588,8 @@
     $('#describe-options').addEventListener('click', onDescribeOptionClick);
     $('#f-business').addEventListener('change', recallDescriptions);
     $('#rescan-dates').addEventListener('click', rescanDates);
-    $('#submit-all-btn').addEventListener('click', () => submitBatch({ all: true }));
+    $('#new-report-btn').addEventListener('click', createReportPrompt);
+    $('#f-report').addEventListener('change', onFormReportChange);
     $('#import-choose').addEventListener('click', () => el.importFile.click());
     $('#import-template').addEventListener('click', downloadTemplate);
     $('#import-copy').addEventListener('click', copyImportInstructions);
@@ -2387,13 +2608,19 @@
     $('#people-copy').addEventListener('click', copyPeopleInstructions);
     el.peopleFile.addEventListener('change', onPeopleFile);
     bindDashboard();
-    el.mineList.addEventListener('click', onMineClick);
+    el.addList.addEventListener('click', onAddListClick);
+    el.addList.addEventListener('change', onAddListChange);
+    el.reportsList.addEventListener('click', onReportsClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
     el.archiveReady.addEventListener('click', onArchiveClick);
     // One delegated listener covers "History" toggles on every card, everywhere.
     el.app.addEventListener('click', onHistoryClick);
-    const refreshers = { mine: loadMine, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, rates: loadRates, people: loadPeople };
+    const refreshers = {
+      add: () => { invalidateReports(); showAddExpense(); },
+      mine: () => { invalidateReports(); showReports(); },
+      approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, rates: loadRates, people: loadPeople,
+    };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())
     );

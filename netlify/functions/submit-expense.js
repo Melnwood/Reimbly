@@ -21,6 +21,8 @@ const {
   shapeExpense,
   logActivity,
   staffById,
+  getReportById,
+  reportOwnedBy,
 } = require('./lib/domain');
 const notify = require('./lib/notify');
 
@@ -92,18 +94,35 @@ exports.handler = async (event) => {
     }
     const accountId = acct.id;
 
+    // Optional: drop this new expense straight into one of the person's reports.
+    // A brand-new expense that's going into a report starts Unsubmitted (Draft)
+    // so it waits for the report to be submitted; a stand-alone expense goes
+    // straight to Pending approval as before.
+    const reportId = String(body.reportId || '').trim();
+    let reportLink = null;
+    if (reportId) {
+      const report = await getReportById(reportId);
+      if (!report || !reportOwnedBy(report, staffId)) {
+        const err = new Error('That isn’t one of your reports.');
+        err.statusCode = 403;
+        throw err;
+      }
+      reportLink = reportId;
+    }
+
     const fields = {
       Description: description,
       'Expense Date': date,
       Amount: amount,
       'Payment Method': DEFAULT_PAYMENT_METHOD,
-      Status: STATUS.SUBMITTED,
+      Status: reportLink ? STATUS.DRAFT : STATUS.SUBMITTED,
       'Submitted On': today(),
       Submitter: [staffId],
       Currency: [currencyId],
       Account: [accountId],
       ...mileageFields,
     };
+    if (reportLink) fields.Report = [reportLink];
     if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
 
@@ -122,7 +141,10 @@ exports.handler = async (event) => {
     }
 
     const created = await airtable.createRecord(TABLES.EXPENSES, fields);
-    await logActivity({ expenseId: created.id, event: EVENTS.SUBMITTED, user });
+    // Only log a "Submitted" event for a stand-alone expense. One added to a
+    // report is still Unsubmitted — it'll be logged when the report is submitted.
+    if (!reportLink) await logActivity({ expenseId: created.id, event: EVENTS.SUBMITTED, user });
+    else await logActivity({ expenseId: created.id, event: EVENTS.IMPORTED, user, note: 'Added to a report' });
 
     let receiptWarning = null;
     if (receipt) {
@@ -144,15 +166,18 @@ exports.handler = async (event) => {
 
     const shaped = shapeExpense(fresh || created, maps);
 
-    // Let the approver know something's waiting (best-effort).
-    try {
-      const uplineId = Array.isArray(staffRec.fields && staffRec.fields.Upline) ? staffRec.fields.Upline[0] : null;
-      if (uplineId) {
-        const approver = await staffById(uplineId);
-        await notify.approverNewExpense({ approver, submitterName: user.name, expense: shaped });
+    // Let the approver know something's waiting (best-effort) — but only for a
+    // stand-alone expense. One in a report waits for the report to be submitted.
+    if (!reportLink) {
+      try {
+        const uplineId = Array.isArray(staffRec.fields && staffRec.fields.Upline) ? staffRec.fields.Upline[0] : null;
+        if (uplineId) {
+          const approver = await staffById(uplineId);
+          await notify.approverNewExpense({ approver, submitterName: user.name, expense: shaped });
+        }
+      } catch (e) {
+        console.error('[rembly] submit notify failed', e && e.message);
       }
-    } catch (e) {
-      console.error('[rembly] submit notify failed', e && e.message);
     }
 
     return ok({ expense: shaped, warning: receiptWarning || dupWarning });

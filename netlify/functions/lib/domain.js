@@ -32,6 +32,7 @@ const TABLES = {
   ACCOUNTS: 'Accounts',
   ACTIVITY: 'Activity Log',
   MILEAGE_RATES: 'Mileage Rates',
+  REPORTS: 'Reports',
 };
 
 // Event names in the Activity Log's "Event" single-select. This is the trail
@@ -393,13 +394,59 @@ async function accountMap() {
 
 // The small maps needed to display expenses. Fetched once per request.
 async function displayMaps() {
-  const [currency, category, staff, account] = await Promise.all([
+  const [currency, category, staff, account, report] = await Promise.all([
     idLabelMap(TABLES.CURRENCIES, 'Code'),
     idLabelMap(TABLES.CATEGORIES, 'Category'),
     staffMap(),
     accountMap(),
+    idLabelMap(TABLES.REPORTS, 'Name'),
   ]);
-  return { currency, category, staff, account };
+  return { currency, category, staff, account, report };
+}
+
+// ---- Reports ----------------------------------------------------------
+// A report is a named container an owner drops expenses into, then submits the
+// whole thing for approval. Nothing clever — just a name and an owner.
+
+async function getReportById(id) {
+  if (!id) return null;
+  return airtable.findFirst(TABLES.REPORTS, {
+    filterByFormula: `RECORD_ID() = '${esc(String(id))}'`,
+  });
+}
+
+// Every report owned by a staff member (including empty ones), newest first.
+async function listReportsOwnedBy(staffId) {
+  if (!staffId) return [];
+  const records = await airtable.listRecords(TABLES.REPORTS, {});
+  return records
+    .filter((r) => (Array.isArray(r.fields && r.fields.Owner) ? r.fields.Owner : []).includes(staffId))
+    .map((r) => {
+      const f = r.fields || {};
+      return {
+        id: r.id,
+        name: f.Name || 'Untitled report',
+        submittedOn: f['Submitted On'] || null,
+        expenseIds: Array.isArray(f.Expenses) ? f.Expenses : [],
+        createdTime: r.createdTime || null,
+      };
+    })
+    .sort((a, b) => String(b.createdTime || '').localeCompare(String(a.createdTime || '')));
+}
+
+async function createReport(name, staffId) {
+  return airtable.createRecord(TABLES.REPORTS, { Name: name, Owner: [staffId] });
+}
+
+// Point an expense at a report (or clear it with reportId = null).
+async function setExpenseReport(expenseId, reportId) {
+  return airtable.updateRecord(TABLES.EXPENSES, expenseId, { Report: reportId ? [reportId] : [] });
+}
+
+// Does this report belong to this staff member?
+function reportOwnedBy(report, staffId) {
+  const owners = Array.isArray(report.fields && report.fields.Owner) ? report.fields.Owner : [];
+  return owners.includes(staffId);
 }
 
 // How an expense got into Rembly, for a provenance badge. Uses an explicit
@@ -431,6 +478,7 @@ function shapeExpense(record, maps = {}) {
   const categoryId = firstLinkId(f.Category);
   const accountId = firstLinkId(f.Account);
   const submitterId = firstLinkId(f.Submitter);
+  const reportId = firstLinkId(f.Report);
   const submitter = (maps.staff && submitterId && maps.staff[submitterId]) || {};
   const account = (maps.account && accountId && maps.account[accountId]) || {};
   const receipts = Array.isArray(f.Receipt) ? f.Receipt : [];
@@ -452,6 +500,8 @@ function shapeExpense(record, maps = {}) {
     mileageRate: f['Mileage Rate'] != null ? Number(f['Mileage Rate']) : null,
     status: f.Status || STATUS.SUBMITTED,
     source: sourceOf(f),
+    reportId: reportId || null,
+    reportName: (maps.report && reportId && maps.report[reportId]) || '',
     submitterName: submitter.name || '',
     submitterEmail: firstLookup(f['Submitter Email']) || submitter.email || '',
     submittedOn: f['Submitted On'] || null,
@@ -551,6 +601,11 @@ module.exports = {
   heldReceiptsFor,
   isHeldEmailReceipt,
   sourceOf,
+  getReportById,
+  listReportsOwnedBy,
+  createReport,
+  setExpenseReport,
+  reportOwnedBy,
   receiptToken,
   verifyReceiptToken,
   getExpenseById,

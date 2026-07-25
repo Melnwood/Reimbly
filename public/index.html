@@ -173,8 +173,26 @@
                 <div id="describe-options" class="describe-options" hidden></div>
               </label>
 
+              <label class="field">
+                <span>Report <em class="opt">(which report to put this in)</em></span>
+                <select id="f-report"><option value="">— Not in a report —</option></select>
+              </label>
+
               <button id="submit-btn" class="btn primary" type="submit">Submit expense</button>
             </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Your expenses</h2>
+              <span class="head-actions">
+                <button class="link-btn" id="rescan-dates" title="Re-read the date from each receipt image with the latest reader">🔁 Re-read receipt dates</button>
+                <button class="link-btn" data-refresh="add">Refresh</button>
+              </span>
+            </div>
+            <p class="panel-sub">Everything you've added. Edit any of them, and choose which report each one goes into.</p>
+            <div id="rescan-note" class="import-note" hidden></div>
+            <div id="add-list" class="list"></div>
           </div>
         </section>
 
@@ -221,25 +239,18 @@
           </div>
         </section>
 
-        <!-- My expenses -->
+        <!-- My reports -->
         <section id="view-mine" class="view" data-view="mine" hidden>
           <div class="panel">
             <div class="panel-head">
-              <h2>My expenses</h2>
+              <h2>My reports</h2>
               <span class="head-actions">
-                <button class="link-btn" id="rescan-dates" title="Re-read the date from each receipt image with the latest reader">🔁 Re-read receipt dates</button>
+                <button class="btn primary small" id="new-report-btn" type="button">＋ New report</button>
                 <button class="link-btn" data-refresh="mine">Refresh</button>
               </span>
             </div>
-            <div id="rescan-note" class="import-note" hidden></div>
-            <div id="submit-bar" class="submit-bar" hidden>
-              <div class="submit-bar-text">
-                <strong id="submit-bar-count"></strong>
-                <span>Review them below, then send them all for approval.</span>
-              </div>
-              <button class="btn primary" id="submit-all-btn" type="button">Submit for approval</button>
-            </div>
-            <div id="mine-list" class="list"></div>
+            <p class="panel-sub">Name a report, put the right expenses in it (on the “Add expense” tab), then submit the whole report for approval.</p>
+            <div id="reports-list"></div>
           </div>
         </section>
 

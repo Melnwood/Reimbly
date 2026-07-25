@@ -1,0 +1,153 @@
+'use strict';
+
+// Expense reports: named containers a person puts expenses into and submits as a
+// batch. GET lists the caller's reports. POST creates/renames/deletes one,
+// moves an expense in or out, or submits a whole report for approval.
+
+const { ok, error, methodGuard, parseBody } = require('./lib/http');
+const { verifyRequest } = require('./lib/google');
+const airtable = require('./lib/airtable');
+const {
+  TABLES, STATUS, EVENTS,
+  ensureStaff, staffById, logActivity,
+  getReportById, listReportsOwnedBy, createReport, setExpenseReport, reportOwnedBy,
+} = require('./lib/domain');
+const notify = require('./lib/notify');
+
+const today = () => new Date().toISOString().slice(0, 10);
+const firstLookup = (v) => (Array.isArray(v) ? v[0] : v);
+const firstLinkId = (v) => (Array.isArray(v) && v.length ? v[0] : null);
+const esc = (s) => String(s).replace(/'/g, "\\'");
+
+// The caller's own expenses that belong to a given report (queried directly, so
+// we never depend on Airtable's cached reverse-link being up to date).
+async function membersOf(reportId, email) {
+  const em = String(email).toLowerCase().replace(/'/g, "\\'");
+  const mine = await airtable.listRecords(TABLES.EXPENSES, {
+    filterByFormula: `LOWER(ARRAYJOIN({Submitter Email})) = '${em}'`,
+  });
+  return mine.filter((r) => firstLinkId(r.fields && r.fields.Report) === reportId);
+}
+
+function badRequest(message) {
+  const err = new Error(message);
+  err.statusCode = 400;
+  return err;
+}
+function forbidden(message) {
+  const err = new Error(message);
+  err.statusCode = 403;
+  return err;
+}
+
+async function ownExpense(expenseId, email) {
+  const rec = await airtable.findFirst(TABLES.EXPENSES, {
+    filterByFormula: `RECORD_ID() = '${esc(expenseId)}'`,
+  });
+  if (!rec) return null;
+  const owner = String(firstLookup(rec.fields['Submitter Email']) || '').toLowerCase();
+  return owner === email.toLowerCase() ? rec : false;
+}
+
+exports.handler = async (event) => {
+  const guard = methodGuard(event, ['GET', 'POST']);
+  if (guard) return guard;
+
+  try {
+    const user = await verifyRequest(event.headers);
+    const { id: staffId, record: staffRec } = await ensureStaff(user);
+
+    if ((event.httpMethod || 'GET').toUpperCase() === 'GET') {
+      const reports = await listReportsOwnedBy(staffId);
+      return ok({ reports: reports.map((r) => ({ id: r.id, name: r.name, submittedOn: r.submittedOn, count: r.expenseIds.length })) });
+    }
+
+    const body = parseBody(event);
+    const action = String(body.action || '').toLowerCase();
+
+    // --- create ---------------------------------------------------------
+    if (action === 'create') {
+      const name = String(body.name || '').trim().slice(0, 100);
+      if (!name) throw badRequest('Give the report a name.');
+      const rec = await createReport(name, staffId);
+      return ok({ report: { id: rec.id, name, count: 0 } });
+    }
+
+    // --- rename ---------------------------------------------------------
+    if (action === 'rename') {
+      const id = String(body.id || '').trim();
+      const name = String(body.name || '').trim().slice(0, 100);
+      if (!id || !name) throw badRequest('Need the report and a new name.');
+      const report = await getReportById(id);
+      if (!report) throw badRequest('That report no longer exists.');
+      if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
+      await airtable.updateRecord(TABLES.REPORTS, id, { Name: name });
+      return ok({ report: { id, name } });
+    }
+
+    // --- delete (only when empty) --------------------------------------
+    if (action === 'delete') {
+      const id = String(body.id || '').trim();
+      if (!id) throw badRequest('Which report?');
+      const report = await getReportById(id);
+      if (!report) return ok({ deleted: true });
+      if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
+      const members = await membersOf(id, user.email);
+      if (members.length) throw badRequest('Move its expenses out first, then delete the report.');
+      await airtable.deleteRecord(TABLES.REPORTS, id);
+      return ok({ deleted: true });
+    }
+
+    // --- assign an expense to a report (or clear it) --------------------
+    if (action === 'assign') {
+      const expenseId = String(body.expenseId || '').trim();
+      const reportId = body.reportId ? String(body.reportId).trim() : null;
+      if (!expenseId) throw badRequest('Which expense?');
+      const exp = await ownExpense(expenseId, user.email);
+      if (exp === null) throw badRequest('That expense no longer exists.');
+      if (exp === false) throw forbidden('That isn’t your expense.');
+      if (reportId) {
+        const report = await getReportById(reportId);
+        if (!report) throw badRequest('That report no longer exists.');
+        if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
+      }
+      await setExpenseReport(expenseId, reportId);
+      return ok({ assigned: true, expenseId, reportId });
+    }
+
+    // --- submit a whole report for approval -----------------------------
+    if (action === 'submit') {
+      const id = String(body.id || '').trim();
+      if (!id) throw badRequest('Which report?');
+      const report = await getReportById(id);
+      if (!report) throw badRequest('That report no longer exists.');
+      if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
+
+      const members = await membersOf(id, user.email);
+      let submitted = 0;
+      let totalUsd = 0;
+      for (const rec of members) {
+        if ((rec.fields.Status || '') !== STATUS.DRAFT) continue; // only unsubmitted ones
+        await airtable.updateRecord(TABLES.EXPENSES, rec.id, { Status: STATUS.SUBMITTED, 'Submitted On': today() });
+        await logActivity({ expenseId: rec.id, event: EVENTS.SUBMITTED, user, note: `Submitted with report “${report.fields.Name || ''}”` });
+        submitted += 1;
+        totalUsd += Number(rec.fields['Amount (USD)']) || 0;
+      }
+      if (submitted) {
+        try { await airtable.updateRecord(TABLES.REPORTS, id, { 'Submitted On': today() }); } catch (e) { /* non-critical */ }
+        try {
+          const uplineId = Array.isArray(staffRec.fields && staffRec.fields.Upline) ? staffRec.fields.Upline[0] : null;
+          if (uplineId) {
+            const approver = await staffById(uplineId);
+            await notify.approverNewExpenses({ approver, submitterName: user.name, count: submitted, totalUsd });
+          }
+        } catch (e) { console.error('[rembly] report submit notify failed', e && e.message); }
+      }
+      return ok({ submitted });
+    }
+
+    throw badRequest('Unknown action.');
+  } catch (err) {
+    return error(err);
+  }
+};

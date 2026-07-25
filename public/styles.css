@@ -292,6 +292,28 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .import-summary-line { font-weight: 700; margin-bottom: 4px; }
 .import-note { font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 8px; }
 
+/* Report cards (My reports) */
+.report-card { border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; margin-bottom: 12px; overflow: hidden; }
+.rc-head { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: 0; cursor: pointer; padding: 14px 16px; font: inherit; }
+.rc-head:hover { background: var(--bg-soft); }
+.rc-main { flex: 1; min-width: 0; }
+.rc-name { font-weight: 700; font-size: 1.02rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-sub { font-size: 0.85rem; color: var(--ink-soft); margin-top: 2px; }
+.report-card .mini-caret { transition: transform 0.15s; color: var(--ink-soft); }
+.report-card.open .mini-caret { transform: rotate(180deg); }
+.rc-body { padding: 4px 16px 14px; border-top: 1px solid var(--line); }
+.rc-item { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+.rc-item:last-of-type { border-bottom: 0; }
+.rc-item .mini-date { color: var(--ink-soft); white-space: nowrap; min-width: 52px; }
+.rc-item .mini-who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-item .mini-amt { font-weight: 700; white-space: nowrap; }
+.rc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+
+/* Per-expense report picker on the Add-expense list */
+.report-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.88rem; color: var(--ink-soft); }
+.report-row > span { font-weight: 600; }
+.report-pick { font: inherit; font-size: 0.88rem; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; max-width: 240px; }
+
 /* "You have N unsubmitted expenses — Submit for approval" bar on My expenses. */
 .submit-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
