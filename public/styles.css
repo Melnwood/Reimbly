@@ -363,6 +363,8 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .rc-item .mini-amt { font-weight: 700; white-space: nowrap; }
 .rc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
 
+.mini-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+
 /* Per-expense report picker on the Add-expense list */
 .report-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.88rem; color: var(--ink-soft); }
 .report-row > span { font-weight: 600; }

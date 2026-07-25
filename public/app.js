@@ -1293,16 +1293,15 @@
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
         <div class="mini-details" hidden>
+          <div class="mini-badges">${statusBadge(e.status)}${sourceBadge(e.source)}</div>
           <div class="mini-desc">${cardTitle(e)}</div>
           <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
           ${mileageMeta}
           <label class="report-row"><span>Report</span>${reportSelectHtml(e.reportId, `data-role="report-pick" data-id="${escapeHtml(e.id)}"`)}</label>
           <div class="expense-actions">
-            ${statusBadge(e.status)}
-            ${sourceBadge(e.source)}
+            ${editable ? `<button class="btn ghost small" data-act="edit" data-id="${escapeHtml(e.id)}">✏️ Edit details</button>` : ''}
             ${receiptLink(e)}
             ${historyBtn(e.id)}
-            ${editable ? `<button class="link-btn" data-act="edit" data-id="${escapeHtml(e.id)}">Edit</button>` : ''}
             ${editable ? `<button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>` : ''}
           </div>
           ${e.status === 'Rejected' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
