@@ -1101,8 +1101,9 @@
         </div>
         <div class="expense-actions">
           ${statusBadge(e.status)}
+          ${sourceBadge(e.source)}
           ${receiptLink(e)}
-          ${e.recordUrl ? `<a class="receipt-link" href="${escapeHtml(e.recordUrl)}" target="_blank" rel="noopener">Open in Airtable ↗</a>` : ''}
+          ${historyBtn(e.id)}
           <button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>
         </div>
       </article>

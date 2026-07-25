@@ -10,13 +10,6 @@ const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const { TABLES, ensureStaff, isApprover, displayMaps, shapeExpense, dupKey } = require('./lib/domain');
 
-const EXPENSES_TABLE_ID = process.env.EXPENSES_TABLE_ID || 'tbliyYWAryk0Om7vn';
-
-function recordUrl(id) {
-  const base = process.env.AIRTABLE_BASE_ID;
-  return base ? `https://airtable.com/${base}/${EXPENSES_TABLE_ID}/${id}` : null;
-}
-
 // Return the list of problems with one expense (empty = ready to send).
 function auditExpense(e) {
   const issues = [];
@@ -54,7 +47,7 @@ exports.handler = async (event) => {
 
     const items = records.map((r) => {
       const e = shapeExpense(r, maps);
-      return { ...e, issues: auditExpense(e), recordUrl: recordUrl(r.id) };
+      return { ...e, issues: auditExpense(e) };
     });
 
     // Flag likely duplicates: same person + same amount + day + merchant.
