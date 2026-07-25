@@ -1376,6 +1376,10 @@
     if (s.duplicates) bits.push(`${s.duplicates} possible duplicate${s.duplicates === 1 ? '' : 's'}`);
     bits.push(`${s.ready} ready`);
     let summary = `<div class="import-summary-line">${escapeHtml(bits.join(' · '))}</div>`;
+    if (data.dateOrder) {
+      const dmy = data.dateOrder === 'dmy';
+      summary += `<div class="import-note">📅 Dates read <strong>${dmy ? 'day-first (European)' : 'month-first (US)'}</strong> — e.g. 12/07 = ${dmy ? '12 July' : 'December 7'}. Check a couple below to be sure.</div>`;
+    }
     if (s.withReceipt) {
       summary += `<div class="import-note">🧾 ${s.withReceipt} of these will arrive with a receipt already attached from your email.</div>`;
     }

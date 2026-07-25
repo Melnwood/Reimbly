@@ -50,7 +50,7 @@ exports.handler = async (event) => {
       throw badRequest('That file is too large (max 5 MB).');
     }
 
-    const { rows, headers, unmatched, format } = parseSpreadsheet(file);
+    const { rows, headers, unmatched, format, dateOrder } = parseSpreadsheet(file);
     if (!rows.length) throw badRequest('No rows found under the header row.');
     if (rows.length > MAX_ROWS) throw badRequest(`That file has ${rows.length} rows — please split it into batches of ${MAX_ROWS} or fewer.`);
 
@@ -143,6 +143,7 @@ exports.handler = async (event) => {
       headers,
       unmatched,
       format,
+      dateOrder,
     });
   } catch (err) {
     return error(err);

@@ -46,6 +46,11 @@ function prompt(accounts) {
     'languages, in local currencies). Read it carefully and call record_receipt with what ' +
     'you find. Use the total actually paid and the currency printed on the receipt. Translate ' +
     'the description to English. If a field is not legible, return null for it rather than guessing.\n\n' +
+    'IMPORTANT — dates: read the date exactly as this receipt means it. A European ' +
+    'receipt is day-first (e.g. a Czech/Polish receipt showing 12.07.2026 or 12/07/2026 ' +
+    'means 12 July 2026); a US receipt is month-first (07/12/2026 means 12 July 2026 too, ' +
+    'but 03/05 means March 5). Decide from the receipt’s country, currency, language, and ' +
+    'how the date is written — do NOT assume one convention. Return the result as YYYY-MM-DD.\n\n' +
     'For "account", choose the single best-fit GL account and return only its numeric code from ' +
     'this list:\n' + legend
   );

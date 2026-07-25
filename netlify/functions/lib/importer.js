@@ -84,20 +84,51 @@ function normAmount(v) {
   return isFinite(n) ? n : null;
 }
 
-function normDate(v) {
+// Josiah Venture is a European org, so a slash/dot date like 12/07 means
+// 12 July (day-first), not December 7. Default to day-first, overridable with
+// IMPORT_DATE_ORDER=mdy for a US team.
+const DEFAULT_DATE_ORDER = (process.env.IMPORT_DATE_ORDER || 'dmy').toLowerCase() === 'mdy' ? 'mdy' : 'dmy';
+
+// Look at a whole column of dates and decide day-first vs month-first from any
+// value that can only go one way (e.g. 25/07 must be day-first). Falls back to
+// the default when every value is ambiguous.
+function detectDateOrder(values) {
+  let dmy = 0;
+  let mdy = 0;
+  for (const v of values) {
+    const m = String(v == null ? '' : v).trim().match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-]\d{2,4}$/);
+    if (!m) continue;
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    if (a > 12 && b <= 12) dmy += 1; // first part must be the day
+    else if (b > 12 && a <= 12) mdy += 1; // second part must be the day
+  }
+  if (dmy && !mdy) return 'dmy';
+  if (mdy && !dmy) return 'mdy';
+  return DEFAULT_DATE_ORDER;
+}
+
+function normDate(v, order = DEFAULT_DATE_ORDER) {
   if (v == null || v === '') return null;
   if (v instanceof Date && !isNaN(v)) return v.toISOString().slice(0, 10);
   const s = String(v).trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  const m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/);
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); // already unambiguous
+  if (iso) {
+    const dt0 = new Date(Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])));
+    return isNaN(dt0) ? null : dt0.toISOString().slice(0, 10);
+  }
+  const m = s.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})$/);
   if (m) {
-    let mo = Number(m[1]);
-    let da = Number(m[2]);
+    const a = Number(m[1]);
+    const b = Number(m[2]);
     let y = Number(m[3]);
     if (y < 100) y += 2000;
-    if (mo > 12 && da <= 12) { const t = mo; mo = da; da = t; } // looks like D/M/Y
+    let mo;
+    let da;
+    if (order === 'mdy') { mo = a; da = b; } else { da = a; mo = b; }
+    if (mo > 12 && da <= 12) { const t = mo; mo = da; da = t; } // impossible month → the other way
     const dt = new Date(Date.UTC(y, mo - 1, da));
-    if (!isNaN(dt)) return dt.toISOString().slice(0, 10);
+    if (!isNaN(dt) && mo >= 1 && mo <= 12 && da >= 1 && da <= 31) return dt.toISOString().slice(0, 10);
   }
   const dt = new Date(s);
   if (!isNaN(dt)) return dt.toISOString().slice(0, 10);
@@ -130,12 +161,17 @@ function parseSpreadsheet(file) {
   const format = rawHeaders.includes('outflow') || rawHeaders.includes('inflow') ? 'ynab' : 'csv';
 
   const at = (row, field) => (map[field] != null ? row[map[field]] : undefined);
+
+  // Decide day-first vs month-first once, from the whole date column, so every
+  // row in the file is read the same (and consistently with the real dates).
+  const dateOrder = detectDateOrder(grid.slice(1).map((r) => at(r, 'date')));
+
   const rows = [];
   for (let i = 1; i < grid.length; i += 1) {
     const r = grid[i];
     rows.push({
       line: i + 1, // 1-based spreadsheet row number
-      date: normDate(at(r, 'date')),
+      date: normDate(at(r, 'date'), dateOrder),
       amount: normAmount(at(r, 'amount')),
       currency: String(at(r, 'currency') || '').trim().toUpperCase(),
       merchant: String(at(r, 'merchant') || '').trim(),
@@ -144,7 +180,7 @@ function parseSpreadsheet(file) {
     });
   }
 
-  return { rows, headers: Object.keys(map), unmatched, format };
+  return { rows, headers: Object.keys(map), unmatched, format, dateOrder };
 }
 
-module.exports = { parseSpreadsheet, fileToGrid, normAmount, normDate };
+module.exports = { parseSpreadsheet, fileToGrid, normAmount, normDate, detectDateOrder };
