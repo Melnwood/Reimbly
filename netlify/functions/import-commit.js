@@ -67,17 +67,23 @@ exports.handler = async (event) => {
 
       if (!(amount > 0) || !date) { skipped.push({ line, reason: 'Missing amount or date' }); continue; }
       if (!description) { skipped.push({ line, reason: 'Missing description' }); continue; }
-      if (!account) { skipped.push({ line, reason: 'No account chosen' }); continue; }
 
       const key = dupKey({ amount, date, merchant });
       if (key && batchKeys.has(key)) { skipped.push({ line, reason: 'Duplicate of another selected row' }); continue; }
 
       const currencyId = await resolveCurrencyId(currency);
       if (!currencyId) { skipped.push({ line, reason: `Currency "${currency}" isn't set up` }); continue; }
-      const acct = access.accounts.find((a) => String(a.code) === account);
-      if (!acct) { skipped.push({ line, reason: `Account "${account}" isn't in the chart` }); continue; }
-      if (!access.visibleIds.has(acct.id)) { skipped.push({ line, reason: `No access to account ${account}` }); continue; }
-      const accountId = acct.id;
+
+      // The account is optional — budget exports (like YNAB) don't carry a GL
+      // account. When one is given we validate it; otherwise the expense comes in
+      // uncoded and gets an account assigned during review/approval.
+      let accountId = null;
+      if (account) {
+        const acct = access.accounts.find((a) => String(a.code) === account);
+        if (!acct) { skipped.push({ line, reason: `Account "${account}" isn't in the chart` }); continue; }
+        if (!access.visibleIds.has(acct.id)) { skipped.push({ line, reason: `No access to account ${account}` }); continue; }
+        accountId = acct.id;
+      }
 
       const fields = {
         Description: description,
@@ -89,8 +95,8 @@ exports.handler = async (event) => {
         Notes: `Imported from ${source}`,
         Submitter: [staffId],
         Currency: [currencyId],
-        Account: [accountId],
       };
+      if (accountId) fields.Account = [accountId];
       if (merchant) fields.Merchant = merchant;
 
       // If a held email receipt matches this row, adopt it (promote that Draft to

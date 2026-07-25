@@ -1492,38 +1492,47 @@
   async function commitImport() {
     const rowsById = new Map(state.importRows.map((r) => [String(r.line), r]));
     const picked = [];
-    let missingAccount = false;
     $$('.import-row', el.importPreview).forEach((el2) => {
       const check = $('.ir-check', el2);
       if (!check || !check.checked || check.disabled) return;
       const r = rowsById.get(el2.dataset.line);
       if (!r) return;
-      const account = ($('.ir-acct', el2) || {}).value || '';
-      if (!account) missingAccount = true;
+      const account = ($('.ir-acct', el2) || {}).value || ''; // optional — code it later
       picked.push({ line: r.line, date: r.date, amount: r.amount, currency: r.currency, merchant: r.merchant, description: r.description || r.merchant, account });
     });
 
     if (!picked.length) return toast('Tick at least one row to import.', 'bad');
-    if (missingAccount) return toast('Pick an account for every row you’re importing.', 'bad');
 
     const btn = $('#import-commit-btn');
     btn.disabled = true;
     const original = btn.textContent;
-    btn.textContent = 'Importing…';
+    const source = el.importName.textContent || 'spreadsheet';
+    // Send in small batches so a big upload can't hit the per-request time limit.
+    const CHUNK = 20;
+    let created = 0;
+    let attached = 0;
+    const skipped = [];
     try {
-      const res = await api('import-commit', { method: 'POST', body: { rows: picked, source: el.importName.textContent || 'spreadsheet' } });
+      for (let i = 0; i < picked.length; i += CHUNK) {
+        const batch = picked.slice(i, i + CHUNK);
+        btn.textContent = `Importing… ${Math.min(i + CHUNK, picked.length)}/${picked.length}`;
+        const res = await api('import-commit', { method: 'POST', body: { rows: batch, source } });
+        created += res.created || 0;
+        attached += res.attached || 0;
+        if (res.skipped && res.skipped.length) skipped.push(...res.skipped);
+      }
       const bits = [];
-      if (res.skipped && res.skipped.length) bits.push(`${res.skipped.length} skipped`);
-      if (res.attached) bits.push(`${res.attached} with a receipt from email`);
+      if (skipped.length) bits.push(`${skipped.length} skipped`);
+      if (attached) bits.push(`${attached} with a receipt from email`);
       const extra = bits.length ? ` · ${bits.join(' · ')}` : '';
-      toast(`Imported ${res.created} expense${res.created === 1 ? '' : 's'}${extra} 🎉`, 'good');
+      toast(`Imported ${created} expense${created === 1 ? '' : 's'}${extra} 🎉`, 'good');
       clearImport();
       state.loaded.mine = false;
       state.loaded.audit = false;
       state.loaded.dashboard = false;
       switchView('mine');
     } catch (e) {
-      toast(e.message, 'bad');
+      toast(`Imported ${created} so far, then hit an error: ${e.message}`, 'bad');
     } finally {
       btn.disabled = false;
       btn.textContent = original;
