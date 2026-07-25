@@ -6,7 +6,23 @@
 // currency's rate. So this module resolves names/codes/emails to record ids for
 // writing links, and builds id→label maps for reading them back for display.
 
+const crypto = require('crypto');
 const airtable = require('./airtable');
+
+// Receipts are served through the app's own /api/receipt so the browser never
+// sees an Airtable file URL. A short HMAC (keyed on the server-only Airtable
+// token) makes the link unguessable — the same "anyone with the link" model the
+// Airtable URLs already had, just on our own domain.
+function receiptToken(expenseId) {
+  const key = process.env.AIRTABLE_TOKEN || 'rembly-dev';
+  return crypto.createHmac('sha256', key).update(`receipt:${expenseId}`).digest('hex').slice(0, 24);
+}
+function verifyReceiptToken(expenseId, token) {
+  const expected = receiptToken(expenseId);
+  const a = Buffer.from(String(token || ''));
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 const TABLES = {
   STAFF: 'Staff',
@@ -434,7 +450,11 @@ function shapeExpense(record, maps = {}) {
     paidOn: f['Paid On'] || null,
     notes: f['Approver Note'] || '',
     receipt: receipts[0]
-      ? { url: receipts[0].url, filename: receipts[0].filename, thumb: receipts[0].thumbnails?.small?.url }
+      ? {
+          url: `/api/receipt?e=${record.id}&t=${receiptToken(record.id)}`,
+          thumb: `/api/receipt?e=${record.id}&t=${receiptToken(record.id)}&thumb=1`,
+          filename: receipts[0].filename,
+        }
       : null,
   };
 }
@@ -516,6 +536,8 @@ module.exports = {
   savePushSub,
   removePushSubs,
   heldReceiptsFor,
+  receiptToken,
+  verifyReceiptToken,
   getExpenseById,
   canModify,
   isApprover,

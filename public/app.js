@@ -696,7 +696,10 @@
 
       state.loaded.mine = false;
       state.loaded.audit = false;
-      switchView('mine');
+      state.loaded.approvals = false;
+      const back = state.editReturn && state.editReturn !== 'submit' ? state.editReturn : 'mine';
+      state.editReturn = null;
+      switchView(back);
     } catch (e) {
       toast(e.message, 'bad');
     } finally {
@@ -708,9 +711,13 @@
   // ---------- Edit / delete ----------
 
   function startEdit(id) {
-    const e = state.mineExpenses.find((x) => x.id === id);
+    // Find the expense in whichever list we're looking at — your own, or (for
+    // Finance/approvers) the Audit list — so anyone with rights can edit it.
+    const e = (state.mineExpenses || []).find((x) => x.id === id)
+      || (state.auditItems || []).find((x) => x.id === id);
     if (!e) return;
     state.editingId = id;
+    state.editReturn = state.view; // come back to the screen you started from
     // Edits are always in receipt/amount mode (you adjust the amount directly),
     // even for a mileage expense. The type toggle is hidden while editing.
     setExpenseType('receipt');
@@ -1103,6 +1110,7 @@
           ${statusBadge(e.status)}
           ${sourceBadge(e.source)}
           ${receiptLink(e)}
+          <button class="link-btn" data-act="edit" data-id="${escapeHtml(e.id)}">Edit</button>
           ${historyBtn(e.id)}
           <button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>
         </div>
@@ -1111,9 +1119,12 @@
   }
 
   function onAuditClick(event) {
-    const btn = event.target.closest('button[data-act="delete"]');
+    const btn = event.target.closest('button[data-act]');
     if (!btn) return;
-    deleteExpense(btn.dataset.id, () => { state.loaded.audit = false; state.loaded.mine = false; loadAudit(); });
+    const { act, id } = btn.dataset;
+    if (act === 'edit') return startEdit(id);
+    if (act === 'delete') return deleteExpense(id, () => { state.loaded.audit = false; state.loaded.mine = false; loadAudit(); });
+    // "history" is handled by the global history handler.
   }
 
   async function loadAudit() {
@@ -1123,6 +1134,7 @@
     try {
       const data = await api('audit');
       state.loaded.audit = true;
+      state.auditItems = data.items || [];
       renderAudit(data);
     } catch (e) {
       el.auditList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;

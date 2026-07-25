@@ -51,6 +51,11 @@ function prompt(accounts) {
     'means 12 July 2026); a US receipt is month-first (07/12/2026 means 12 July 2026 too, ' +
     'but 03/05 means March 5). Decide from the receipt’s country, currency, language, and ' +
     'how the date is written — do NOT assume one convention. Return the result as YYYY-MM-DD.\n\n' +
+    'For "description", say in plain English WHAT the money was for — the product or service, ' +
+    'not just the vendor name. If you recognize the vendor, name what they actually sell: e.g. ' +
+    'Anthropic → "Claude AI subscription"; Starlink → "Starlink satellite internet"; a hotel → ' +
+    '"Hotel stay in <city>"; a restaurant → "Meal at <name>"; an airline → "Flight <route>". ' +
+    'Keep it short and human. Put the vendor name in "merchant".\n\n' +
     'For "account", choose the single best-fit GL account and return only its numeric code from ' +
     'this list:\n' + legend
   );
