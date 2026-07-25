@@ -1030,7 +1030,6 @@
     const btn = event.target.closest('button[data-act]');
     if (!btn) return false;
     const act = btn.dataset.act;
-    if (act === 'ie-describe') { inlineDescribe(btn); return true; }
     if (act === 'toggle') {
       const card = btn.closest('.expense');
       if (!card) return false;
@@ -1061,45 +1060,38 @@
 
   function onAddListClick(event) { onExpenseCardClick(event); }
 
-  // "✨ Write it for me" inside the inline editor — same helper as the new-expense
-  // form, but reads/writes this row's fields (imported rows often just have the
-  // merchant copied into the description, so this gives a real one).
-  async function inlineDescribe(btn) {
-    const details = btn.closest('.mini-details');
-    if (!details) return;
+  // When you open an expense whose description is just the merchant name copied
+  // over (common for imported rows), quietly offer better ones — the descriptions
+  // you've used at that merchant before, or a few fresh AI suggestions if none.
+  // No button: they just appear, and you tap the one you want.
+  const normStr = (s) => String(s == null ? '' : s).trim().toLowerCase();
+  async function maybeSuggestDescription(details, e) {
+    if (!(state.config && state.config.aiEnabled)) return;
+    const desc = normStr(e.description);
+    const weak = !desc || desc === normStr(e.merchant) || (e.account && desc === normStr(e.account));
+    if (!weak) return; // already has a real description — leave it alone
     const box = $('.ie-describe-options', details);
-    const acctSel = $('.ie-account', details);
-    const acctOpt = acctSel && acctSel.options[acctSel.selectedIndex];
-    const body = {
-      merchant: $('.ie-business', details).value.trim(),
-      amount: parseFloat($('.ie-amount', details).value) || undefined,
-      currency: $('.ie-currency', details).value,
-      account: acctOpt && acctOpt.value ? acctOpt.textContent : '',
-      hint: $('.ie-description', details).value.trim(),
-      date: $('.ie-date', details).value,
-    };
-    if (!body.merchant && !body.hint && !body.account) {
-      return toast('Add where you spent it (or a couple of words) first.', 'bad');
-    }
-    btn.disabled = true;
-    const label = btn.textContent;
-    btn.textContent = '✨ Thinking…';
+    if (!box) return;
+    box.hidden = false;
+    box.innerHTML = `<div class="describe-cap">💭 finding a better description…</div>`;
     try {
-      const res = await api('suggest-description', { method: 'POST', body });
+      const res = await api('suggest-description', { method: 'POST', body: {
+        merchant: (e.merchant || '').trim(),
+        amount: e.amount != null ? e.amount : undefined,
+        currency: e.currency || 'USD',
+        account: e.account || '',
+        date: e.date || '',
+      } });
       const remembered = (res && res.remembered) || [];
       const options = (res && res.options) || [];
-      if (!remembered.length && !options.length) { toast('Couldn’t think of one — add a bit more detail.', 'bad'); return; }
+      if (!remembered.length && !options.length) { box.hidden = true; box.innerHTML = ''; return; }
       const chips = [];
       remembered.forEach((o) => chips.push(`<button type="button" class="describe-chip remembered" data-desc="${escapeHtml(o)}">↺ ${escapeHtml(o)}</button>`));
       options.forEach((o) => chips.push(`<button type="button" class="describe-chip" data-desc="${escapeHtml(o)}">✨ ${escapeHtml(o)}</button>`));
-      const cap = remembered.length ? 'You’ve used these here before — or try a new one:' : 'Tap one to use it:';
+      const cap = remembered.length ? 'You’ve used these here before — tap one:' : 'Pick a better description:';
       box.innerHTML = `<div class="describe-cap">${cap}</div>${chips.join('')}`;
-      box.hidden = false;
-    } catch (e) {
-      toast(e.message, 'bad');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = label;
+    } catch (err) {
+      box.hidden = true; box.innerHTML = '';
     }
   }
 
@@ -1395,7 +1387,7 @@
         <label class="ie-f"><span>Date</span><input class="ie-date" type="date" value="${escapeHtml(e.date || '')}" /></label>
         <label class="ie-f"><span>Where (business)</span><input class="ie-business" type="text" maxlength="80" value="${escapeHtml(e.merchant || '')}" /></label>
         <label class="ie-f">
-          <span class="field-label-row"><span>Description</span>${(state.config && state.config.aiEnabled) ? '<button type="button" class="link-btn" data-act="ie-describe">✨ Write it for me</button>' : ''}</span>
+          <span>Description</span>
           <input class="ie-description" type="text" maxlength="120" value="${escapeHtml(e.description || '')}" />
           <div class="ie-describe-options describe-options" hidden></div>
         </label>
@@ -1424,7 +1416,12 @@
   function buildInlineEdit(details, id) {
     const e = (state.mineExpenses || []).find((x) => x.id === id);
     if (!e) { details.innerHTML = ''; return; }
-    details.innerHTML = EDITABLE.includes(e.status) ? inlineEditHtml(e) : readOnlyDetailsHtml(e);
+    if (EDITABLE.includes(e.status)) {
+      details.innerHTML = inlineEditHtml(e);
+      maybeSuggestDescription(details, e); // auto-offer a better description if it's weak
+    } else {
+      details.innerHTML = readOnlyDetailsHtml(e);
+    }
   }
 
   // Save the inline edits for one expense. Returns 'saved', 'unchanged', or false
