@@ -805,8 +805,9 @@
       state.loaded.audit = false;
       state.loaded.approvals = false;
       // After adding, stay on Add expense so they can add more and see the list;
-      // after an edit, go back to wherever they started.
-      const back = editing ? (state.editReturn && state.editReturn !== 'submit' ? state.editReturn : 'mine') : 'submit';
+      // after an edit, go back to exactly where they started (the Add-expense
+      // list, or Audit) — the saved expense drops back into its report there.
+      const back = editing ? (state.editReturn || 'mine') : 'submit';
       state.editReturn = null;
       setAddFormOpen(false); // collapse back to the small header after saving
       switchView(back);
@@ -828,9 +829,35 @@
     toggle.setAttribute('aria-expanded', String(open));
     toggle.classList.toggle('open', open);
   }
+  // Is the open form filled in enough to save? (Mirrors the checks in onSubmit.)
+  function isExpenseFormComplete() {
+    const editing = !!state.editingId;
+    const mileageMode = !editing && state.expenseType === 'mileage';
+    const account = $('#f-account').value;
+    const date = $('#f-date').value;
+    if (mileageMode) {
+      const rate = selectedRate();
+      const distance = parseFloat($('#f-distance').value);
+      return !!(rate && distance > 0 && date && account);
+    }
+    const amount = parseFloat($('#f-amount').value);
+    const description = $('#f-description').value.trim();
+    return !!(description && amount > 0 && date && account);
+  }
+
+  // Tapping the header opens the form; tapping it while open "clicks out":
+  //  - editing → save the changes (onSubmit validates; only closes if it saved)
+  //  - a new, fully-filled expense → save it (it drops into the chosen report)
+  //  - an empty/partial new form → just fold away, nothing entered
   function toggleAddForm() {
     const body = $('#add-form-body');
-    setAddFormOpen(body && body.hidden);
+    if (body && body.hidden) { setAddFormOpen(true); return; }
+    if (state.editingId || isExpenseFormComplete()) {
+      if (el.form.requestSubmit) el.form.requestSubmit();
+      else el.form.dispatchEvent(new Event('submit', { cancelable: true }));
+      return;
+    }
+    setAddFormOpen(false);
   }
 
   // ---------- Edit / delete ----------
