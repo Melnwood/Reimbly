@@ -365,6 +365,11 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 
 .mini-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 
+/* Sort control above an expense list */
+.list-sort { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.list-sort label { font-size: 0.82rem; color: var(--ink-soft); font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.list-sort select { font: inherit; }
+
 /* Inline editor shown when you open an expense */
 .inline-edit { display: flex; flex-direction: column; gap: 10px; }
 .ie-row { display: flex; gap: 10px; }

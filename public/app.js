@@ -16,6 +16,7 @@
     editingId: null,
     importRows: [],
     importMode: 'add', // 'add' | 'reconcile'
+    expenseSort: 'date-desc', // how the expense lists are ordered
   };
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -1337,12 +1338,29 @@
       </article>`;
   }
 
+  // Sort a list of expenses by the person's chosen order (date / description /
+  // amount). Used by the "Not in a report yet" list and each report's expenses.
+  function sortExpenses(list) {
+    const arr = list.slice();
+    const who = (e) => (e.merchant || e.description || '').toLowerCase();
+    const amt = (e) => Number(e.amountUsd != null ? e.amountUsd : e.amount) || 0;
+    const date = (e) => String(e.date || '');
+    switch (state.expenseSort) {
+      case 'date-asc': arr.sort((a, b) => date(a).localeCompare(date(b))); break;
+      case 'desc-az': arr.sort((a, b) => who(a).localeCompare(who(b))); break;
+      case 'amt-desc': arr.sort((a, b) => amt(b) - amt(a)); break;
+      case 'amt-asc': arr.sort((a, b) => amt(a) - amt(b)); break;
+      default: arr.sort((a, b) => date(b).localeCompare(date(a))); break; // newest first
+    }
+    return arr;
+  }
+
   function renderAddList() {
     const box = el.addList;
     if (!box) return;
     // Only expenses not yet in a report — once you file one it moves to that
     // report (and shows under "My reports").
-    const unfiled = (state.mineExpenses || []).filter((e) => !e.reportId);
+    const unfiled = sortExpenses((state.mineExpenses || []).filter((e) => !e.reportId));
     if (!unfiled.length) {
       box.innerHTML = `<div class="state"><span class="emoji">✅</span>Nothing loose here — every expense is filed into a report. Add a new one above, or see them under “My reports.”</div>`;
       return;
@@ -1588,7 +1606,7 @@
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
         <div class="rc-body" hidden>
-          ${items.length ? items.map(expenseRowHtml).join('') : '<div class="state small">No expenses yet — add some on the “Add expense” tab, then pick this report.</div>'}
+          ${items.length ? sortExpenses(items).map(expenseRowHtml).join('') : '<div class="state small">No expenses yet — add some on the “Add expense” tab, then pick this report.</div>'}
           <div class="rc-actions">
             ${canSubmit ? `<button class="btn primary small" data-act="report-submit" data-id="${escapeHtml(r.id)}">Submit report for approval</button>` : ''}
             <button class="link-btn" data-act="report-rename" data-id="${escapeHtml(r.id)}">Rename</button>
@@ -2953,6 +2971,7 @@
     $('#describe-options').addEventListener('click', onDescribeOptionClick);
     $('#f-business').addEventListener('change', recallDescriptions);
     $('#rescan-dates').addEventListener('click', rescanDates);
+    $('#add-sort').addEventListener('change', (e) => { state.expenseSort = e.target.value; renderAddList(); renderReports(); });
     $('#new-report-btn').addEventListener('click', createReportPrompt);
     $('#f-report').addEventListener('change', onFormReportChange);
     $('#import-choose').addEventListener('click', () => el.importFile.click());
