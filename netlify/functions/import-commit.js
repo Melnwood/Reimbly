@@ -33,6 +33,9 @@ exports.handler = async (event) => {
     const body = parseBody(event);
     const rows = Array.isArray(body.rows) ? body.rows : [];
     const source = String(body.source || 'spreadsheet').slice(0, 120);
+    // Label the origin so each expense shows how it got in (YNAB vs a plain CSV).
+    const kind = String(body.kind || '').toLowerCase() === 'ynab' ? 'YNAB' : 'CSV';
+    const originNote = `Imported from ${kind} · ${source}`;
     if (!rows.length) throw badRequest('Nothing was selected to import.');
     if (rows.length > MAX_ROWS) throw badRequest(`Too many rows at once (max ${MAX_ROWS}).`);
 
@@ -92,7 +95,7 @@ exports.handler = async (event) => {
         'Payment Method': DEFAULT_PAYMENT_METHOD,
         Status: STATUS.SUBMITTED,
         'Submitted On': today(),
-        Notes: `Imported from ${source}`,
+        Notes: originNote,
         Submitter: [staffId],
         Currency: [currencyId],
       };
@@ -114,7 +117,7 @@ exports.handler = async (event) => {
         const rec = await airtable.createRecord(TABLES.EXPENSES, fields);
         recId = rec.id;
       }
-      await logActivity({ expenseId: recId, event: EVENTS.SUBMITTED, user, note: `Imported from ${source}` });
+      await logActivity({ expenseId: recId, event: EVENTS.SUBMITTED, user, note: originNote });
       if (key) batchKeys.add(key);
       created.push({ id: recId, hasReceipt: match >= 0 });
     }

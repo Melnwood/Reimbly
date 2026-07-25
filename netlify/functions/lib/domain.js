@@ -385,6 +385,19 @@ async function displayMaps() {
   return { currency, category, staff, account };
 }
 
+// How an expense got into Rembly, for a provenance badge. Uses an explicit
+// "Source" field if the base has one, otherwise reads it off the Notes tag each
+// entry path writes (so existing records get a sensible label too).
+function sourceOf(fields = {}) {
+  const explicit = fields.Source;
+  if (explicit) return typeof explicit === 'object' ? explicit.name : String(explicit);
+  const notes = String(fields.Notes || '');
+  if (/from email|captured from email/i.test(notes)) return 'Email';
+  if (/imported from ynab|from ynab/i.test(notes)) return 'YNAB';
+  if (/imported from/i.test(notes)) return 'CSV';
+  return 'Manual';
+}
+
 // Shape a raw Expenses record into the trimmed object the browser needs,
 // resolving linked ids through the maps from displayMaps().
 function shapeExpense(record, maps = {}) {
@@ -413,6 +426,7 @@ function shapeExpense(record, maps = {}) {
     distanceUnit: f['Distance Unit'] || '',
     mileageRate: f['Mileage Rate'] != null ? Number(f['Mileage Rate']) : null,
     status: f.Status || STATUS.SUBMITTED,
+    source: sourceOf(f),
     submitterName: submitter.name || '',
     submitterEmail: firstLookup(f['Submitter Email']) || submitter.email || '',
     submittedOn: f['Submitted On'] || null,

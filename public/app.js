@@ -791,6 +791,24 @@
     return `<span class="dot ${cls}" title="${escapeHtml(status || 'Submitted')}"></span>`;
   }
 
+  // How the expense got into Rembly: typed, from email, or an import.
+  const SOURCE_META = {
+    Manual: ['✍️', 'Manual'],
+    Email: ['📧', 'Email'],
+    CSV: ['📄', 'CSV'],
+    YNAB: ['📊', 'YNAB'],
+  };
+  function sourceBadge(src) {
+    const meta = SOURCE_META[src];
+    if (!meta) return '';
+    return `<span class="src-badge src-${src.toLowerCase()}">${meta[0]} ${escapeHtml(meta[1])}</span>`;
+  }
+  function sourceDot(src) {
+    const meta = SOURCE_META[src];
+    if (!meta) return '';
+    return `<span class="mini-src" title="Added: ${escapeHtml(meta[1])}">${meta[0]}</span>`;
+  }
+
   function receiptLink(expense) {
     if (!expense.receipt || !expense.receipt.url) return '';
     return `<a class="receipt-link" href="${escapeHtml(expense.receipt.url)}" target="_blank" rel="noopener">📎 Receipt</a>`;
@@ -839,6 +857,7 @@
           <span class="mini-date">${escapeHtml(fmtDateShort(e.date))}</span>
           <span class="mini-who">${escapeHtml(who)}</span>
           <span class="mini-amt">${escapeHtml(amt)}</span>
+          ${sourceDot(e.source)}
           ${statusDot(e.status)}
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
@@ -848,6 +867,7 @@
           ${mileageMeta}
           <div class="expense-actions">
             ${statusBadge(e.status)}
+            ${sourceBadge(e.source)}
             ${receiptLink(e)}
             ${historyBtn(e.id)}
             ${editable ? `<button class="link-btn" data-act="edit" data-id="${escapeHtml(e.id)}">Edit</button>` : ''}
@@ -914,6 +934,7 @@
                 ${amountBlock(e)}
               </div>
               <div class="expense-actions">
+                ${sourceBadge(e.source)}
                 ${receiptLink(e)}
                 ${historyBtn(e.id)}
                 <button class="btn ghost small" data-act="sendback-toggle">Send back</button>
@@ -1349,6 +1370,7 @@
 
   function renderImportPreview(data) {
     state.importRows = data.rows || [];
+    state.importFormat = data.format || 'csv';
     const s = data.summary || { total: 0, duplicates: 0, ready: 0 };
     const bits = [`${s.total} row${s.total === 1 ? '' : 's'}`];
     if (s.duplicates) bits.push(`${s.duplicates} possible duplicate${s.duplicates === 1 ? '' : 's'}`);
@@ -1516,7 +1538,7 @@
       for (let i = 0; i < picked.length; i += CHUNK) {
         const batch = picked.slice(i, i + CHUNK);
         btn.textContent = `Importing… ${Math.min(i + CHUNK, picked.length)}/${picked.length}`;
-        const res = await api('import-commit', { method: 'POST', body: { rows: batch, source } });
+        const res = await api('import-commit', { method: 'POST', body: { rows: batch, source, kind: state.importFormat } });
         created += res.created || 0;
         attached += res.attached || 0;
         if (res.skipped && res.skipped.length) skipped.push(...res.skipped);

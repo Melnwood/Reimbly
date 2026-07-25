@@ -252,6 +252,18 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .badge.rejected { background: #fee2e2; color: #b91c1c; }
 .badge.reimbursed { background: #dbeafe; color: #1e40af; }
 
+/* How an expense got in (provenance) */
+.src-badge {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em;
+  padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  background: #f1eee8; color: #5b5347; border: 1px solid #e5e0d6;
+}
+.src-badge.src-email { background: #eef4ff; color: #1e4fa3; border-color: #d6e4ff; }
+.src-badge.src-ynab { background: #ecfdf5; color: #05704f; border-color: #c9f0df; }
+.src-badge.src-csv { background: #fef6e7; color: #92600e; border-color: #f6e6c4; }
+.src-badge.src-manual { background: #f3f1f5; color: #5b4b6b; border-color: #e6e1ec; }
+.mini-src { flex: none; font-size: 0.9rem; line-height: 1; opacity: 0.85; }
+
 .expense-note {
   font-size: 0.85rem; color: var(--warn);
   background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 8px 10px;

@@ -125,6 +125,10 @@ function parseSpreadsheet(file) {
     throw err;
   }
 
+  // Recognize a YNAB export by its signature columns, so imports can be labeled.
+  const rawHeaders = (grid[0] || []).map((h) => String(h == null ? '' : h).trim().toLowerCase());
+  const format = rawHeaders.includes('outflow') || rawHeaders.includes('inflow') ? 'ynab' : 'csv';
+
   const at = (row, field) => (map[field] != null ? row[map[field]] : undefined);
   const rows = [];
   for (let i = 1; i < grid.length; i += 1) {
@@ -140,7 +144,7 @@ function parseSpreadsheet(file) {
     });
   }
 
-  return { rows, headers: Object.keys(map), unmatched };
+  return { rows, headers: Object.keys(map), unmatched, format };
 }
 
 module.exports = { parseSpreadsheet, fileToGrid, normAmount, normDate };
