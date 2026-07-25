@@ -204,7 +204,7 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .btn.small { padding: 8px 14px; font-size: 0.9rem; }
 
 /* ---------- Lists / cards ---------- */
-.list { display: grid; gap: 12px; }
+.list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .expense {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
