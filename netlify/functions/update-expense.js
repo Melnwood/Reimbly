@@ -19,6 +19,8 @@ const {
   displayMaps,
   shapeExpense,
   logActivity,
+  getReportById,
+  reportOwnedBy,
 } = require('./lib/domain');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
@@ -46,7 +48,7 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role } = await ensureStaff(user);
+    const { role, id: staffId } = await ensureStaff(user);
     const body = parseBody(event);
 
     const id = String(body.id || '').trim();
@@ -92,6 +94,21 @@ exports.handler = async (event) => {
       Currency: [currencyId],
       Account: [accountId],
     };
+
+    // Optionally move the expense into (or out of) a report in the same save, so
+    // filing it happens together with the edits — no separate step.
+    if (Object.prototype.hasOwnProperty.call(body, 'reportId')) {
+      const reportId = String(body.reportId || '').trim();
+      if (reportId) {
+        const report = await getReportById(reportId);
+        if (!report || !reportOwnedBy(report, staffId)) {
+          const err = new Error('That isn’t one of your reports.');
+          err.statusCode = 403;
+          throw err;
+        }
+      }
+      fields.Report = reportId ? [reportId] : [];
+    }
 
     // Editing a sent-back expense sends it back through for approval, clean.
     const wasRejected = (current.fields && current.fields.Status) === STATUS.REJECTED;

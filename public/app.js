@@ -1014,13 +1014,15 @@
     holder.querySelector('[data-confirm="no"]').addEventListener('click', () => holder.replaceWith(btn));
   }
 
-  // Clicks inside the "Your expenses" list on the Add-expense tab.
-  function onAddListClick(event) {
+  // Handle a click on an expense card (used by both the Add-expense list and the
+  // expenses inside a report). Returns true if it handled the click.
+  function onExpenseCardClick(event) {
     const btn = event.target.closest('button[data-act]');
-    if (!btn) return;
+    if (!btn) return false;
     const act = btn.dataset.act;
     if (act === 'toggle') {
       const card = btn.closest('.expense');
+      if (!card) return false;
       const id = card.dataset.id;
       const details = $('.mini-details', card);
       if (details.hasAttribute('hidden')) {
@@ -1031,43 +1033,36 @@
       } else {
         collapseInlineEdit(card, id, details, btn); // closing saves what changed
       }
-      return;
+      return true;
     }
-    const id = btn.dataset.id;
     if (act === 'delete') {
-      requestDelete(btn, id, () => { invalidateReports(); showAddExpense(); });
+      requestDelete(btn, btn.dataset.id, () => refreshExpenseViews());
+      return true;
     }
+    return false;
   }
 
-  // The per-expense "which report?" picker changed.
-  function onAddListChange(event) {
+  function onAddListClick(event) { onExpenseCardClick(event); }
+
+  // The only report-picker change we act on immediately is "＋ New report" —
+  // it creates the report and selects it. Picking an existing report is saved
+  // when the line is closed (together with any field edits), so nothing is lost.
+  async function onAddListChange(event) {
     const sel = event.target.closest('select[data-role="report-pick"]');
-    if (!sel) return;
-    const id = sel.getAttribute('data-id');
-    assignExpense(id, sel.value, sel);
-  }
-
-  async function assignExpense(expenseId, value, sel) {
-    if (sel) sel.disabled = true;
+    if (!sel || sel.value !== '__new__') return;
+    const name = (window.prompt('Name the new report (e.g. “General Fund – July”):') || '').trim();
+    if (!name) { sel.value = ''; return; }
     try {
-      let reportId = value || null;
-      if (value === '__new__') {
-        const name = (window.prompt('Name the new report (e.g. “General Fund – July”):') || '').trim();
-        if (!name) { if (sel) sel.disabled = false; renderAddList(); return; }
-        const made = await api('reports', { method: 'POST', body: { action: 'create', name } });
-        reportId = made.report.id;
-      }
-      await api('reports', { method: 'POST', body: { action: 'assign', expenseId, reportId } });
-      toast(reportId ? 'Added to the report.' : 'Removed from the report.', 'good');
-      invalidateReports();
+      const made = await api('reports', { method: 'POST', body: { action: 'create', name } });
       await ensureReportsData(true);
       populateReportPicker();
-      renderAddList();
-    } catch (e) {
-      toast(e.message, 'bad');
-      if (sel) sel.disabled = false;
-      renderAddList();
-    }
+      const opt = document.createElement('option');
+      opt.value = made.report.id;
+      opt.textContent = made.report.name;
+      sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
+      sel.value = made.report.id;
+      toast('Report created — it’ll be filed here when you close this line.', 'good');
+    } catch (e) { toast(e.message, 'bad'); sel.value = ''; }
   }
 
   async function createReportPrompt() {
@@ -1085,6 +1080,7 @@
 
   // Clicks inside the "My reports" list.
   function onReportsClick(event) {
+    if (onExpenseCardClick(event)) return; // an expense card inside a report
     const btn = event.target.closest('button[data-act]');
     if (!btn) return;
     const act = btn.dataset.act;
@@ -1269,20 +1265,14 @@
     } catch (e) { toast(e.message, 'bad'); sel.value = ''; }
   }
 
-  // ----- Add-expense tab: the flat, editable list of your expenses -----
+  // ----- Add-expense tab: expenses not yet filed into a report -----
 
-  function renderAddList() {
-    const box = el.addList;
-    if (!box) return;
-    const expenses = state.mineExpenses || [];
-    if (!expenses.length) {
-      box.innerHTML = `<div class="state"><span class="emoji">🌱</span>No expenses yet — add your first one above!</div>`;
-      return;
-    }
-    box.innerHTML = expenses.map((e) => {
-      const who = e.merchant || e.description || '(no description)';
-      const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
-      return `
+  // One collapsed expense row that opens into the inline editor. Shared by the
+  // Add-expense list and the expenses inside each report card.
+  function expenseRowHtml(e) {
+    const who = e.merchant || e.description || '(no description)';
+    const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
+    return `
       <article class="expense mini" data-id="${escapeHtml(e.id)}">
         <button type="button" class="mini-row" data-act="toggle" aria-expanded="false">
           <span class="mini-date">${escapeHtml(fmtDateShort(e.date))}</span>
@@ -1294,7 +1284,31 @@
         </button>
         <div class="mini-details" hidden></div>
       </article>`;
-    }).join('');
+  }
+
+  function renderAddList() {
+    const box = el.addList;
+    if (!box) return;
+    // Only expenses not yet in a report — once you file one it moves to that
+    // report (and shows under "My reports").
+    const unfiled = (state.mineExpenses || []).filter((e) => !e.reportId);
+    if (!unfiled.length) {
+      box.innerHTML = `<div class="state"><span class="emoji">✅</span>Nothing loose here — every expense is filed into a report. Add a new one above, or see them under “My reports.”</div>`;
+      return;
+    }
+    box.innerHTML = unfiled.map(expenseRowHtml).join('');
+  }
+
+  // Reload the expense data and re-render both places it shows (the Add-expense
+  // list and the report cards) plus the duplicates panel, so everything stays
+  // in step after an edit, a report change, or a delete.
+  async function refreshExpenseViews() {
+    invalidateReports();
+    try { await ensureReportsData(true); } catch (e) { /* keep going */ }
+    populateReportPicker();
+    renderAddList();
+    renderReports();
+    loadDuplicates();
   }
 
   // Currencies offered in the inline editor (kept in step with the form).
@@ -1363,20 +1377,29 @@
     const merchant = details.querySelector('.ie-business').value.trim();
     const description = details.querySelector('.ie-description').value.trim();
 
-    const changed = amount !== e.amount || currency !== (e.currency || 'USD')
+    // The report picker is saved together with the fields — so choosing a report
+    // and closing the line files the expense into it (no separate step).
+    const reportSel = details.querySelector('.report-pick');
+    const reportVal = reportSel ? reportSel.value : undefined;
+    const reportChanged = reportSel && reportVal !== '__new__' && reportVal !== (e.reportId || '');
+
+    const fieldsChanged = amount !== e.amount || currency !== (e.currency || 'USD')
       || account !== (e.accountCode || '') || date !== (e.date || '')
       || merchant !== (e.merchant || '') || description !== (e.description || '');
-    if (!changed) return 'unchanged';
+    if (!fieldsChanged && !reportChanged) return 'unchanged';
 
     if (!description) { toast('Add a short description.', 'bad'); return false; }
     if (!(amount > 0)) { toast('Amount must be greater than zero.', 'bad'); return false; }
     if (!date) { toast('Pick the date.', 'bad'); return false; }
     if (!account) { toast('Choose an account.', 'bad'); return false; }
 
+    const body = { id, amount, currency, account, date, description, merchant };
+    if (reportChanged) body.reportId = reportVal; // '' removes from its report
+
     try {
-      await api('update-expense', { method: 'POST', body: { id, amount, currency, account, date, description, merchant } });
+      await api('update-expense', { method: 'POST', body });
       bumpAccountUsage(account);
-      toast('Saved.', 'good');
+      toast(reportChanged && reportVal ? 'Saved and filed into the report.' : 'Saved.', 'good');
       return 'saved';
     } catch (err) {
       toast(err.message, 'bad');
@@ -1390,7 +1413,7 @@
     details.setAttribute('hidden', '');
     btn.setAttribute('aria-expanded', 'false');
     card.classList.remove('open');
-    if (result === 'saved') { invalidateReports(); showAddExpense(); }
+    if (result === 'saved') refreshExpenseViews();
   }
 
   async function showAddExpense() {
@@ -1504,7 +1527,7 @@
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
         <div class="rc-body" hidden>
-          ${items.length ? items.map(memberRowHtml).join('') : '<div class="state small">No expenses yet — add some on the “Add expense” tab.</div>'}
+          ${items.length ? items.map(expenseRowHtml).join('') : '<div class="state small">No expenses yet — add some on the “Add expense” tab, then pick this report.</div>'}
           <div class="rc-actions">
             ${canSubmit ? `<button class="btn primary small" data-act="report-submit" data-id="${escapeHtml(r.id)}">Submit report for approval</button>` : ''}
             <button class="link-btn" data-act="report-rename" data-id="${escapeHtml(r.id)}">Rename</button>
@@ -1518,17 +1541,15 @@
     const box = el.reportsList;
     if (!box) return;
     const reports = state.reports || [];
-    const unfiled = (state.mineExpenses || []).filter((e) => !e.reportId);
+    const unfiled = (state.mineExpenses || []).filter((e) => !e.reportId).length;
     let html = '';
     if (!reports.length) {
-      html += `<div class="state"><span class="emoji">🗂️</span>No reports yet. Tap “＋ New report”, then add expenses to it on the “Add expense” tab.</div>`;
+      html += `<div class="state"><span class="emoji">🗂️</span>No reports yet. Tap “＋ New report”, then file expenses into it from the “Add expense” tab.</div>`;
     } else {
       html += reports.map(reportCardHtml).join('');
     }
-    if (unfiled.length) {
-      html += `<h3 class="dash-h">Not in a report yet (${unfiled.length})</h3>`;
-      html += `<p class="import-note">Put these into a report on the “Add expense” tab.</p>`;
-      html += unfiled.map(memberRowHtml).join('');
+    if (unfiled) {
+      html += `<p class="import-note">You still have ${unfiled} expense${unfiled === 1 ? '' : 's'} not in a report — file ${unfiled === 1 ? 'it' : 'them'} on the “Add expense” tab.</p>`;
     }
     box.innerHTML = html;
   }
@@ -2895,6 +2916,7 @@
     el.addList.addEventListener('change', onAddListChange);
     $('#dupes-list').addEventListener('click', onDuplicatesClick);
     el.reportsList.addEventListener('click', onReportsClick);
+    el.reportsList.addEventListener('change', onAddListChange);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
     el.archiveReady.addEventListener('click', onArchiveClick);
