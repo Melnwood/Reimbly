@@ -1410,10 +1410,7 @@
     $('#rank-dim-label').textContent = dash.dim === 'account' ? 'Accounts' : dash.dim === 'category' ? 'Categories' : 'Status';
 
     const { slices, total } = buildBuckets();
-    const totalTxt = money(total, 'USD');
-    $('#donut-total').textContent = totalTxt;
-    $('#donut-center-total').textContent = totalTxt;
-    $('#donut-center-sub').textContent = periodLabelText();
+    $('#donut-total').textContent = money(total, 'USD');
     renderDonut(slices, total);
     renderRank(slices, total);
     renderDetail(slices);
