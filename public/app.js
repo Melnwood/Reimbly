@@ -1396,6 +1396,47 @@
     el.importPreview.innerHTML = state.importRows.map(importRowHtml).join('');
     $('#import-commit-btn').textContent = 'Import selected';
     el.importActions.hidden = false;
+
+    // Fill in a best-guess account for rows that came in without one — quietly,
+    // in the background, so the preview shows instantly and the accounts appear a
+    // moment later for you to review.
+    autoSuggestAccounts();
+  }
+
+  // Ask Claude to code the uncoded rows from their text, in small batches, and
+  // drop each suggestion into that row's account picker. Best-effort: if it's
+  // off or errors, rows just stay blank for you to choose by hand.
+  async function autoSuggestAccounts() {
+    const rows = state.importRows
+      .filter((r) => r.importable && !r.duplicate && !r.accountCode)
+      .map((r) => ({ line: r.line, merchant: r.merchant, description: r.description, amount: r.amount }));
+    if (!rows.length) return;
+
+    const note = document.createElement('div');
+    note.className = 'import-note suggest-note';
+    note.textContent = '✨ Suggesting accounts…';
+    el.importSummary.appendChild(note);
+
+    const CHUNK = 40;
+    let filled = 0;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      let res;
+      try {
+        res = await api('suggest-accounts', { method: 'POST', body: { rows: rows.slice(i, i + CHUNK) } });
+      } catch (e) {
+        note.remove();
+        return; // best-effort — leave the rest for manual selection
+      }
+      (res.suggestions || []).forEach((s) => {
+        const row = $(`.import-row[data-line="${s.line}"]`, el.importPreview);
+        const sel = row && $('.ir-acct', row);
+        if (sel && Array.from(sel.options).some((o) => o.value === s.code)) { sel.value = s.code; filled += 1; }
+      });
+      note.textContent = `✨ Suggesting accounts… ${Math.min(i + CHUNK, rows.length)}/${rows.length}`;
+    }
+    note.textContent = filled
+      ? `✨ Suggested an account for ${filled} row${filled === 1 ? '' : 's'} — please double-check before importing.`
+      : '';
   }
 
   // One selectable row (checkbox + details + account picker), shared by the
