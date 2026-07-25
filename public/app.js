@@ -40,10 +40,7 @@
     approvalsList: $('#approvals-list'),
     auditSummary: $('#audit-summary'),
     auditList: $('#audit-list'),
-    dashTiles: $('#dash-tiles'),
-    dashAccounts: $('#dash-accounts'),
-    dashStatus: $('#dash-status'),
-    dashHistory: $('#dash-history'),
+    dashboard: $('#view-dashboard'),
     archiveReadyWrap: $('#archive-ready-wrap'),
     archiveReady: $('#archive-ready'),
     archivePaid: $('#archive-paid'),
@@ -397,7 +394,7 @@
 
     $('.tab[data-view="approvals"]').hidden = !state.me.canApprove;
     $('.tab[data-view="audit"]').hidden = !state.me.canApprove;
-    $('.tab[data-view="dashboard"]').hidden = !state.me.canApprove;
+    $('.tab[data-view="dashboard"]').hidden = false; // everyone gets their own spending breakdown
     $('.tab[data-view="archive"]').hidden = !state.me.canApprove;
     $('.tab[data-view="rates"]').hidden = state.me.role !== 'Finance';
     $('.tab[data-view="people"]').hidden = state.me.role !== 'Finance';
@@ -1195,59 +1192,230 @@
     }
   }
 
-  // ---------- Dashboard ----------
+  // ---------- Dashboard (spending breakdown) ----------
+  // A donut of where the money went, with a month stepper, an all-time / custom
+  // range, and click-to-drill-in. All the slice math happens here in the browser
+  // over the expenses the server hands back, so stepping months is instant.
 
-  function tile(label, value) {
-    return `<div class="tile"><div class="tile-val">${escapeHtml(value)}</div><div class="tile-label">${escapeHtml(label)}</div></div>`;
+  const DONUT_COLORS = [
+    '#4f46e5', '#22c55e', '#f59e0b', '#ef4444', '#a78bfa', '#84cc16',
+    '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#8b5cf6', '#eab308',
+  ];
+  const EVERYTHING_ELSE = '#c7cbe0';
+  const MAX_SLICES = 9; // top N, then everything else rolls up
+
+  const dash = {
+    raw: [],
+    mode: 'month', // month | year | all | custom
+    ym: new Date().toISOString().slice(0, 7), // 'YYYY-MM' for month mode
+    year: new Date().getFullYear(),
+    from: '', to: '',
+    dim: 'account', // account | category | status
+    scope: 'mine',
+    active: null, // drilled-in bucket key
+  };
+
+  // A dashboard expense counts as "spend" unless it was denied.
+  const isSpend = (e) => e.status !== 'Rejected';
+
+  function dashLabel(e) {
+    if (dash.dim === 'account') return e.account || 'Unassigned';
+    if (dash.dim === 'category') return e.category || 'Uncategorised';
+    return statusLabel(e.status);
   }
 
-  function renderDashboard(d) {
-    el.dashTiles.innerHTML = [
-      tile('Total spent', money(d.totals.usd, 'USD')),
-      tile('Expenses', String(d.totals.count)),
-      tile('This month', money(d.thisMonthUsd, 'USD')),
-    ].join('');
+  function inPeriod(e) {
+    const d = String(e.date || '').slice(0, 10);
+    if (!d) return dash.mode === 'all';
+    if (dash.mode === 'month') return d.slice(0, 7) === dash.ym;
+    if (dash.mode === 'year') return d.slice(0, 4) === String(dash.year);
+    if (dash.mode === 'custom') {
+      if (dash.from && d < dash.from) return false;
+      if (dash.to && d > dash.to) return false;
+      return true;
+    }
+    return true; // all
+  }
 
-    const max = (d.byAccount[0] && d.byAccount[0].usd) || 1;
-    el.dashAccounts.innerHTML = d.byAccount.length
-      ? d.byAccount.map((a) => `
-        <div class="bar-row">
-          <div class="bar-top"><span class="bar-label">${escapeHtml(a.account)}</span><span class="bar-val">${escapeHtml(money(a.usd, 'USD'))}</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.max(3, (a.usd / max) * 100)}%"></div></div>
-        </div>`).join('')
-      : `<div class="state">No spend yet.</div>`;
+  function periodLabelText() {
+    if (dash.mode === 'all') return 'All time';
+    if (dash.mode === 'year') return String(dash.year);
+    if (dash.mode === 'custom') {
+      if (!dash.from && !dash.to) return 'Custom range';
+      return `${dash.from ? fmtDate(dash.from) : '…'} – ${dash.to ? fmtDate(dash.to) : '…'}`;
+    }
+    const d = new Date(`${dash.ym}-01T00:00:00`);
+    return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }
 
-    el.dashStatus.innerHTML = d.byStatus.map((s) => {
-      const cls = statusKey(s.status);
-      return `<span class="badge ${cls}">${escapeHtml(statusLabel(s.status))} · ${s.count} · ${escapeHtml(money(s.usd, 'USD'))}</span>`;
+  function stepPeriod(delta) {
+    if (dash.mode === 'month') {
+      const d = new Date(`${dash.ym}-01T00:00:00`);
+      d.setMonth(d.getMonth() + delta);
+      dash.ym = d.toISOString().slice(0, 7);
+    } else if (dash.mode === 'year') {
+      dash.year += delta;
+    } else {
+      return; // no stepping for all / custom
+    }
+    dash.active = null;
+    renderDashboard();
+  }
+
+  // Sum the in-period spend into buckets by the current dimension.
+  function buildBuckets() {
+    const map = new Map();
+    let total = 0;
+    for (const e of dash.raw) {
+      if (!isSpend(e) || !inPeriod(e)) continue;
+      const usd = Number(e.amountUsd);
+      if (!isFinite(usd) || usd <= 0) continue;
+      const key = dashLabel(e);
+      const b = map.get(key) || { key, usd: 0, count: 0 };
+      b.usd += usd; b.count += 1;
+      map.set(key, b);
+      total += usd;
+    }
+    const all = [...map.values()].sort((a, b) => b.usd - a.usd);
+    // Roll the long tail into one "Everything else" slice.
+    let slices = all;
+    if (all.length > MAX_SLICES + 1) {
+      const head = all.slice(0, MAX_SLICES);
+      const tail = all.slice(MAX_SLICES);
+      const rest = tail.reduce((s, x) => s + x.usd, 0);
+      const restC = tail.reduce((s, x) => s + x.count, 0);
+      slices = [...head, { key: 'Everything else', usd: rest, count: restC, rollup: tail.map((x) => x.key) }];
+    }
+    slices.forEach((s, i) => { s.color = s.key === 'Everything else' ? EVERYTHING_ELSE : DONUT_COLORS[i % DONUT_COLORS.length]; });
+    return { slices, total, allCount: all.length };
+  }
+
+  // SVG annular-sector path for one slice.
+  function arcPath(cx, cy, rOut, rIn, a0, a1) {
+    const p = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    const large = a1 - a0 > Math.PI ? 1 : 0;
+    const [x0, y0] = p(rOut, a0);
+    const [x1, y1] = p(rOut, a1);
+    const [x2, y2] = p(rIn, a1);
+    const [x3, y3] = p(rIn, a0);
+    return `M${x0} ${y0}A${rOut} ${rOut} 0 ${large} 1 ${x1} ${y1}L${x2} ${y2}A${rIn} ${rIn} 0 ${large} 0 ${x3} ${y3}Z`;
+  }
+
+  function renderDonut(slices, total) {
+    const box = $('#donut');
+    if (!box) return;
+    if (!total) { box.innerHTML = `<div class="donut-empty">Nothing spent in this period.</div>`; return; }
+    const size = 260, cx = size / 2, cy = size / 2, rOut = 120, rIn = 78, gap = 0.012;
+    let a = -Math.PI / 2; // start at 12 o'clock
+    const paths = slices.map((s) => {
+      const frac = s.usd / total;
+      const a0 = a + gap;
+      const a1 = a + frac * 2 * Math.PI;
+      a = a1;
+      const dimmed = dash.active && dash.active !== s.key;
+      return `<path d="${arcPath(cx, cy, rOut, rIn, a0, Math.max(a1 - gap, a0 + 0.001))}" fill="${s.color}" opacity="${dimmed ? 0.28 : 1}" class="donut-slice" data-key="${escapeHtml(s.key)}"><title>${escapeHtml(s.key)} — ${escapeHtml(money(s.usd, 'USD'))}</title></path>`;
     }).join('');
+    box.innerHTML = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" role="img" aria-label="Spending breakdown donut">${paths}</svg>`;
+  }
 
-    el.dashHistory.innerHTML = (d.history || []).length
-      ? d.history.map((e) => `
-        <article class="expense">
-          <div class="expense-top">
-            <div class="expense-main">
-              <div class="expense-desc">${cardTitle(e)}</div>
-              <div class="expense-meta">${cardMeta(e, [e.submitterName || e.submitterEmail, e.account, fmtDate(e.date)])}</div>
-            </div>
-            ${amountBlock(e)}
+  function renderRank(slices, total) {
+    const list = $('#dash-rank');
+    if (!list) return;
+    if (!slices.length) { list.innerHTML = `<div class="state">No spend in this period.</div>`; return; }
+    list.innerHTML = slices.map((s) => {
+      const pct = total ? Math.round((s.usd / total) * 100) : 0;
+      const on = dash.active === s.key;
+      return `
+        <button type="button" class="rank-row ${on ? 'on' : ''}" data-key="${escapeHtml(s.key)}">
+          <span class="rank-name">${escapeHtml(s.key)}</span>
+          <span class="rank-amt">${escapeHtml(money(s.usd, 'USD'))}</span>
+          <span class="rank-bar"><span class="rank-fill" style="width:${Math.max(2, pct)}%;background:${s.color}"></span></span>
+          <span class="rank-pct">${pct}%</span>
+        </button>`;
+    }).join('');
+  }
+
+  function renderDetail(slices) {
+    const wrap = $('#dash-detail');
+    const listEl = $('#dash-detail-list');
+    if (!wrap || !listEl) return;
+    if (!dash.active) { wrap.hidden = true; return; }
+    const slice = slices.find((s) => s.key === dash.active);
+    const keys = slice && slice.rollup ? new Set(slice.rollup) : new Set([dash.active]);
+    const items = dash.raw
+      .filter((e) => isSpend(e) && inPeriod(e) && keys.has(dashLabel(e)) && Number(e.amountUsd) > 0)
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    $('#detail-title').textContent = `${dash.active} · ${items.length} expense${items.length === 1 ? '' : 's'}`;
+    listEl.innerHTML = items.length ? items.map((e) => `
+      <article class="expense">
+        <div class="expense-top">
+          <div class="expense-main">
+            <div class="expense-desc">${cardTitle(e)}</div>
+            <div class="expense-meta">${cardMeta(e, [dash.scope === 'all' ? (e.submitterName || e.submitterEmail) : '', e.account, fmtDate(e.date)])}</div>
           </div>
-          <div class="expense-actions">${statusBadge(e.status)}${receiptLink(e)}</div>
-        </article>`).join('')
-      : `<div class="state">No history yet.</div>`;
+          ${amountBlock(e)}
+        </div>
+        <div class="expense-actions">${statusBadge(e.status)}${sourceBadge(e.source)}${receiptLink(e)}</div>
+      </article>`).join('') : `<div class="state">No expenses here.</div>`;
+    wrap.hidden = false;
+  }
+
+  function renderDashboard() {
+    $('#period-label').textContent = periodLabelText();
+    const stepper = dash.mode === 'month' || dash.mode === 'year';
+    $('#period-prev').style.visibility = stepper ? 'visible' : 'hidden';
+    $('#period-next').style.visibility = stepper ? 'visible' : 'hidden';
+    $('#rank-dim-label').textContent = dash.dim === 'account' ? 'Accounts' : dash.dim === 'category' ? 'Categories' : 'Status';
+
+    const { slices, total } = buildBuckets();
+    const totalTxt = money(total, 'USD');
+    $('#donut-total').textContent = totalTxt;
+    $('#donut-center-total').textContent = totalTxt;
+    $('#donut-center-sub').textContent = periodLabelText();
+    renderDonut(slices, total);
+    renderRank(slices, total);
+    renderDetail(slices);
+  }
+
+  function setActiveBucket(key) {
+    dash.active = dash.active === key ? null : key;
+    renderDashboard();
+  }
+
+  function exportDashboard() {
+    const rows = [['Date', 'Merchant', 'Description', 'Account', 'Category', 'Amount (USD)', 'Currency', 'Amount', 'Status']];
+    dash.raw
+      .filter((e) => isSpend(e) && inPeriod(e))
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+      .forEach((e) => rows.push([
+        e.date || '', e.merchant || '', e.description || '', e.account || '', e.category || '',
+        e.amountUsd != null ? e.amountUsd : '', e.currency || '', e.amount != null ? e.amount : '', statusLabel(e.status),
+      ]));
+    const csv = rows.map((r) => r.map((c) => {
+      const s = String(c == null ? '' : c);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rembly-spending-${dash.mode === 'month' ? dash.ym : dash.mode === 'year' ? dash.year : 'range'}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   async function loadDashboard() {
-    el.dashTiles.innerHTML = '';
-    el.dashAccounts.innerHTML = '';
-    el.dashStatus.innerHTML = '';
-    el.dashHistory.innerHTML = `<div class="state">Loading…</div>`;
+    $('#dash-rank').innerHTML = `<div class="state">Loading…</div>`;
+    $('#donut').innerHTML = '';
     try {
-      const d = await api('dashboard');
+      const d = await api(`dashboard?scope=${dash.scope}`);
       state.loaded.dashboard = true;
-      renderDashboard(d);
+      dash.raw = d.expenses || [];
+      const scopeSel = $('#dash-scope');
+      if (scopeSel) scopeSel.hidden = !d.canSeeAll;
+      renderDashboard();
     } catch (e) {
-      el.dashHistory.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+      $('#dash-rank').innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
     }
   }
 
@@ -2003,6 +2171,39 @@
     if (btn) toggleHistory(btn);
   }
 
+  // ---------- Dashboard wiring ----------
+
+  function bindDashboard() {
+    $('#period-prev').addEventListener('click', () => stepPeriod(-1));
+    $('#period-next').addEventListener('click', () => stepPeriod(1));
+    $('#period-label').addEventListener('click', () => {
+      // Tapping the label jumps back to the current month.
+      dash.mode = 'month';
+      dash.ym = new Date().toISOString().slice(0, 7);
+      $('#period-mode').value = 'month';
+      $('#dash-range').hidden = true;
+      dash.active = null;
+      renderDashboard();
+    });
+    $('#period-mode').addEventListener('change', (e) => {
+      dash.mode = e.target.value;
+      $('#dash-range').hidden = dash.mode !== 'custom';
+      dash.active = null;
+      renderDashboard();
+    });
+    $('#dash-dim').addEventListener('change', (e) => { dash.dim = e.target.value; dash.active = null; renderDashboard(); });
+    $('#dash-scope').addEventListener('change', (e) => { dash.scope = e.target.value; dash.active = null; loadDashboard(); });
+    $('#range-from').addEventListener('change', (e) => { dash.from = e.target.value; dash.active = null; renderDashboard(); });
+    $('#range-to').addEventListener('change', (e) => { dash.to = e.target.value; dash.active = null; renderDashboard(); });
+    $('#dash-export').addEventListener('click', exportDashboard);
+    $('#detail-close').addEventListener('click', () => { dash.active = null; renderDashboard(); });
+    // Click a donut slice or a ranked row to drill into that bucket.
+    el.dashboard.addEventListener('click', (e) => {
+      const hit = e.target.closest('[data-key]');
+      if (hit) setActiveBucket(hit.getAttribute('data-key'));
+    });
+  }
+
   // ---------- Wire up ----------
 
   function bind() {
@@ -2038,6 +2239,7 @@
     $('#people-template').addEventListener('click', downloadPeopleTemplate);
     $('#people-copy').addEventListener('click', copyPeopleInstructions);
     el.peopleFile.addEventListener('change', onPeopleFile);
+    bindDashboard();
     el.mineList.addEventListener('click', onMineClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);

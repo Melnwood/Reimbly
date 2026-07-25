@@ -1,7 +1,9 @@
 'use strict';
 
-// Spend dashboard + history for approvers/finance: totals, a breakdown by
-// account (category), a status breakdown, and the full history newest-first.
+// Spending breakdown data. Everyone gets their own spending; approvers/Finance
+// can ask for the whole team's (scope=all). We return the raw shaped expenses
+// and let the browser do the period/slice math, so month-stepping, date ranges
+// and drill-in are instant without another round-trip.
 
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
@@ -12,7 +14,8 @@ const { TABLES, ensureStaff, isApprover, displayMaps, shapeExpense } = require('
 const ACTIVE = new Set(['Submitted', 'Approved', 'Reimbursed']);
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
-// Roll a list of shaped expenses into the dashboard numbers.
+// Roll a list of shaped expenses into the dashboard numbers. Kept for the unit
+// test and any server-side summary; the live UI aggregates client-side.
 function aggregate(items, monthPrefix) {
   let totalUsd = 0;
   let count = 0;
@@ -53,24 +56,35 @@ exports.handler = async (event) => {
   try {
     const user = await verifyRequest(event.headers);
     const { role } = await ensureStaff(user);
-    if (!isApprover(role)) {
-      const err = new Error('You do not have dashboard access.');
-      err.statusCode = 403;
-      throw err;
+    const canSeeAll = isApprover(role);
+
+    const q = event.queryStringParameters || {};
+    const wantAll = canSeeAll && String(q.scope || '').toLowerCase() === 'all';
+
+    const params = {
+      'sort[0][field]': 'Expense Date',
+      'sort[0][direction]': 'desc',
+    };
+    if (!wantAll) {
+      const email = user.email.toLowerCase().replace(/'/g, "\\'");
+      params.filterByFormula = `LOWER(ARRAYJOIN({Submitter Email})) = '${email}'`;
     }
 
     const [records, maps] = await Promise.all([
-      airtable.listRecords(TABLES.EXPENSES, {
-        'sort[0][field]': 'Submitted On',
-        'sort[0][direction]': 'desc',
-      }),
+      airtable.listRecords(TABLES.EXPENSES, params),
       displayMaps(),
     ]);
 
-    const items = records.map((r) => shapeExpense(r, maps));
+    const expenses = records.map((r) => shapeExpense(r, maps));
     const monthPrefix = new Date().toISOString().slice(0, 7);
 
-    return ok({ ...aggregate(items, monthPrefix), history: items.slice(0, 100) });
+    return ok({
+      scope: wantAll ? 'all' : 'mine',
+      canSeeAll,
+      role,
+      expenses,
+      ...aggregate(expenses, monthPrefix),
+    });
   } catch (err) {
     return error(err);
   }

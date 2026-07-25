@@ -267,16 +267,69 @@
         <section id="view-dashboard" class="view" data-view="dashboard" hidden>
           <div class="panel">
             <div class="panel-head">
-              <h2>Dashboard</h2>
-              <button class="link-btn" data-refresh="dashboard">Refresh</button>
+              <h2>Spending breakdown</h2>
+              <button class="link-btn" id="dash-export">⤓ Export</button>
             </div>
-            <div id="dash-tiles" class="dash-tiles"></div>
-            <h3 class="dash-h">By account</h3>
-            <div id="dash-accounts"></div>
-            <h3 class="dash-h">By status</h3>
-            <div id="dash-status" class="dash-status"></div>
-            <h3 class="dash-h">History</h3>
-            <div id="dash-history" class="list"></div>
+
+            <div class="dash-controls">
+              <div class="period-nav">
+                <button class="pill-btn" id="period-prev" aria-label="Previous" title="Previous">‹</button>
+                <button class="pill-btn period-label" id="period-label">This month</button>
+                <button class="pill-btn" id="period-next" aria-label="Next" title="Next">›</button>
+              </div>
+              <div class="dash-filters">
+                <select id="period-mode" class="dash-select" title="Time range">
+                  <option value="month">Monthly</option>
+                  <option value="year">This year</option>
+                  <option value="all">All time</option>
+                  <option value="custom">Custom range…</option>
+                </select>
+                <select id="dash-dim" class="dash-select" title="Break down by">
+                  <option value="account">By account</option>
+                  <option value="category">By category</option>
+                  <option value="status">By status</option>
+                </select>
+                <select id="dash-scope" class="dash-select" title="Whose spending" hidden>
+                  <option value="mine">Just me</option>
+                  <option value="all">Everyone</option>
+                </select>
+              </div>
+              <div class="dash-range" id="dash-range" hidden>
+                <label>From <input type="date" id="range-from" /></label>
+                <label>To <input type="date" id="range-to" /></label>
+              </div>
+            </div>
+
+            <div class="dash-grid">
+              <div class="dash-card donut-card">
+                <div class="donut-head">
+                  <div>
+                    <div class="donut-cap">Total spending</div>
+                    <div class="donut-total" id="donut-total">—</div>
+                  </div>
+                </div>
+                <div class="donut-wrap">
+                  <div id="donut" class="donut"></div>
+                  <div class="donut-center">
+                    <div class="donut-cap">Total spending</div>
+                    <div class="donut-center-total" id="donut-center-total">—</div>
+                    <div class="donut-cap" id="donut-center-sub"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="dash-card">
+                <div class="rank-head"><span id="rank-dim-label">Accounts</span><span>Total spending</span></div>
+                <div id="dash-rank" class="rank-list"></div>
+              </div>
+            </div>
+
+            <div id="dash-detail" class="dash-detail" hidden>
+              <div class="detail-head">
+                <h3 class="dash-h" id="detail-title">Detail</h3>
+                <button class="link-btn" id="detail-close">✕ Close</button>
+              </div>
+              <div id="dash-detail-list" class="list"></div>
+            </div>
           </div>
         </section>
 

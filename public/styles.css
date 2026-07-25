@@ -394,6 +394,60 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .bar-fill { height: 100%; background: var(--grad); border-radius: 999px; }
 .dash-status { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* ---------- Spending breakdown (donut dashboard) ---------- */
+.dash-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 18px; }
+.period-nav { display: flex; align-items: center; gap: 6px; }
+.pill-btn {
+  font: inherit; font-weight: 700; cursor: pointer; color: var(--brand-ink);
+  background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; line-height: 1;
+}
+.pill-btn:hover { background: var(--bg-soft); }
+.period-label { min-width: 150px; }
+.dash-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.dash-select {
+  font: inherit; font-weight: 600; color: var(--ink); cursor: pointer;
+  background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px;
+}
+.dash-range { display: flex; gap: 14px; flex-basis: 100%; font-size: 0.85rem; color: var(--ink-soft); }
+.dash-range input { font: inherit; margin-left: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
+
+.dash-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.dash-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+.donut-cap { font-size: 0.78rem; color: var(--ink-soft); font-weight: 600; }
+.donut-total { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); line-height: 1.1; }
+.donut-head { margin-bottom: 6px; }
+.donut-wrap { position: relative; width: 100%; max-width: 300px; margin: 4px auto 0; aspect-ratio: 1; }
+.donut { width: 100%; height: 100%; }
+.donut-slice { cursor: pointer; transition: opacity 0.15s; }
+.donut-slice:hover { opacity: 0.85 !important; }
+.donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
+.donut-center-total { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.donut-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--ink-soft); font-size: 0.9rem; text-align: center; }
+
+.rank-head { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--ink-soft); font-weight: 700; padding-bottom: 10px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.rank-list { display: flex; flex-direction: column; }
+.rank-row {
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "name amt" "bar pct";
+  gap: 2px 10px; align-items: center; width: 100%; text-align: left; cursor: pointer;
+  background: none; border: 0; border-bottom: 1px solid var(--line); padding: 11px 4px; font: inherit;
+}
+.rank-row:hover { background: var(--bg-soft); }
+.rank-row.on { background: #fff5fa; }
+.rank-name { grid-area: name; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-amt { grid-area: amt; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.rank-bar { grid-area: bar; height: 7px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; align-self: center; }
+.rank-fill { display: block; height: 100%; border-radius: 999px; }
+.rank-pct { grid-area: pct; font-size: 0.8rem; color: var(--ink-soft); font-weight: 600; text-align: right; }
+
+.dash-detail { margin-top: 22px; }
+.detail-head { display: flex; align-items: center; justify-content: space-between; }
+
+@media (max-width: 640px) {
+  .dash-grid { grid-template-columns: 1fr; }
+  .dash-filters { margin-left: 0; width: 100%; }
+  .dash-select { flex: 1; }
+}
+
 /* ---------- Empty / loading states ---------- */
 .state { text-align: center; color: var(--ink-soft); padding: 32px 12px; }
 .state .emoji { font-size: 2rem; display: block; margin-bottom: 8px; }
