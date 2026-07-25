@@ -252,16 +252,11 @@
             </div>
             <p class="panel-sub">Tap one to edit it and choose which report it goes into — it then moves into that report (see “My reports”). Filed expenses live under their report.</p>
             <div id="rescan-note" class="import-note" hidden></div>
-            <div class="list-sort">
-              <label>Sort by
-                <select id="add-sort" class="dash-select">
-                  <option value="date-desc">Newest first</option>
-                  <option value="date-asc">Oldest first</option>
-                  <option value="desc-az">Description (A–Z)</option>
-                  <option value="amt-desc">Amount (high to low)</option>
-                  <option value="amt-asc">Amount (low to high)</option>
-                </select>
-              </label>
+            <div class="sort-head" id="add-sort">
+              <span class="sort-hint">Sort:</span>
+              <button type="button" class="sort-col" data-sort="date">Date</button>
+              <button type="button" class="sort-col" data-sort="desc">Description</button>
+              <button type="button" class="sort-col" data-sort="amt">Cost</button>
             </div>
             <div id="add-list" class="list"></div>
           </div>

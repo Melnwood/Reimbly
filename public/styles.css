@@ -365,10 +365,15 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 
 .mini-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 
-/* Sort control above an expense list */
-.list-sort { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-.list-sort label { font-size: 0.82rem; color: var(--ink-soft); font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
-.list-sort select { font: inherit; }
+/* Clickable Date / Description / Cost sort headers above an expense list */
+.sort-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.sort-hint { font-size: 0.8rem; color: var(--ink-soft); font-weight: 600; margin-right: 2px; }
+.sort-col {
+  font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; color: var(--ink-soft);
+  background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px;
+}
+.sort-col:hover { background: var(--bg-soft); color: var(--ink); }
+.sort-col.active { color: var(--brand-ink); border-color: var(--brand); background: #fff5fa; }
 
 /* Inline editor shown when you open an expense */
 .inline-edit { display: flex; flex-direction: column; gap: 10px; }

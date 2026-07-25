@@ -16,7 +16,8 @@
     editingId: null,
     importRows: [],
     importMode: 'add', // 'add' | 'reconcile'
-    expenseSort: 'date-desc', // how the expense lists are ordered
+    sortKey: 'date', // 'date' | 'desc' | 'amt'
+    sortDir: 'desc', // 'asc' | 'desc'
   };
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -1338,21 +1339,45 @@
       </article>`;
   }
 
-  // Sort a list of expenses by the person's chosen order (date / description /
-  // amount). Used by the "Not in a report yet" list and each report's expenses.
+  // Sort a list of expenses by the chosen column (date / description / cost),
+  // ascending, then flip it if the direction is descending. Used by the "Not in
+  // a report yet" list and the expenses inside each report.
+  const SORT_LABELS = { date: 'Date', desc: 'Description', amt: 'Cost' };
   function sortExpenses(list) {
     const arr = list.slice();
     const who = (e) => (e.merchant || e.description || '').toLowerCase();
     const amt = (e) => Number(e.amountUsd != null ? e.amountUsd : e.amount) || 0;
     const date = (e) => String(e.date || '');
-    switch (state.expenseSort) {
-      case 'date-asc': arr.sort((a, b) => date(a).localeCompare(date(b))); break;
-      case 'desc-az': arr.sort((a, b) => who(a).localeCompare(who(b))); break;
-      case 'amt-desc': arr.sort((a, b) => amt(b) - amt(a)); break;
-      case 'amt-asc': arr.sort((a, b) => amt(a) - amt(b)); break;
-      default: arr.sort((a, b) => date(b).localeCompare(date(a))); break; // newest first
-    }
+    let cmp;
+    if (state.sortKey === 'desc') cmp = (a, b) => who(a).localeCompare(who(b));
+    else if (state.sortKey === 'amt') cmp = (a, b) => amt(a) - amt(b);
+    else cmp = (a, b) => date(a).localeCompare(date(b));
+    arr.sort(cmp);
+    if (state.sortDir === 'desc') arr.reverse();
     return arr;
+  }
+
+  // Reflect the current sort on the Date / Description / Cost headers (which is
+  // active, and an ↑/↓ arrow for the direction).
+  function updateSortHeader() {
+    $$('#add-sort .sort-col').forEach((b) => {
+      const key = b.dataset.sort;
+      const active = key === state.sortKey;
+      b.classList.toggle('active', active);
+      b.textContent = SORT_LABELS[key] + (active ? (state.sortDir === 'asc' ? ' ↑' : ' ↓') : '');
+    });
+  }
+
+  // Clicking a header sorts by it (A→Z); clicking the active one flips A→Z / Z→A.
+  function onSortClick(event) {
+    const col = event.target.closest('.sort-col');
+    if (!col) return;
+    const key = col.dataset.sort;
+    if (key === state.sortKey) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    else { state.sortKey = key; state.sortDir = 'asc'; }
+    updateSortHeader();
+    renderAddList();
+    renderReports();
   }
 
   function renderAddList() {
@@ -2971,7 +2996,8 @@
     $('#describe-options').addEventListener('click', onDescribeOptionClick);
     $('#f-business').addEventListener('change', recallDescriptions);
     $('#rescan-dates').addEventListener('click', rescanDates);
-    $('#add-sort').addEventListener('change', (e) => { state.expenseSort = e.target.value; renderAddList(); renderReports(); });
+    $('#add-sort').addEventListener('click', onSortClick);
+    updateSortHeader();
     $('#new-report-btn').addEventListener('click', createReportPrompt);
     $('#f-report').addEventListener('change', onFormReportChange);
     $('#import-choose').addEventListener('click', () => el.importFile.click());
