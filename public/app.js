@@ -1035,6 +1035,12 @@
       }
       return true;
     }
+    if (act === 'ie-save') {
+      const card = btn.closest('.expense');
+      if (!card) return false;
+      collapseInlineEdit(card, card.dataset.id, $('.mini-details', card), $('.mini-row', card));
+      return true;
+    }
     if (act === 'delete') {
       requestDelete(btn, btn.dataset.id, () => refreshExpenseViews());
       return true;
@@ -1338,12 +1344,13 @@
         <label class="ie-f"><span>Description</span><input class="ie-description" type="text" maxlength="120" value="${escapeHtml(e.description || '')}" /></label>
         <label class="report-row"><span>Report</span>${reportSelectHtml(e.reportId, `data-role="report-pick" data-id="${escapeHtml(e.id)}"`)}</label>
         <div class="expense-actions">
+          <button class="btn primary small" data-act="ie-save" data-id="${escapeHtml(e.id)}">Save</button>
           ${receiptLink(e)}
           ${historyBtn(e.id)}
           <button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>
         </div>
         ${e.status === 'Rejected' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
-        <div class="ie-hint">Tap the line above to close — your changes save automatically.</div>
+        <div class="ie-hint">Save files it into the report you picked and closes it. (Tapping the line above closes it too.)</div>
       </div>`;
   }
 
