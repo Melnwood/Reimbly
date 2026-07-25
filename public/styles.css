@@ -365,6 +365,15 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 
 .mini-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 
+/* Inline editor shown when you open an expense */
+.inline-edit { display: flex; flex-direction: column; gap: 10px; }
+.ie-row { display: flex; gap: 10px; }
+.ie-f { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.ie-f > span { font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
+.ie-cur { flex: 0 0 96px; }
+.ie-f input, .ie-f select { font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fffdfa; width: 100%; }
+.ie-hint { font-size: 0.78rem; color: var(--ink-soft); }
+
 /* Per-expense report picker on the Add-expense list */
 .report-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.88rem; color: var(--ink-soft); }
 .report-row > span { font-weight: 600; }

@@ -1021,16 +1021,20 @@
     const act = btn.dataset.act;
     if (act === 'toggle') {
       const card = btn.closest('.expense');
+      const id = card.dataset.id;
       const details = $('.mini-details', card);
-      const open = details.hasAttribute('hidden');
-      details.toggleAttribute('hidden', !open);
-      btn.setAttribute('aria-expanded', String(open));
-      card.classList.toggle('open', open);
+      if (details.hasAttribute('hidden')) {
+        buildInlineEdit(details, id); // open straight into the editable fields
+        details.removeAttribute('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+        card.classList.add('open');
+      } else {
+        collapseInlineEdit(card, id, details, btn); // closing saves what changed
+      }
       return;
     }
     const id = btn.dataset.id;
-    if (act === 'edit') startEdit(id);
-    else if (act === 'delete') {
+    if (act === 'delete') {
       requestDelete(btn, id, () => { invalidateReports(); showAddExpense(); });
     }
   }
@@ -1276,12 +1280,8 @@
       return;
     }
     box.innerHTML = expenses.map((e) => {
-      const editable = EDITABLE.includes(e.status);
       const who = e.merchant || e.description || '(no description)';
       const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
-      const mileageMeta = e.distance != null && e.mileageRate != null
-        ? `<div class="expense-meta">${escapeHtml(`${e.distance} ${e.distanceUnit} × ${money(e.mileageRate, e.currency)}`)}</div>`
-        : '';
       return `
       <article class="expense mini" data-id="${escapeHtml(e.id)}">
         <button type="button" class="mini-row" data-act="toggle" aria-expanded="false">
@@ -1292,22 +1292,105 @@
           ${statusDot(e.status)}
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
-        <div class="mini-details" hidden>
-          <div class="mini-badges">${statusBadge(e.status)}${sourceBadge(e.source)}</div>
-          <div class="mini-desc">${cardTitle(e)}</div>
-          <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
-          ${mileageMeta}
-          <label class="report-row"><span>Report</span>${reportSelectHtml(e.reportId, `data-role="report-pick" data-id="${escapeHtml(e.id)}"`)}</label>
-          <div class="expense-actions">
-            ${editable ? `<button class="btn ghost small" data-act="edit" data-id="${escapeHtml(e.id)}">✏️ Edit details</button>` : ''}
-            ${receiptLink(e)}
-            ${historyBtn(e.id)}
-            ${editable ? `<button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>` : ''}
-          </div>
-          ${e.status === 'Rejected' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
-        </div>
+        <div class="mini-details" hidden></div>
       </article>`;
     }).join('');
+  }
+
+  // Currencies offered in the inline editor (kept in step with the form).
+  const CURRENCIES = ['USD', 'EUR', 'CZK', 'PLN', 'GBP', 'RON', 'HUF', 'BGN', 'RSD', 'UAH'];
+
+  function ieAccountOptions(selected) {
+    const opt = (a) => `<option value="${escapeHtml(a.code)}"${a.code === selected ? ' selected' : ''}>${escapeHtml(a.code)} – ${escapeHtml(a.name)}</option>`;
+    return `<option value="">Choose account…</option>${(state.accounts || []).map(opt).join('')}`;
+  }
+  function ieCurrencyOptions(selected) {
+    return CURRENCIES.map((c) => `<option${c === (selected || 'USD') ? ' selected' : ''}>${c}</option>`).join('');
+  }
+
+  // Tapping an expense opens it straight into editable fields — no extra "Edit"
+  // step. Closing the line saves whatever changed.
+  function inlineEditHtml(e) {
+    return `
+      <div class="inline-edit">
+        <div class="mini-badges">${statusBadge(e.status)}${sourceBadge(e.source)}</div>
+        <div class="ie-row">
+          <label class="ie-f"><span>Amount</span><input class="ie-amount" type="number" inputmode="decimal" step="0.01" min="0" value="${e.amount != null ? e.amount : ''}" /></label>
+          <label class="ie-f ie-cur"><span>Currency</span><select class="ie-currency">${ieCurrencyOptions(e.currency)}</select></label>
+        </div>
+        <label class="ie-f"><span>Account</span><select class="ie-account">${ieAccountOptions(e.accountCode)}</select></label>
+        <label class="ie-f"><span>Date</span><input class="ie-date" type="date" value="${escapeHtml(e.date || '')}" /></label>
+        <label class="ie-f"><span>Where (business)</span><input class="ie-business" type="text" maxlength="80" value="${escapeHtml(e.merchant || '')}" /></label>
+        <label class="ie-f"><span>Description</span><input class="ie-description" type="text" maxlength="120" value="${escapeHtml(e.description || '')}" /></label>
+        <label class="report-row"><span>Report</span>${reportSelectHtml(e.reportId, `data-role="report-pick" data-id="${escapeHtml(e.id)}"`)}</label>
+        <div class="expense-actions">
+          ${receiptLink(e)}
+          ${historyBtn(e.id)}
+          <button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>
+        </div>
+        ${e.status === 'Rejected' && e.notes ? `<div class="expense-note">↩︎ ${escapeHtml(e.notes)}</div>` : ''}
+        <div class="ie-hint">Tap the line above to close — your changes save automatically.</div>
+      </div>`;
+  }
+
+  // Read-only details for an expense that can no longer be edited (approved/paid).
+  function readOnlyDetailsHtml(e) {
+    return `
+      <div class="mini-badges">${statusBadge(e.status)}${sourceBadge(e.source)}</div>
+      <div class="mini-desc">${cardTitle(e)}</div>
+      <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
+      ${e.reportName ? `<div class="expense-meta">🗂️ ${escapeHtml(e.reportName)}</div>` : ''}
+      <div class="expense-actions">${receiptLink(e)}${historyBtn(e.id)}</div>`;
+  }
+
+  function buildInlineEdit(details, id) {
+    const e = (state.mineExpenses || []).find((x) => x.id === id);
+    if (!e) { details.innerHTML = ''; return; }
+    details.innerHTML = EDITABLE.includes(e.status) ? inlineEditHtml(e) : readOnlyDetailsHtml(e);
+  }
+
+  // Save the inline edits for one expense. Returns 'saved', 'unchanged', or false
+  // (kept open because something required is missing).
+  async function commitInlineEdit(id, details) {
+    const amtInput = details.querySelector('.ie-amount');
+    if (!amtInput) return 'unchanged'; // read-only row, nothing to save
+    const e = (state.mineExpenses || []).find((x) => x.id === id);
+    if (!e) return 'unchanged';
+    const amount = parseFloat(amtInput.value);
+    const currency = details.querySelector('.ie-currency').value;
+    const account = details.querySelector('.ie-account').value;
+    const date = details.querySelector('.ie-date').value;
+    const merchant = details.querySelector('.ie-business').value.trim();
+    const description = details.querySelector('.ie-description').value.trim();
+
+    const changed = amount !== e.amount || currency !== (e.currency || 'USD')
+      || account !== (e.accountCode || '') || date !== (e.date || '')
+      || merchant !== (e.merchant || '') || description !== (e.description || '');
+    if (!changed) return 'unchanged';
+
+    if (!description) { toast('Add a short description.', 'bad'); return false; }
+    if (!(amount > 0)) { toast('Amount must be greater than zero.', 'bad'); return false; }
+    if (!date) { toast('Pick the date.', 'bad'); return false; }
+    if (!account) { toast('Choose an account.', 'bad'); return false; }
+
+    try {
+      await api('update-expense', { method: 'POST', body: { id, amount, currency, account, date, description, merchant } });
+      bumpAccountUsage(account);
+      toast('Saved.', 'good');
+      return 'saved';
+    } catch (err) {
+      toast(err.message, 'bad');
+      return false;
+    }
+  }
+
+  async function collapseInlineEdit(card, id, details, btn) {
+    const result = await commitInlineEdit(id, details);
+    if (result === false) return; // missing something — keep it open
+    details.setAttribute('hidden', '');
+    btn.setAttribute('aria-expanded', 'false');
+    card.classList.remove('open');
+    if (result === 'saved') { invalidateReports(); showAddExpense(); }
   }
 
   async function showAddExpense() {
