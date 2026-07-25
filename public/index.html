@@ -80,11 +80,16 @@
         <!-- Submit -->
         <section id="view-submit" class="view" data-view="submit">
           <div class="panel add-panel">
-            <button type="button" class="add-toggle" id="add-toggle" aria-expanded="false">
-              <span class="add-plus" aria-hidden="true">＋</span>
-              <span class="add-toggle-title" id="submit-title">New expense</span>
-              <span class="mini-caret" aria-hidden="true">▾</span>
-            </button>
+            <div class="add-actions">
+              <button type="button" class="add-action" id="add-toggle" aria-expanded="false">
+                <span class="add-plus" aria-hidden="true">＋</span>
+                <span class="add-toggle-title" id="submit-title">New expense</span>
+              </button>
+              <button type="button" class="add-action ghost" id="import-toggle" aria-expanded="false">
+                <span class="add-ico" aria-hidden="true">⬆</span>
+                <span>Import</span>
+              </button>
+            </div>
             <div id="add-form-body" hidden>
             <p class="panel-sub">Reimbursed in USD. Foreign amounts convert automatically.</p>
             <div id="edit-banner" class="edit-banner" hidden>
@@ -185,20 +190,6 @@
               <button id="submit-btn" class="btn primary" type="submit">Submit expense</button>
             </form>
             </div>
-          </div>
-
-          <div class="panel" id="inbox-panel" hidden>
-            <h2>🧾 Receipts waiting from email</h2>
-            <p class="panel-sub">These arrived in your email and are held until a row from your budget import claims them. Import your YNAB export below and Rembly attaches each receipt to the matching expense automatically.</p>
-            <div id="inbox-list" class="import-preview"></div>
-          </div>
-
-          <div class="panel add-panel">
-            <button type="button" class="add-toggle" id="import-toggle" aria-expanded="false">
-              <span class="add-plus" aria-hidden="true">＋</span>
-              <span class="add-toggle-title">Import a spreadsheet</span>
-              <span class="mini-caret" aria-hidden="true">▾</span>
-            </button>
             <div id="import-body" hidden>
               <div class="type-toggle import-mode" role="group" aria-label="Import mode">
                 <button type="button" class="type-btn active" data-mode="add">➕ Add expenses</button>
@@ -232,6 +223,12 @@
                 <button type="button" class="link-btn" id="import-cancel">Clear</button>
               </div>
             </div>
+          </div>
+
+          <div class="panel" id="inbox-panel" hidden>
+            <h2>🧾 Receipts waiting from email</h2>
+            <p class="panel-sub">These arrived in your email and are held until a row from your budget import claims them. Import your YNAB export below and Rembly attaches each receipt to the matching expense automatically.</p>
+            <div id="inbox-list" class="import-preview"></div>
           </div>
 
           <div class="panel">

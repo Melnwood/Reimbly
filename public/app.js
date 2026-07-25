@@ -827,6 +827,21 @@
     body.hidden = !open;
     toggle.setAttribute('aria-expanded', String(open));
     toggle.classList.toggle('open', open);
+    toggle.classList.toggle('active', open);
+    if (open) setImportOpen(false); // only one of the two panels open at a time
+  }
+
+  // The Import panel sits beside "New expense"; opening it folds the form away
+  // (its contents are kept, not cleared) and vice-versa.
+  function setImportOpen(open) {
+    const body = $('#import-body');
+    const toggle = $('#import-toggle');
+    if (!body || !toggle) return;
+    body.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.classList.toggle('open', open);
+    toggle.classList.toggle('active', open);
+    if (open) setAddFormOpen(false);
   }
   // Has the person typed anything into the new-expense form yet?
   function formHasAnyInput() {
@@ -2265,8 +2280,7 @@
       const extra = bits.length ? ` · ${bits.join(' · ')}` : '';
       toast(`Imported ${created} expense${created === 1 ? '' : 's'}${extra} 🎉`, 'good');
       clearImport();
-      $('#import-body').hidden = true;
-      $('#import-toggle').classList.remove('open');
+      setImportOpen(false);
       state.loaded.mine = false;
       state.loaded.audit = false;
       state.loaded.dashboard = false;
@@ -2623,13 +2637,7 @@
     $('#lock-unlock').addEventListener('click', unlockWithFaceId);
     $('#lock-google').addEventListener('click', showSignin);
     $('#add-toggle').addEventListener('click', toggleAddForm);
-    $('#import-toggle').addEventListener('click', () => {
-      const body = $('#import-body');
-      const open = body.hidden;
-      body.hidden = !open;
-      $('#import-toggle').classList.toggle('open', open);
-      $('#import-toggle').setAttribute('aria-expanded', String(open));
-    });
+    $('#import-toggle').addEventListener('click', () => setImportOpen($('#import-body').hidden));
     $('#cancel-edit').addEventListener('click', () => { cancelEdit(); setAddFormOpen(false); });
     el.form.addEventListener('submit', onSubmit);
     el.receiptInput.addEventListener('change', onReceiptChange);

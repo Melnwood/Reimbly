@@ -292,21 +292,25 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .import-summary-line { font-weight: 700; margin-bottom: 4px; }
 .import-note { font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 8px; }
 
-/* Collapsible "New expense" form on the Add-expense tab */
-.add-toggle {
-  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
-  background: none; border: 0; cursor: pointer; padding: 4px 2px; font: inherit;
+/* "New expense" + "Import" buttons, side by side, on the Add-expense tab */
+.add-actions { display: flex; gap: 10px; }
+.add-action {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: #fff; cursor: pointer; font: inherit; font-weight: 800; font-size: 1rem; color: var(--ink);
 }
+.add-action:hover { background: var(--bg-soft); }
+.add-action.active { border-color: var(--brand); background: #fff5fa; color: var(--brand-ink); }
+.add-action.ghost { font-weight: 700; color: var(--ink-soft); }
+.add-ico { font-size: 1.1rem; }
 .add-plus {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff;
-  font-weight: 700; font-size: 1.1rem; flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff;
+  font-weight: 700; font-size: 1rem; flex-shrink: 0;
 }
-.add-toggle-title { flex: 1; font-size: 1.15rem; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; }
-.add-toggle .mini-caret { color: var(--ink-soft); transition: transform 0.15s; }
-.add-toggle.open .mini-caret { transform: rotate(180deg); }
-.add-toggle.open .add-plus { transform: rotate(45deg); transition: transform 0.15s; }
-#add-form-body { margin-top: 8px; }
+.add-action.active .add-plus { transform: rotate(45deg); transition: transform 0.15s; }
+.add-toggle-title { letter-spacing: -0.01em; }
+#add-form-body, #import-body { margin-top: 14px; }
 
 /* Report cards (My reports) */
 .report-card { border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; margin-bottom: 12px; overflow: hidden; }
