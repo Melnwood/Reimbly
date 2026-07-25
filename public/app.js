@@ -829,34 +829,32 @@
     toggle.setAttribute('aria-expanded', String(open));
     toggle.classList.toggle('open', open);
   }
-  // Is the open form filled in enough to save? (Mirrors the checks in onSubmit.)
-  function isExpenseFormComplete() {
-    const editing = !!state.editingId;
-    const mileageMode = !editing && state.expenseType === 'mileage';
-    const account = $('#f-account').value;
-    const date = $('#f-date').value;
-    if (mileageMode) {
-      const rate = selectedRate();
-      const distance = parseFloat($('#f-distance').value);
-      return !!(rate && distance > 0 && date && account);
-    }
-    const amount = parseFloat($('#f-amount').value);
-    const description = $('#f-description').value.trim();
-    return !!(description && amount > 0 && date && account);
+  // Has the person typed anything into the new-expense form yet?
+  function formHasAnyInput() {
+    if ($('#f-amount').value.trim()) return true;
+    if ($('#f-description').value.trim()) return true;
+    if ($('#f-business').value.trim()) return true;
+    if ($('#f-distance') && $('#f-distance').value.trim()) return true;
+    if ($('#f-account').value) return true;
+    if (currentReceipt()) return true;
+    return false;
+  }
+
+  function submitForm() {
+    if (el.form.requestSubmit) el.form.requestSubmit();
+    else el.form.dispatchEvent(new Event('submit', { cancelable: true }));
   }
 
   // Tapping the header opens the form; tapping it while open "clicks out":
-  //  - editing → save the changes (onSubmit validates; only closes if it saved)
-  //  - a new, fully-filled expense → save it (it drops into the chosen report)
-  //  - an empty/partial new form → just fold away, nothing entered
+  //  - editing, or a new expense you've started → try to save it. onSubmit
+  //    validates: if it's complete it saves and folds away; if something's
+  //    still missing it STAYS OPEN and says what's needed — a started expense
+  //    never just vanishes, it sits here until it's done.
+  //  - a form you never touched → simply fold away.
   function toggleAddForm() {
     const body = $('#add-form-body');
     if (body && body.hidden) { setAddFormOpen(true); return; }
-    if (state.editingId || isExpenseFormComplete()) {
-      if (el.form.requestSubmit) el.form.requestSubmit();
-      else el.form.dispatchEvent(new Event('submit', { cancelable: true }));
-      return;
-    }
+    if (state.editingId || formHasAnyInput()) { submitForm(); return; }
     setAddFormOpen(false);
   }
 
