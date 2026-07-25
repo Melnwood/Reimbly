@@ -290,6 +290,9 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .ir-flags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
 .ir-acct { flex: none; max-width: 190px; font: inherit; font-size: 0.85rem; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; }
 .import-actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.inbox-thumb { flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--line); background: #fff; }
+.inbox-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#inbox-list { display: grid; gap: 8px; }
 @media (max-width: 560px) {
   .import-row { flex-wrap: wrap; }
   .ir-acct { max-width: none; width: 100%; }

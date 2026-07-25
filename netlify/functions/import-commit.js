@@ -7,9 +7,10 @@
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
+const { pickBest } = require('./lib/matching');
 const {
   TABLES, STATUS, EVENTS, DEFAULT_PAYMENT_METHOD,
-  ensureStaff, resolveCurrencyId, accountAccessFor, dupKey, logActivity,
+  ensureStaff, resolveCurrencyId, accountAccessFor, dupKey, logActivity, heldReceiptsFor,
 } = require('./lib/domain');
 
 const MAX_ROWS = 500;
@@ -37,8 +38,23 @@ exports.handler = async (event) => {
 
     const created = [];
     const skipped = [];
+    let attached = 0; // rows that adopted a held email receipt
     const batchKeys = new Set(); // guard against the same row twice in one commit
     const access = await accountAccessFor(user.email); // account access for this person
+
+    // Option #2: pull matching receipts in from the email holding pool.
+    const attachReceipts = body.attachReceipts !== false; // default on
+    let pool = [];
+    if (attachReceipts) {
+      try {
+        const held = await heldReceiptsFor(user.email);
+        pool = held.map((h) => ({
+          record: h.record,
+          amount: h.exp.amount, date: h.exp.date, merchant: h.exp.merchant,
+          currency: h.exp.currency || 'USD', used: false,
+        }));
+      } catch (e) { console.error('[rembly] held receipts load failed', e && e.message); }
+    }
 
     for (const r of rows) {
       const line = r.line || '?';
@@ -77,13 +93,27 @@ exports.handler = async (event) => {
       };
       if (merchant) fields.Merchant = merchant;
 
-      const rec = await airtable.createRecord(TABLES.EXPENSES, fields);
-      await logActivity({ expenseId: rec.id, event: EVENTS.SUBMITTED, user, note: `Imported from ${source}` });
+      // If a held email receipt matches this row, adopt it (promote that Draft to
+      // a Submitted expense, keeping its attached receipt) instead of making a new
+      // record. YNAB is the source of truth, so its values overwrite the draft's.
+      const match = attachReceipts ? pickBest({ amount, date, merchant, currency }, pool) : -1;
+      let recId;
+      if (match >= 0) {
+        const draft = pool[match];
+        draft.used = true;
+        const updated = await airtable.updateRecord(TABLES.EXPENSES, draft.record.id, fields);
+        recId = updated.id;
+        attached += 1;
+      } else {
+        const rec = await airtable.createRecord(TABLES.EXPENSES, fields);
+        recId = rec.id;
+      }
+      await logActivity({ expenseId: recId, event: EVENTS.SUBMITTED, user, note: `Imported from ${source}` });
       if (key) batchKeys.add(key);
-      created.push(rec.id);
+      created.push({ id: recId, hasReceipt: match >= 0 });
     }
 
-    return ok({ created: created.length, skipped });
+    return ok({ created: created.length, attached, needsReceipt: created.length - attached, items: created, skipped });
   } catch (err) {
     return error(err);
   }

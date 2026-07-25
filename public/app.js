@@ -518,6 +518,53 @@
     if (view === 'archive' && !state.loaded.archive) loadArchive();
     if (view === 'rates' && !state.loaded.rates) loadRates();
     if (view === 'people' && !state.loaded.people) loadPeople();
+    if (view === 'import') loadInbox();
+  }
+
+  // ---------- Receipt inbox (held email receipts) ----------
+
+  async function loadInbox() {
+    const panel = $('#inbox-panel');
+    const list = $('#inbox-list');
+    if (!panel || !list) return;
+    try {
+      const data = await api('receipt-inbox');
+      const receipts = data.receipts || [];
+      if (!receipts.length) { panel.hidden = true; return; }
+      panel.hidden = false;
+      list.innerHTML = receipts.map(inboxRowHtml).join('');
+      list.querySelectorAll('[data-discard]').forEach((btn) => {
+        btn.onclick = () => discardHeld(btn.getAttribute('data-discard'));
+      });
+    } catch (e) {
+      panel.hidden = true;
+    }
+  }
+
+  function inboxRowHtml(r) {
+    const title = r.merchant || r.description || 'Receipt';
+    const amt = r.amount != null ? money(r.amount, r.currency) : '—';
+    const thumb = r.receipt && (r.receipt.thumb || r.receipt.url)
+      ? `<a class="inbox-thumb" href="${escapeHtml(r.receipt.url)}" target="_blank" rel="noopener"><img src="${escapeHtml(r.receipt.thumb || r.receipt.url)}" alt="receipt" /></a>` : '';
+    return `
+      <div class="import-row">
+        ${thumb}
+        <div class="ir-main">
+          <div class="ir-top"><strong>${escapeHtml(title)}</strong><span class="ir-amt">${escapeHtml(amt)}</span></div>
+          <div class="ir-meta">${escapeHtml([fmtDate(r.date) || 'no date', 'held from email'].filter(Boolean).join(' · '))}</div>
+        </div>
+        <button type="button" class="link-btn" data-discard="${escapeHtml(r.id)}">Discard</button>
+      </div>`;
+  }
+
+  async function discardHeld(id) {
+    try {
+      await api('receipt-inbox', { method: 'POST', body: { id, action: 'discard' } });
+      toast('Receipt discarded.', 'good');
+      loadInbox();
+    } catch (e) {
+      toast(e.message, 'bad');
+    }
   }
 
   // ---------- Submit ----------
@@ -1307,6 +1354,12 @@
     if (s.duplicates) bits.push(`${s.duplicates} possible duplicate${s.duplicates === 1 ? '' : 's'}`);
     bits.push(`${s.ready} ready`);
     let summary = `<div class="import-summary-line">${escapeHtml(bits.join(' · '))}</div>`;
+    if (s.withReceipt) {
+      summary += `<div class="import-note">🧾 ${s.withReceipt} of these will arrive with a receipt already attached from your email.</div>`;
+    }
+    if (s.receiptsUnmatched) {
+      summary += `<div class="import-note">${s.receiptsUnmatched} held receipt${s.receiptsUnmatched === 1 ? '' : 's'} didn’t match a row — they stay in your inbox above.</div>`;
+    }
     if (data.unmatched && data.unmatched.length) {
       summary += `<div class="import-note">Columns not used: ${escapeHtml(data.unmatched.join(', '))}</div>`;
     }
@@ -1330,6 +1383,7 @@
     const checked = !bad && !r.duplicate;
     const flags = [];
     if (r.duplicate) flags.push(`<span class="badge rejected">Duplicate · ${escapeHtml(r.dupReason)}</span>`);
+    if (r.receiptFound) flags.push(`<span class="badge approved">🧾 Receipt matched</span>`);
     (r.issues || []).forEach((i) => { if (i !== 'Currency') flags.push(`<span class="issue">Missing ${escapeHtml(i.toLowerCase())}</span>`); });
     const title = r.merchant || r.description || '(no merchant)';
     const amt = r.amount != null ? `${money(r.amount, r.currency)}` : '—';
@@ -1360,7 +1414,7 @@
   }
 
   const IMPORT_HINTS = {
-    add: 'Upload a CSV or Excel file — like your monthly summary of expenses that came in by email. Rembly reads it, flags likely duplicates, and lets you review everything before anything is added.',
+    add: 'Upload your budget export (YNAB works — Date, Payee, Outflow, Memo). Rembly turns each row into an expense and automatically attaches the matching receipt from your email. It flags duplicates and lets you review before anything is added.',
     reconcile: 'Upload the list of reimbursable expenses from your budget app. Rembly checks each one against what you’ve already submitted and shows you exactly what’s still missing for the period.',
   };
 
@@ -1458,7 +1512,10 @@
     btn.textContent = 'Importing…';
     try {
       const res = await api('import-commit', { method: 'POST', body: { rows: picked, source: el.importName.textContent || 'spreadsheet' } });
-      const extra = res.skipped && res.skipped.length ? ` · ${res.skipped.length} skipped` : '';
+      const bits = [];
+      if (res.skipped && res.skipped.length) bits.push(`${res.skipped.length} skipped`);
+      if (res.attached) bits.push(`${res.attached} with a receipt from email`);
+      const extra = bits.length ? ` · ${bits.join(' · ')}` : '';
       toast(`Imported ${res.created} expense${res.created === 1 ? '' : 's'}${extra} 🎉`, 'good');
       clearImport();
       state.loaded.mine = false;

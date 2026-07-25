@@ -36,6 +36,10 @@ var CONFIG = {
   SOURCE_LABEL: 'Rembly',        // drop an email here to file it by hand
   DONE_LABEL: 'Rembly/Filed',    // added once an email is filed (don't rename)
 
+  // 'inbox'  → receipts are HELD until a YNAB row claims them (the #2 flow).
+  // 'expense'→ each receipt becomes a Submitted expense right away.
+  MODE: 'inbox',
+
   // What counts as a receipt/invoice worth filing. Requires an attachment to
   // keep newsletters out, and covers several JV languages. Edit to taste.
   KEYWORDS: 'receipt OR invoice OR faktura OR "účtenka" OR paragon OR rachunek OR Rechnung OR factura OR "order confirmation" OR "tax invoice" OR "payment received"',
@@ -103,6 +107,7 @@ function fileMatching_(query) {
 
       var payload = {
         secret: CONFIG.SECRET,
+        mode: CONFIG.MODE, // 'inbox' holds the receipt; 'expense' files it now
         from: me, // the expense belongs to you, the inbox owner
         name: '',
         subject: msg.getSubject(),

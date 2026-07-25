@@ -33,6 +33,7 @@ const EVENTS = {
 // Status options that actually exist in the base's Expenses.Status field:
 // Draft, Submitted, Approved, Rejected, Reimbursed.
 const STATUS = {
+  DRAFT: 'Draft',
   SUBMITTED: 'Submitted',
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
@@ -424,6 +425,18 @@ function shapeExpense(record, maps = {}) {
   };
 }
 
+// Held email receipts waiting to be claimed: a person's Draft expenses that came
+// in from email. Each carries the receipt file and the amount/date/merchant
+// Claude read off it, so a YNAB row can find and adopt the right one.
+async function heldReceiptsFor(email, maps) {
+  const em = String(email || '').toLowerCase().replace(/'/g, "\\'");
+  const records = await airtable.listRecords(TABLES.EXPENSES, {
+    filterByFormula: `AND(LOWER(ARRAYJOIN({Submitter Email})) = '${em}', {Status} = '${STATUS.DRAFT}')`,
+  });
+  const m = maps || (await displayMaps());
+  return records.map((r) => ({ record: r, exp: shapeExpense(r, m) }));
+}
+
 // ---- Activity trail ----------------------------------------------------
 
 // Record one event on an expense's trail. Best-effort: logging must never
@@ -488,6 +501,7 @@ module.exports = {
   getPushSubs,
   savePushSub,
   removePushSubs,
+  heldReceiptsFor,
   getExpenseById,
   canModify,
   isApprover,

@@ -9,9 +9,11 @@
 
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const airtable = require('./lib/airtable');
+const { pickBest } = require('./lib/matching');
 const {
   TABLES, STATUS, EVENTS, DEFAULT_PAYMENT_METHOD,
   ensureStaff, resolveCurrencyId, resolveAccountId, listAccounts, logActivity,
+  displayMaps, shapeExpense,
 } = require('./lib/domain');
 const { scanReceipt, scanText, isScannable } = require('./lib/scanner');
 
@@ -60,10 +62,70 @@ exports.handler = async (event) => {
     const user = { email: from, name };
     const { id: staffId } = await ensureStaff(user);
 
+    // In "inbox" mode (used with the YNAB flow) a receipt doesn't become an
+    // expense on its own — it's held as a Draft until a YNAB row claims it, or
+    // it's attached straight to an expense that's already waiting for a receipt.
+    const inbox = body.mode === 'inbox' || process.env.RECEIPT_INBOX_MODE === '1';
+
     let accounts = [];
     try { accounts = await listAccounts(); } catch (e) { console.error('[reimbly] accounts load failed', e); }
 
+    // For inbox mode: the person's expenses that are still missing a receipt, so
+    // a newly-arrived receipt can attach itself to the right one.
+    let needyPool = [];
+    if (inbox) {
+      try {
+        const emailEsc = from.replace(/'/g, "\\'");
+        const [recs, maps] = await Promise.all([
+          airtable.listRecords(TABLES.EXPENSES, {
+            filterByFormula: `AND(LOWER(ARRAYJOIN({Submitter Email})) = '${emailEsc}', OR({Status} = '${STATUS.SUBMITTED}', {Status} = '${STATUS.APPROVED}'))`,
+          }),
+          displayMaps(),
+        ]);
+        needyPool = recs
+          .map((r) => shapeExpense(r, maps))
+          .filter((e) => !e.receipt)
+          .map((e) => ({ id: e.id, amount: e.amount, date: e.date, merchant: e.merchant, currency: e.currency || 'USD', used: false }));
+      } catch (e) {
+        console.error('[reimbly] needy pool load failed', e && e.message);
+      }
+    }
+
     const createFromScan = async (scan, receipt) => {
+      const target = { amount: scan.amount, date: scan.date || receiptDate, merchant: scan.merchant, currency: (scan.currency || 'USD').toUpperCase() };
+
+      // Inbox mode: attach to a waiting expense if one matches, else hold as Draft.
+      if (inbox) {
+        if (receipt) {
+          const idx = pickBest(target, needyPool);
+          if (idx >= 0) {
+            const hit = needyPool[idx];
+            hit.used = true;
+            try { await airtable.uploadAttachment(hit.id, 'Receipt', receipt); } catch (e) { console.error('[reimbly] email receipt attach failed', e); }
+            await logActivity({ expenseId: hit.id, event: EVENTS.EDITED, user, note: 'Receipt matched from email' });
+            return { id: hit.id, amount: scan.amount, merchant: scan.merchant, attachedTo: hit.id };
+          }
+        }
+        const heldFields = {
+          Description: scan.description || scan.merchant || subject || 'Emailed receipt',
+          'Expense Date': scan.date || receiptDate || today(),
+          'Payment Method': DEFAULT_PAYMENT_METHOD,
+          Status: STATUS.DRAFT,
+          Notes: `Captured from email — awaiting a match${subject ? `: ${subject}` : ''}`,
+          Submitter: [staffId],
+        };
+        if (scan.amount != null) heldFields.Amount = scan.amount;
+        const heldCur = await resolveCurrencyId(scan.currency || 'USD');
+        if (heldCur) heldFields.Currency = [heldCur];
+        if (scan.merchant) heldFields.Merchant = scan.merchant;
+        const draft = await airtable.createRecord(TABLES.EXPENSES, heldFields);
+        if (receipt) {
+          try { await airtable.uploadAttachment(draft.id, 'Receipt', receipt); } catch (e) { console.error('[reimbly] held receipt attach failed', e); }
+        }
+        return { id: draft.id, amount: scan.amount, merchant: scan.merchant, held: true };
+      }
+
+      // Default mode: a receipt becomes a Submitted expense right away.
       const currencyId = await resolveCurrencyId(scan.currency || 'USD');
       const accountId = scan.account ? await resolveAccountId(scan.account) : null;
       const fields = {
@@ -104,7 +166,8 @@ exports.handler = async (event) => {
     }
 
     // No usable attachment (e.g. an HTML-only Uber/hotel receipt) — read the body.
-    if (!created.length) {
+    // Skipped in inbox mode: with no file to attach later, there's nothing to hold.
+    if (!created.length && !inbox) {
       const text = String(body.text || '').trim();
       if (text) {
         try {
@@ -118,7 +181,10 @@ exports.handler = async (event) => {
       }
     }
 
-    return ok({ created: created.length, items: created, skipped });
+    const held = created.filter((c) => c && c.held).length;
+    const attached = created.filter((c) => c && c.attachedTo).length;
+    const madeExpenses = created.length - held - attached;
+    return ok({ created: madeExpenses, held, attached, items: created, skipped });
   } catch (err) {
     return error(err);
   }

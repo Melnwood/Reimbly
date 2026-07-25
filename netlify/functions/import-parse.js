@@ -9,9 +9,10 @@ const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const {
-  TABLES, CURRENCY_CODES, ensureStaff, listAccounts, displayMaps, shapeExpense, dupKey,
+  TABLES, CURRENCY_CODES, ensureStaff, listAccounts, displayMaps, shapeExpense, dupKey, heldReceiptsFor,
 } = require('./lib/domain');
 const { parseSpreadsheet } = require('./lib/importer');
+const { pickBest } = require('./lib/matching');
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_ROWS = 500;
@@ -70,9 +71,21 @@ exports.handler = async (event) => {
       if (key) existingKeys.set(key, e);
     }
 
+    // Held email receipts this person has waiting — so the preview can show which
+    // rows will arrive with their receipt already attached.
+    const attachReceipts = body.attachReceipts !== false; // default on
+    let pool = [];
+    if (attachReceipts) {
+      try {
+        const held = await heldReceiptsFor(user.email, maps);
+        pool = held.map((h) => ({ amount: h.exp.amount, date: h.exp.date, merchant: h.exp.merchant, currency: h.exp.currency || 'USD', used: false }));
+      } catch (e) { /* preview is best-effort; matching just won't show */ }
+    }
+
     const seen = new Map();
     let duplicates = 0;
     let ready = 0;
+    let withReceipt = 0;
 
     const preview = rows.map((r) => {
       const issues = [];
@@ -99,6 +112,13 @@ exports.handler = async (event) => {
       if (duplicate) duplicates += 1;
       else if (importable) ready += 1;
 
+      // Will a held email receipt attach to this row?
+      let receiptFound = false;
+      if (attachReceipts && !duplicate && importable) {
+        const idx = pickBest({ amount: r.amount, date: r.date, merchant: r.merchant, currency }, pool);
+        if (idx >= 0) { pool[idx].used = true; receiptFound = true; withReceipt += 1; }
+      }
+
       return {
         line: r.line,
         date: r.date,
@@ -112,12 +132,14 @@ exports.handler = async (event) => {
         dupReason,
         issues,
         importable,
+        receiptFound,
       };
     });
 
+    const receiptsHeld = pool.length;
     return ok({
       rows: preview,
-      summary: { total: preview.length, duplicates, ready },
+      summary: { total: preview.length, duplicates, ready, withReceipt, receiptsHeld, receiptsUnmatched: pool.filter((p) => !p.used).length },
       headers,
       unmatched,
     });

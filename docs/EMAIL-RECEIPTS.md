@@ -51,6 +51,30 @@ sneaks in is harmless — you just delete it.
 That's it. Filed emails get a `Rembly/Filed` label so they're never imported
 twice.
 
+## Pairing with your budget (YNAB) — the "hold" mode
+
+By default the script runs in **`inbox` mode** (`CONFIG.MODE` in the script):
+a receipt is **held**, not turned into an expense on its own. Your budget app —
+YNAB — stays the master list of what's reimbursable. The flow is:
+
+1. Receipts arrive by email → Rembly reads each one and **holds** it (with the
+   image + the amount/date/merchant Claude read off it).
+2. You export your reimbursables from YNAB (Date, Payee, Outflow, Memo) and
+   upload it on the **Import** screen.
+3. Each YNAB row becomes an expense, and Rembly **automatically attaches the
+   matching held receipt** (same amount, within a few days). Rows with no
+   receipt are created and flagged; held receipts not on your YNAB list simply
+   stay in the **Receipts waiting from email** box — nothing junk is created,
+   and there's nothing to delete.
+4. A receipt that shows up *after* its expense already exists attaches itself to
+   that waiting expense automatically.
+
+Anything the auto-matcher misses (a receipt dated a few days off, an odd
+merchant name) sits in the inbox for you to attach by hand or discard.
+
+If you'd rather each receipt become a Submitted expense the moment it arrives
+(no budget file), set `CONFIG.MODE` to `'expense'`.
+
 ## Tuning it
 
 All in the `CONFIG` block at the top of the script:

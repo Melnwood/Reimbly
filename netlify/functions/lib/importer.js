@@ -7,7 +7,7 @@
 // field -> accepted header names (compared lower-cased and trimmed)
 const HEADER_ALIASES = {
   date: ['date', 'expense date', 'transaction date', 'date of expense', 'txn date', 'day', 'purchase date'],
-  amount: ['amount', 'total', 'price', 'cost', 'sum', 'value', 'charge'],
+  amount: ['amount', 'total', 'price', 'cost', 'sum', 'value', 'charge', 'outflow'],
   currency: ['currency', 'ccy', 'cur', 'curr'],
   merchant: ['merchant', 'business', 'vendor', 'payee', 'store', 'where', 'company', 'supplier', 'from'],
   description: ['description', 'desc', 'purpose', 'details', 'memo', 'note', 'notes', 'item', 'what', 'reason'],
