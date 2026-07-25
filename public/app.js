@@ -777,25 +777,62 @@
     }
     const id = btn.dataset.id;
     if (act === 'edit') startEdit(id);
+    else if (act === 'submit') submitBatch({ ids: [id] }, btn);
     else if (act === 'delete') {
       deleteExpense(id, () => { state.loaded.mine = false; state.loaded.audit = false; loadMine(); });
     }
   }
 
+  // Send unsubmitted expenses (one, or all of them) for approval. Moves them
+  // from "Unsubmitted" to "Pending approval" and tells the approver.
+  async function submitBatch(body, btn) {
+    const count = body.all ? (state.mineExpenses || []).filter(isUnsubmitted).length : (body.ids || []).length;
+    if (!count) return;
+    if (body.all && !window.confirm(`Submit ${count} expense${count === 1 ? '' : 's'} for approval?`)) return;
+    const buttons = btn ? [btn] : $$('#submit-all-btn, #mine-list button[data-act="submit"]');
+    buttons.forEach((b) => { if (b) b.disabled = true; });
+    try {
+      const res = await api('submit-batch', { method: 'POST', body });
+      const n = res.submitted || 0;
+      toast(n ? `Submitted ${n} expense${n === 1 ? '' : 's'} for approval 🎉` : 'Nothing to submit.', n ? 'good' : 'bad');
+      state.loaded.mine = false;
+      state.loaded.approvals = false;
+      state.loaded.audit = false;
+      state.loaded.dashboard = false;
+      loadMine();
+    } catch (e) {
+      buttons.forEach((b) => { if (b) b.disabled = false; });
+      toast(e.message, 'bad');
+    }
+  }
+
   // ---------- My expenses ----------
 
-  function statusBadge(status) {
+  // The words people see for each stage. The stored status is unchanged — this
+  // only relabels it, so the workflow keeps running exactly the same underneath.
+  const STATUS_LABELS = {
+    draft: 'Unsubmitted',
+    submitted: 'Pending approval',
+    approved: 'Pending payment',
+    rejected: 'Denied',
+    reimbursed: 'Paid',
+  };
+  function statusKey(status) {
     const key = String(status || '').toLowerCase().replace(/[^a-z]/g, '');
-    const known = ['draft', 'submitted', 'approved', 'rejected', 'reimbursed'];
-    const cls = known.includes(key) ? key : 'submitted';
-    return `<span class="badge ${cls}">${escapeHtml(status || 'Submitted')}</span>`;
+    return ['draft', 'submitted', 'approved', 'rejected', 'reimbursed'].includes(key) ? key : 'submitted';
+  }
+  function statusLabel(status) {
+    return STATUS_LABELS[statusKey(status)];
+  }
+
+  function statusBadge(status) {
+    const cls = statusKey(status);
+    return `<span class="badge ${cls}">${escapeHtml(statusLabel(status))}</span>`;
   }
 
   function statusDot(status) {
-    const key = String(status || '').toLowerCase().replace(/[^a-z]/g, '');
-    const known = ['draft', 'submitted', 'approved', 'rejected', 'reimbursed'];
-    const cls = known.includes(key) ? key : 'submitted';
-    return `<span class="dot ${cls}" title="${escapeHtml(status || 'Submitted')}"></span>`;
+    const cls = statusKey(status);
+    return `<span class="dot ${cls}" title="${escapeHtml(statusLabel(status))}"></span>`;
   }
 
   // How the expense got into Rembly: typed, from email, or an import.
@@ -846,13 +883,29 @@
 
   const EDITABLE = ['Submitted', 'Rejected', 'Draft'];
 
+  // "Unsubmitted" = a Draft the person entered/imported but hasn't sent for
+  // approval yet. (Held email receipts never reach this list.)
+  const isUnsubmitted = (e) => e.status === 'Draft';
+
+  function updateSubmitBar(expenses) {
+    const bar = $('#submit-bar');
+    if (!bar) return;
+    const n = (expenses || []).filter(isUnsubmitted).length;
+    if (!n) { bar.hidden = true; return; }
+    $('#submit-bar-count').textContent = `You have ${n} unsubmitted expense${n === 1 ? '' : 's'}.`;
+    $('#submit-all-btn').textContent = `Submit ${n === 1 ? 'it' : `all ${n}`} for approval`;
+    bar.hidden = false;
+  }
+
   function renderMine(expenses) {
+    updateSubmitBar(expenses);
     if (!expenses.length) {
       el.mineList.innerHTML = `<div class="state"><span class="emoji">🌱</span>No expenses yet. Submit your first one above!</div>`;
       return;
     }
     el.mineList.innerHTML = expenses.map((e) => {
       const editable = EDITABLE.includes(e.status);
+      const unsubmitted = isUnsubmitted(e);
       const who = e.merchant || e.description || '(no description)';
       const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
       const mileageMeta = e.distance != null && e.mileageRate != null
@@ -877,6 +930,7 @@
             ${sourceBadge(e.source)}
             ${receiptLink(e)}
             ${historyBtn(e.id)}
+            ${unsubmitted ? `<button class="btn primary small" data-act="submit" data-id="${escapeHtml(e.id)}">Submit</button>` : ''}
             ${editable ? `<button class="link-btn" data-act="edit" data-id="${escapeHtml(e.id)}">Edit</button>` : ''}
             ${editable ? `<button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>` : ''}
           </div>
@@ -1164,9 +1218,8 @@
       : `<div class="state">No spend yet.</div>`;
 
     el.dashStatus.innerHTML = d.byStatus.map((s) => {
-      const key = String(s.status).toLowerCase().replace(/[^a-z]/g, '');
-      const cls = ['draft', 'submitted', 'approved', 'rejected', 'reimbursed'].includes(key) ? key : 'submitted';
-      return `<span class="badge ${cls}">${escapeHtml(s.status)} · ${s.count} · ${escapeHtml(money(s.usd, 'USD'))}</span>`;
+      const cls = statusKey(s.status);
+      return `<span class="badge ${cls}">${escapeHtml(statusLabel(s.status))} · ${s.count} · ${escapeHtml(money(s.usd, 'USD'))}</span>`;
     }).join('');
 
     el.dashHistory.innerHTML = (d.history || []).length
@@ -1529,7 +1582,7 @@
   }
 
   const IMPORT_HINTS = {
-    add: 'Upload your budget export (YNAB works — Date, Payee, Outflow, Memo). Rembly turns each row into an expense and automatically attaches the matching receipt from your email. It flags duplicates and lets you review before anything is added.',
+    add: 'Upload your budget export (YNAB works — Date, Payee, Outflow, Memo). Rembly turns each row into an Unsubmitted expense and automatically attaches the matching receipt from your email. It flags duplicates and lets you review before anything is added. Nothing goes to your approver until you review them under “My expenses” and hit Submit.',
     reconcile: 'Upload the list of reimbursable expenses from your budget app. Rembly checks each one against what you’ve already submitted and shows you exactly what’s still missing for the period.',
   };
 
@@ -1581,17 +1634,17 @@
     let html = '';
     if (missing.length) {
       html += `<h3 class="dash-h">Missing — not in Rembly yet (${missing.length})</h3>`;
-      html += `<p class="import-note">Tick the ones to add. They come in as Submitted expenses (add receipts after).</p>`;
+      html += `<p class="import-note">Tick the ones to add. They come in <strong>Unsubmitted</strong> — review them under “My expenses,” then hit Submit to send them for approval.</p>`;
       html += missing.map(importRowHtml).join('');
     }
     if (matched.length) {
       html += `<details class="import-help"><summary>✓ Already captured (${matched.length})</summary>${
-        matched.map((m) => reconcileLine(m, `matched to your ${escapeHtml(m.matchedTo.status || 'submitted').toLowerCase()} expense`)).join('')
+        matched.map((m) => reconcileLine(m, `matched to your “${escapeHtml(statusLabel(m.matchedTo.status || 'submitted').toLowerCase())}” expense`)).join('')
       }</details>`;
     }
     if (extra.length) {
       html += `<details class="import-help"><summary>In Rembly but not on your budget list (${extra.length})</summary>${
-        extra.map((x) => reconcileLine(x, escapeHtml((x.status || '').toLowerCase()))).join('')
+        extra.map((x) => reconcileLine(x, escapeHtml(statusLabel(x.status || 'submitted').toLowerCase()))).join('')
       }</details>`;
     }
     el.importPreview.innerHTML = html || `<div class="state">Nothing to reconcile.</div>`;
@@ -1897,7 +1950,7 @@
   // ---------- History / activity trail ----------
 
   const EVENT_ICON = {
-    Submitted: '📝', Approved: '✅', 'Sent back': '↩︎', 'Kicked back': '↩︎',
+    Imported: '📥', Submitted: '📝', Approved: '✅', 'Sent back': '↩︎', 'Kicked back': '↩︎',
     Resubmitted: '🔁', Edited: '✏️', Paid: '💸',
   };
 
@@ -1967,6 +2020,7 @@
     $('#btn-choose').addEventListener('click', () => el.receiptInput.click());
     $('#btn-camera').addEventListener('click', () => el.receiptCamera.click());
     $('#rescan-dates').addEventListener('click', rescanDates);
+    $('#submit-all-btn').addEventListener('click', () => submitBatch({ all: true }));
     $('#import-choose').addEventListener('click', () => el.importFile.click());
     $('#import-template').addEventListener('click', downloadTemplate);
     $('#import-copy').addEventListener('click', copyImportInstructions);

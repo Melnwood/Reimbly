@@ -1,8 +1,10 @@
 'use strict';
 
 // Create expenses from the rows the person chose in the import preview. Each
-// becomes a normal Submitted expense owned by the uploader, tagged in Notes so
-// it's clear it came from a spreadsheet, and recorded on the activity trail.
+// comes in as an Unsubmitted (Draft) expense owned by the uploader, tagged in
+// Notes so it's clear it came from a spreadsheet, and recorded on the activity
+// trail. The person reviews them in "My expenses" and hits Submit to send the
+// whole batch for approval — importing is not the same as submitting.
 
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
@@ -93,7 +95,10 @@ exports.handler = async (event) => {
         'Expense Date': date,
         Amount: amount,
         'Payment Method': DEFAULT_PAYMENT_METHOD,
-        Status: STATUS.SUBMITTED,
+        // Land as Unsubmitted — the uploader reviews the batch and submits it.
+        Status: STATUS.DRAFT,
+        // Stamp an entry date so imported rows sort with the newest expenses in
+        // "My expenses" (this is not the same as being submitted for approval).
         'Submitted On': today(),
         Notes: originNote,
         Submitter: [staffId],
@@ -117,7 +122,7 @@ exports.handler = async (event) => {
         const rec = await airtable.createRecord(TABLES.EXPENSES, fields);
         recId = rec.id;
       }
-      await logActivity({ expenseId: recId, event: EVENTS.SUBMITTED, user, note: originNote });
+      await logActivity({ expenseId: recId, event: EVENTS.IMPORTED, user, note: originNote });
       if (key) batchKeys.add(key);
       created.push({ id: recId, hasReceipt: match >= 0 });
     }

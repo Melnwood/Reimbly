@@ -291,6 +291,17 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .import-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 6px 0 14px; }
 .import-summary-line { font-weight: 700; margin-bottom: 4px; }
 .import-note { font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 8px; }
+
+/* "You have N unsubmitted expenses — Submit for approval" bar on My expenses. */
+.submit-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  flex-wrap: wrap; margin-bottom: 14px; padding: 14px 16px;
+  border: 1px solid #fbcfe8; border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #fff5fa, #fffdfd);
+}
+.submit-bar-text { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; color: var(--ink-soft); }
+.submit-bar-text strong { color: var(--ink); font-size: 0.98rem; }
+.submit-bar .btn { flex-shrink: 0; }
 .import-preview { display: flex; flex-direction: column; gap: 10px; }
 .import-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fffdfa; }
 .import-row.dup { background: #fff7ed; border-color: #fed7aa; }

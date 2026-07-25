@@ -37,6 +37,7 @@ const TABLES = {
 // Event names in the Activity Log's "Event" single-select. This is the trail
 // every expense carries: who did what, when, and why.
 const EVENTS = {
+  IMPORTED: 'Imported',
   SUBMITTED: 'Submitted',
   APPROVED: 'Approved',
   SENT_BACK: 'Sent back',
@@ -414,6 +415,14 @@ function sourceOf(fields = {}) {
   return 'Manual';
 }
 
+// A "held email receipt" is a Draft that arrived by email and is waiting to be
+// claimed by an expense — it lives in the Import screen's receipt inbox, not in
+// the person's expense list. An *imported* Draft (from YNAB/CSV) is a real
+// unsubmitted expense instead, so it must not be treated as a held receipt.
+function isHeldEmailReceipt(fields = {}) {
+  return (fields.Status || '') === STATUS.DRAFT && sourceOf(fields) === 'Email';
+}
+
 // Shape a raw Expenses record into the trimmed object the browser needs,
 // resolving linked ids through the maps from displayMaps().
 function shapeExpense(record, maps = {}) {
@@ -468,7 +477,11 @@ async function heldReceiptsFor(email, maps) {
     filterByFormula: `AND(LOWER(ARRAYJOIN({Submitter Email})) = '${em}', {Status} = '${STATUS.DRAFT}')`,
   });
   const m = maps || (await displayMaps());
-  return records.map((r) => ({ record: r, exp: shapeExpense(r, m) }));
+  // Only receipts that actually came from email — never an imported/unsubmitted
+  // expense that happens to also be a Draft.
+  return records
+    .filter((r) => isHeldEmailReceipt(r.fields))
+    .map((r) => ({ record: r, exp: shapeExpense(r, m) }));
 }
 
 // ---- Activity trail ----------------------------------------------------
@@ -536,6 +549,8 @@ module.exports = {
   savePushSub,
   removePushSubs,
   heldReceiptsFor,
+  isHeldEmailReceipt,
+  sourceOf,
   receiptToken,
   verifyReceiptToken,
   getExpenseById,

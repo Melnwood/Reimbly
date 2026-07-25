@@ -132,6 +132,28 @@ async function approverNewExpense({ approver, submitterName, expense }) {
   ]);
 }
 
+// A whole batch of expenses was just submitted for one approver (e.g. after an
+// import — the person reviewed and hit "Submit all").
+async function approverNewExpenses({ approver, submitterName, count = 1, totalUsd }) {
+  if (!approver || !approver.email) return;
+  if (count === 1) {
+    // Fall back to the single-expense wording when it's really just one.
+    return approverNewExpense({ approver, submitterName, expense: {} });
+  }
+  const who = submitterName || 'A staff member';
+  const { html, text } = shell({
+    heading: `${who} sent ${count} expenses to approve`,
+    intro: `${esc(who)} just submitted ${count} expenses${totalUsd != null ? ` (total ${usd(totalUsd)})` : ''} that are waiting for you to review.`,
+    rows: [['Expenses', String(count)], ['Total', totalUsd != null ? usd(totalUsd) : '']].filter((r) => r[1]),
+    cta: `${appUrl()}/#approvals`,
+    ctaLabel: 'Review them',
+  });
+  await Promise.all([
+    sendEmail({ to: approver.email, subject: `${who} submitted ${count} expenses to approve`, html, text }),
+    sendPush({ to: approver.email, title: `${count} expenses to approve`, body: `${who}${totalUsd != null ? ` — ${usd(totalUsd)}` : ''}`, url: `${appUrl()}/#approvals` }),
+  ]);
+}
+
 // A submitter's expense(s) were approved.
 async function submitterApproved({ submitter, expense, count = 1, totalUsd }) {
   if (!submitter || !submitter.email) return;
@@ -182,4 +204,4 @@ async function submitterPaid({ submitter, count = 1, totalUsd }) {
   ]);
 }
 
-module.exports = { sendEmail, sendPush, approverNewExpense, submitterApproved, submitterSentBack, submitterPaid };
+module.exports = { sendEmail, sendPush, approverNewExpense, approverNewExpenses, submitterApproved, submitterSentBack, submitterPaid };

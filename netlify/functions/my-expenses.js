@@ -6,7 +6,7 @@
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, displayMaps, shapeExpense } = require('./lib/domain');
+const { TABLES, displayMaps, shapeExpense, isHeldEmailReceipt } = require('./lib/domain');
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
@@ -25,7 +25,12 @@ exports.handler = async (event) => {
       displayMaps(),
     ]);
 
-    return ok({ expenses: records.map((r) => shapeExpense(r, maps)) });
+    // Held email receipts (Drafts waiting in the inbox) aren't real expenses —
+    // they belong on the Import screen, not in the person's expense list.
+    const expenses = records
+      .filter((r) => !isHeldEmailReceipt(r.fields))
+      .map((r) => shapeExpense(r, maps));
+    return ok({ expenses });
   } catch (err) {
     return error(err);
   }
