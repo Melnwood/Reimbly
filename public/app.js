@@ -808,6 +808,7 @@
       // after an edit, go back to wherever they started.
       const back = editing ? (state.editReturn && state.editReturn !== 'submit' ? state.editReturn : 'mine') : 'submit';
       state.editReturn = null;
+      setAddFormOpen(false); // collapse back to the small header after saving
       switchView(back);
     } catch (e) {
       toast(e.message, 'bad');
@@ -815,6 +816,21 @@
       el.submitBtn.disabled = false;
       el.submitBtn.textContent = state.editingId ? 'Save changes' : 'Submit expense';
     }
+  }
+
+  // The "New expense" form is collapsed by default so the expense list shows
+  // right below it; tapping the header opens it to add (or edit) one.
+  function setAddFormOpen(open) {
+    const body = $('#add-form-body');
+    const toggle = $('#add-toggle');
+    if (!body || !toggle) return;
+    body.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.classList.toggle('open', open);
+  }
+  function toggleAddForm() {
+    const body = $('#add-form-body');
+    setAddFormOpen(body && body.hidden);
   }
 
   // ---------- Edit / delete ----------
@@ -844,6 +860,7 @@
     el.submitBtn.textContent = 'Save changes';
     $('#edit-banner').hidden = false;
     switchView('submit');
+    setAddFormOpen(true); // editing always opens the form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -2578,7 +2595,8 @@
     $('#signout').addEventListener('click', () => signOut('Signed out. See you soon!'));
     $('#lock-unlock').addEventListener('click', unlockWithFaceId);
     $('#lock-google').addEventListener('click', showSignin);
-    $('#cancel-edit').addEventListener('click', cancelEdit);
+    $('#add-toggle').addEventListener('click', toggleAddForm);
+    $('#cancel-edit').addEventListener('click', () => { cancelEdit(); setAddFormOpen(false); });
     el.form.addEventListener('submit', onSubmit);
     el.receiptInput.addEventListener('change', onReceiptChange);
     el.receiptCamera.addEventListener('change', onReceiptChange);
