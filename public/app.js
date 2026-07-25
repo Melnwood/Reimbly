@@ -618,8 +618,10 @@
         const made = await api('reports', { method: 'POST', body: { action: 'create', name } });
         reportId = made.report.id;
       }
-      await api('reports', { method: 'POST', body: { action: 'assign', expenseId: id, reportId } });
-      toast('Receipt filed into the report — edit it below if you need to.', 'good');
+      const res = await api('reports', { method: 'POST', body: { action: 'file', expenseId: id, reportId } });
+      toast(res.merged
+        ? 'That charge was already here — attached the receipt to it (no duplicate).'
+        : 'Receipt filed into the report — edit it below if you need to.', 'good');
       invalidateReports();
       await ensureReportsData(true);
       populateReportPicker();

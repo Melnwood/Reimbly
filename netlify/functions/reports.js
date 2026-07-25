@@ -11,7 +11,9 @@ const {
   TABLES, STATUS, EVENTS,
   ensureStaff, staffById, logActivity,
   getReportById, listReportsOwnedBy, createReport, setExpenseReport, reportOwnedBy,
+  displayMaps, shapeExpense, isHeldEmailReceipt,
 } = require('./lib/domain');
+const { pickBest } = require('./lib/matching');
 const notify = require('./lib/notify');
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -56,6 +58,7 @@ exports.handler = async (event) => {
   try {
     const user = await verifyRequest(event.headers);
     const { id: staffId, record: staffRec } = await ensureStaff(user);
+    const me = user.email.toLowerCase();
 
     if ((event.httpMethod || 'GET').toUpperCase() === 'GET') {
       const reports = await listReportsOwnedBy(staffId);
@@ -113,6 +116,60 @@ exports.handler = async (event) => {
       }
       await setExpenseReport(expenseId, reportId);
       return ok({ assigned: true, expenseId, reportId });
+    }
+
+    // --- file a held email receipt into a report (de-duplicating) -------
+    // If the person already has an expense that matches this receipt (same
+    // money + day), attach the receipt to THAT one and drop the held copy —
+    // so filing a receipt never creates a second copy of the same charge.
+    if (action === 'file') {
+      const expenseId = String(body.expenseId || '').trim();
+      const reportId = body.reportId ? String(body.reportId).trim() : null;
+      if (!expenseId) throw badRequest('Which receipt?');
+      const heldRec = await airtable.findFirst(TABLES.EXPENSES, { filterByFormula: `RECORD_ID() = '${esc(expenseId)}'` });
+      if (!heldRec) throw badRequest('That receipt no longer exists.');
+      if (String(firstLookup(heldRec.fields['Submitter Email']) || '').toLowerCase() !== me) throw forbidden('That isn’t your receipt.');
+      if (reportId) {
+        const report = await getReportById(reportId);
+        if (!report) throw badRequest('That report no longer exists.');
+        if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
+      }
+
+      const maps = await displayMaps();
+      const held = shapeExpense(heldRec, maps);
+      const meEsc = me.replace(/'/g, "\\'");
+      const mineRecs = await airtable.listRecords(TABLES.EXPENSES, {
+        filterByFormula: `LOWER(ARRAYJOIN({Submitter Email})) = '${meEsc}'`,
+      });
+      // Everything of mine that could be the real expense — not this receipt,
+      // and not another unclaimed email receipt.
+      const candidates = mineRecs
+        .filter((r) => r.id !== expenseId && !isHeldEmailReceipt(r.fields))
+        .map((r) => ({ rec: r, e: shapeExpense(r, maps) }));
+      const pool = candidates.map((c) => ({ amount: c.e.amount, date: c.e.date, merchant: c.e.merchant, currency: c.e.currency || 'USD' }));
+      const idx = pickBest({ amount: held.amount, date: held.date, merchant: held.merchant, currency: held.currency || 'USD' }, pool);
+
+      if (idx >= 0) {
+        const match = candidates[idx];
+        const heldReceipt = Array.isArray(heldRec.fields.Receipt) ? heldRec.fields.Receipt : [];
+        // Give the matched expense the receipt if it doesn't already have one.
+        if (!match.e.receipt && heldReceipt.length) {
+          await airtable.updateRecord(TABLES.EXPENSES, match.rec.id, {
+            Receipt: heldReceipt.map((a) => ({ url: a.url, filename: a.filename })),
+          });
+        }
+        // Drop it into the chosen report if it isn't in one yet.
+        if (reportId && !firstLinkId(match.rec.fields.Report)) {
+          await setExpenseReport(match.rec.id, reportId);
+        }
+        await airtable.deleteRecord(TABLES.EXPENSES, expenseId); // remove the duplicate copy
+        await logActivity({ expenseId: match.rec.id, event: EVENTS.EDITED, user, note: 'Emailed receipt matched to this expense (duplicate avoided)' });
+        return ok({ merged: true, into: match.rec.id });
+      }
+
+      // No match — file it as a new expense in the report, as before.
+      await setExpenseReport(expenseId, reportId);
+      return ok({ filed: true });
     }
 
     // --- submit a whole report for approval -----------------------------
