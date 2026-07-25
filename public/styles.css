@@ -348,6 +348,7 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .report-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.88rem; color: var(--ink-soft); }
 .report-row > span { font-weight: 600; }
 .report-pick { font: inherit; font-size: 0.88rem; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; max-width: 240px; }
+.ir-file { margin-top: 8px; }
 
 /* "You have N unsubmitted expenses — Submit for approval" bar on My expenses. */
 .submit-bar {

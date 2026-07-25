@@ -467,7 +467,12 @@ function sourceOf(fields = {}) {
 // the person's expense list. An *imported* Draft (from YNAB/CSV) is a real
 // unsubmitted expense instead, so it must not be treated as a held receipt.
 function isHeldEmailReceipt(fields = {}) {
-  return (fields.Status || '') === STATUS.DRAFT && sourceOf(fields) === 'Email';
+  // Still "held" only while it's an unclaimed email Draft with no report. Once
+  // it's filed into a report it becomes a normal Unsubmitted expense and leaves
+  // the inbox.
+  return (fields.Status || '') === STATUS.DRAFT
+    && sourceOf(fields) === 'Email'
+    && !firstLinkId(fields.Report);
 }
 
 // Shape a raw Expenses record into the trimmed object the browser needs,

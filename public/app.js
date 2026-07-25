@@ -561,6 +561,9 @@
     const list = $('#inbox-list');
     if (!panel || !list) return;
     try {
+      // Make sure the person's reports are loaded so the "file into a report"
+      // picker on each receipt is populated.
+      await ensureReportsData();
       const data = await api('receipt-inbox');
       const receipts = data.receipts || [];
       if (!receipts.length) { panel.hidden = true; return; }
@@ -569,9 +572,20 @@
       list.querySelectorAll('[data-discard]').forEach((btn) => {
         btn.onclick = () => discardHeld(btn.getAttribute('data-discard'));
       });
+      list.querySelectorAll('select[data-role="inbox-file"]').forEach((sel) => {
+        sel.onchange = () => fileHeldReceipt(sel.getAttribute('data-id'), sel.value, sel);
+      });
     } catch (e) {
       panel.hidden = true;
     }
+  }
+
+  // The "file into a report" picker shown on each waiting receipt.
+  function inboxReportSelectHtml(id) {
+    const opts = ['<option value="">File into a report…</option>']
+      .concat((state.reports || []).map((r) => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.name)}</option>`))
+      .concat('<option value="__new__">＋ New report…</option>');
+    return `<select class="report-pick" data-role="inbox-file" data-id="${escapeHtml(id)}">${opts.join('')}</select>`;
   }
 
   function inboxRowHtml(r) {
@@ -584,10 +598,37 @@
         ${thumb}
         <div class="ir-main">
           <div class="ir-top"><strong>${escapeHtml(title)}</strong><span class="ir-amt">${escapeHtml(amt)}</span></div>
-          <div class="ir-meta">${escapeHtml([fmtDate(r.date) || 'no date', 'held from email'].filter(Boolean).join(' · '))}</div>
+          <div class="ir-meta">${escapeHtml([fmtDate(r.date) || 'no date', 'from email'].filter(Boolean).join(' · '))}</div>
+          <div class="ir-file">${inboxReportSelectHtml(r.id)}</div>
         </div>
         <button type="button" class="link-btn" data-discard="${escapeHtml(r.id)}">Discard</button>
       </div>`;
+  }
+
+  // File a held email receipt into a report — it becomes a normal Unsubmitted
+  // expense in that report (editable in "Your expenses" below) and leaves the inbox.
+  async function fileHeldReceipt(id, value, sel) {
+    if (!value) return;
+    if (sel) sel.disabled = true;
+    try {
+      let reportId = value;
+      if (value === '__new__') {
+        const name = (window.prompt('Name the new report (e.g. “General Fund – July”):') || '').trim();
+        if (!name) { if (sel) { sel.disabled = false; sel.value = ''; } return; }
+        const made = await api('reports', { method: 'POST', body: { action: 'create', name } });
+        reportId = made.report.id;
+      }
+      await api('reports', { method: 'POST', body: { action: 'assign', expenseId: id, reportId } });
+      toast('Receipt filed into the report — edit it below if you need to.', 'good');
+      invalidateReports();
+      await ensureReportsData(true);
+      populateReportPicker();
+      renderAddList();
+      loadInbox();
+    } catch (e) {
+      toast(e.message, 'bad');
+      if (sel) { sel.disabled = false; sel.value = ''; }
+    }
   }
 
   async function discardHeld(id) {
