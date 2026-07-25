@@ -165,7 +165,8 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 }
 .panel h2 { margin: 0 0 4px; font-size: 1.35rem; }
 .panel-sub { margin: 0 0 22px; color: var(--ink-soft); }
-.panel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+.head-actions { display: flex; gap: 16px; align-items: center; }
 .panel-head h2 { margin: 0; }
 
 .form { display: grid; gap: 18px; }

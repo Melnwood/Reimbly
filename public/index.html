@@ -222,8 +222,12 @@
           <div class="panel">
             <div class="panel-head">
               <h2>My expenses</h2>
-              <button class="link-btn" data-refresh="mine">Refresh</button>
+              <span class="head-actions">
+                <button class="link-btn" id="rescan-dates" title="Re-read the date from each receipt image with the latest reader">🔁 Re-read receipt dates</button>
+                <button class="link-btn" data-refresh="mine">Refresh</button>
+              </span>
             </div>
+            <div id="rescan-note" class="import-note" hidden></div>
             <div id="mine-list" class="list"></div>
           </div>
         </section>

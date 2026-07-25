@@ -891,6 +891,41 @@
     }
   }
 
+  // Re-read the date off each receipt image with the current reader and fix any
+  // that changed. One at a time so it never times out; shows progress + a summary
+  // of what it corrected.
+  async function rescanDates() {
+    const items = (state.mineExpenses || []).filter((e) => e.receipt && e.receipt.url);
+    const note = $('#rescan-note');
+    const btn = $('#rescan-dates');
+    if (!items.length) { toast('No receipts to re-read here.', 'bad'); return; }
+    if (!window.confirm(`Re-read the date on ${items.length} receipt${items.length === 1 ? '' : 's'} from the images? Only dates are changed.`)) return;
+
+    btn.disabled = true;
+    note.hidden = false;
+    const changes = [];
+    let done = 0;
+    for (const e of items) {
+      note.textContent = `🔁 Re-reading receipts… ${done + 1}/${items.length}`;
+      try {
+        const res = await api('rescan-date', { method: 'POST', body: { id: e.id } });
+        if (res.changed) changes.push(res);
+      } catch (err) { /* skip this one, keep going */ }
+      done += 1;
+    }
+    btn.disabled = false;
+    if (changes.length) {
+      note.innerHTML = `✅ Corrected ${changes.length} date${changes.length === 1 ? '' : 's'}: ` +
+        changes.map((c) => `<strong>${escapeHtml(c.merchant || 'receipt')}</strong> ${escapeHtml(c.old || '—')} → ${escapeHtml(c.date)}`).join('; ');
+      toast(`Fixed ${changes.length} date${changes.length === 1 ? '' : 's'} from the receipts.`, 'good');
+      state.loaded.mine = false;
+      loadMine();
+    } else {
+      note.textContent = '✅ Re-read every receipt — all the dates already matched. Nothing to change.';
+      toast('All receipt dates already matched.', 'good');
+    }
+  }
+
   // ---------- Approvals ----------
 
   // Group each person's pending expenses into one "report" the upline approves
@@ -1918,6 +1953,7 @@
     el.receiptCamera.addEventListener('change', onReceiptChange);
     $('#btn-choose').addEventListener('click', () => el.receiptInput.click());
     $('#btn-camera').addEventListener('click', () => el.receiptCamera.click());
+    $('#rescan-dates').addEventListener('click', rescanDates);
     $('#import-choose').addEventListener('click', () => el.importFile.click());
     $('#import-template').addEventListener('click', downloadTemplate);
     $('#import-copy').addEventListener('click', copyImportInstructions);
