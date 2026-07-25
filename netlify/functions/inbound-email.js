@@ -118,6 +118,10 @@ exports.handler = async (event) => {
         const heldCur = await resolveCurrencyId(scan.currency || 'USD');
         if (heldCur) heldFields.Currency = [heldCur];
         if (scan.merchant) heldFields.Merchant = scan.merchant;
+        // Keep the account Claude read off the receipt, so the held receipt (and
+        // any YNAB row that later adopts it) comes in already coded.
+        const heldAcct = scan.account ? await resolveAccountId(scan.account) : null;
+        if (heldAcct) heldFields.Account = [heldAcct];
         const draft = await airtable.createRecord(TABLES.EXPENSES, heldFields);
         if (receipt) {
           try { await airtable.uploadAttachment(draft.id, 'Receipt', receipt); } catch (e) { console.error('[reimbly] held receipt attach failed', e); }
