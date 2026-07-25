@@ -991,7 +991,6 @@
   }
 
   async function deleteExpense(id, onDone) {
-    if (!window.confirm('Delete this expense? This can’t be undone.')) return;
     try {
       await api('delete-expense', { method: 'POST', body: { id } });
       toast('Expense deleted.', 'good');
@@ -999,6 +998,20 @@
     } catch (e) {
       toast(e.message, 'bad');
     }
+  }
+
+  // Ask "are you sure?" right where the Delete button is, instead of a browser
+  // pop-up at the top of the screen. Swaps the button for a small confirm row.
+  function requestDelete(btn, id, onDone) {
+    if (!btn) return deleteExpense(id, onDone);
+    const holder = document.createElement('span');
+    holder.className = 'confirm-inline';
+    holder.innerHTML = `<span class="confirm-q">Delete — sure?</span>`
+      + `<button type="button" class="btn danger small" data-confirm="yes">Yes, delete</button>`
+      + `<button type="button" class="link-btn" data-confirm="no">Keep it</button>`;
+    btn.replaceWith(holder);
+    holder.querySelector('[data-confirm="yes"]').addEventListener('click', () => deleteExpense(id, onDone));
+    holder.querySelector('[data-confirm="no"]').addEventListener('click', () => holder.replaceWith(btn));
   }
 
   // Clicks inside the "Your expenses" list on the Add-expense tab.
@@ -1018,7 +1031,7 @@
     const id = btn.dataset.id;
     if (act === 'edit') startEdit(id);
     else if (act === 'delete') {
-      deleteExpense(id, () => { invalidateReports(); showAddExpense(); });
+      requestDelete(btn, id, () => { invalidateReports(); showAddExpense(); });
     }
   }
 
@@ -1354,7 +1367,7 @@
     const btn = event.target.closest('button[data-act="dup-delete"]');
     if (!btn) return;
     const id = btn.dataset.id;
-    deleteExpense(id, () => { invalidateReports(); loadDuplicates(); showAddExpense(); });
+    requestDelete(btn, id, () => { invalidateReports(); loadDuplicates(); showAddExpense(); });
   }
 
   // ----- My-reports tab: report cards with status + Submit -----
@@ -1673,7 +1686,7 @@
     if (!btn) return;
     const { act, id } = btn.dataset;
     if (act === 'edit') return startEdit(id);
-    if (act === 'delete') return deleteExpense(id, () => { state.loaded.audit = false; state.loaded.mine = false; loadAudit(); });
+    if (act === 'delete') return requestDelete(btn, id, () => { state.loaded.audit = false; state.loaded.mine = false; loadAudit(); });
     // "history" is handled by the global history handler.
   }
 
