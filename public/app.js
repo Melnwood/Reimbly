@@ -1305,17 +1305,57 @@
     const box = $('#donut');
     if (!box) return;
     if (!total) { box.innerHTML = `<div class="donut-empty">Nothing spent in this period.</div>`; return; }
-    const size = 260, cx = size / 2, cy = size / 2, rOut = 120, rIn = 78, gap = 0.012;
+    const W = 480, H = 300, cx = W / 2, cy = H / 2, rOut = 96, rIn = 62, gap = 0.012;
+    const LABEL_MIN = 0.035; // only name slices worth at least this share, so labels don't pile up
+
     let a = -Math.PI / 2; // start at 12 o'clock
-    const paths = slices.map((s) => {
+    const arcs = [];
+    const labels = [];
+    slices.forEach((s) => {
       const frac = s.usd / total;
       const a0 = a + gap;
       const a1 = a + frac * 2 * Math.PI;
+      const mid = (a0 + a1) / 2;
       a = a1;
       const dimmed = dash.active && dash.active !== s.key;
-      return `<path d="${arcPath(cx, cy, rOut, rIn, a0, Math.max(a1 - gap, a0 + 0.001))}" fill="${s.color}" opacity="${dimmed ? 0.28 : 1}" class="donut-slice" data-key="${escapeHtml(s.key)}"><title>${escapeHtml(s.key)} — ${escapeHtml(money(s.usd, 'USD'))}</title></path>`;
+      arcs.push(`<path d="${arcPath(cx, cy, rOut, rIn, a0, Math.max(a1 - gap, a0 + 0.001))}" fill="${s.color}" opacity="${dimmed ? 0.28 : 1}" class="donut-slice" data-key="${escapeHtml(s.key)}"><title>${escapeHtml(s.key)} — ${escapeHtml(money(s.usd, 'USD'))}</title></path>`);
+      if (frac >= LABEL_MIN) labels.push({ key: s.key, mid, frac, color: s.color, usd: s.usd, dimmed });
+    });
+
+    // Lay the labels out around the ring, nudging apart any that would overlap on
+    // the same side so the names stay readable.
+    const right = [], left = [];
+    labels.forEach((l) => {
+      l.cos = Math.cos(l.mid); l.sin = Math.sin(l.mid);
+      l.x0 = cx + rOut * l.cos; l.y0 = cy + rOut * l.sin;    // point on the ring
+      l.x1 = cx + (rOut + 10) * l.cos; l.y1 = cy + (rOut + 10) * l.sin; // elbow
+      l.y = l.y1;
+      (l.cos >= 0 ? right : left).push(l);
+    });
+    const spread = (arr) => {
+      arr.sort((p, q) => p.y - q.y);
+      const gapY = 26;
+      for (let i = 1; i < arr.length; i += 1) { if (arr[i].y - arr[i - 1].y < gapY) arr[i].y = arr[i - 1].y + gapY; }
+      for (let i = arr.length - 2; i >= 0; i -= 1) { if (arr[i + 1].y - arr[i].y < gapY) arr[i].y = arr[i + 1].y - gapY; }
+      arr.forEach((l) => { l.y = Math.max(14, Math.min(H - 14, l.y)); });
+    };
+    spread(right); spread(left);
+
+    const short = (s) => (s.length > 20 ? `${s.slice(0, 19)}…` : s);
+    const labelSvg = labels.map((l) => {
+      const rightSide = l.cos >= 0;
+      const tx = rightSide ? W - 6 : 6;
+      const anchor = rightSide ? 'end' : 'start';
+      const kneeX = rightSide ? W - 74 : 74;
+      const op = l.dimmed ? 0.3 : 1;
+      return `<g opacity="${op}" class="donut-label" data-key="${escapeHtml(l.key)}">
+        <polyline points="${l.x0.toFixed(1)},${l.y0.toFixed(1)} ${l.x1.toFixed(1)},${l.y1.toFixed(1)} ${kneeX},${l.y.toFixed(1)} ${tx},${l.y.toFixed(1)}" fill="none" stroke="${l.color}" stroke-width="1.4" />
+        <text x="${tx}" y="${(l.y - 2).toFixed(1)}" text-anchor="${anchor}" class="dl-name">${escapeHtml(short(l.key))}</text>
+        <text x="${tx}" y="${(l.y + 11).toFixed(1)}" text-anchor="${anchor}" class="dl-sub">${escapeHtml(money(l.usd, 'USD'))} · ${Math.round(l.frac * 100)}%</text>
+      </g>`;
     }).join('');
-    box.innerHTML = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" role="img" aria-label="Spending breakdown donut">${paths}</svg>`;
+
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" role="img" aria-label="Spending breakdown donut">${arcs.join('')}${labelSvg}</svg>`;
   }
 
   function renderRank(slices, total) {
@@ -1336,10 +1376,10 @@
   }
 
   function renderDetail(slices) {
-    const wrap = $('#dash-detail');
+    const wrap = $('#dash-modal');
     const listEl = $('#dash-detail-list');
     if (!wrap || !listEl) return;
-    if (!dash.active) { wrap.hidden = true; return; }
+    if (!dash.active) { wrap.hidden = true; document.body.classList.remove('modal-open'); return; }
     const slice = slices.find((s) => s.key === dash.active);
     const keys = slice && slice.rollup ? new Set(slice.rollup) : new Set([dash.active]);
     const items = dash.raw
@@ -1358,6 +1398,8 @@
         <div class="expense-actions">${statusBadge(e.status)}${sourceBadge(e.source)}${receiptLink(e)}</div>
       </article>`).join('') : `<div class="state">No expenses here.</div>`;
     wrap.hidden = false;
+    document.body.classList.add('modal-open');
+    listEl.scrollTop = 0;
   }
 
   function renderDashboard() {
@@ -2196,8 +2238,12 @@
     $('#range-from').addEventListener('change', (e) => { dash.from = e.target.value; dash.active = null; renderDashboard(); });
     $('#range-to').addEventListener('change', (e) => { dash.to = e.target.value; dash.active = null; renderDashboard(); });
     $('#dash-export').addEventListener('click', exportDashboard);
-    $('#detail-close').addEventListener('click', () => { dash.active = null; renderDashboard(); });
-    // Click a donut slice or a ranked row to drill into that bucket.
+    const closeModal = () => { dash.active = null; renderDashboard(); };
+    $('#detail-close').addEventListener('click', closeModal);
+    // Click the dark backdrop (but not the card) to close.
+    $('#dash-modal').addEventListener('click', (e) => { if (e.target.id === 'dash-modal') closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && dash.active && state.view === 'dashboard') closeModal(); });
+    // Click a donut slice, its label, or a ranked row to drill into that bucket.
     el.dashboard.addEventListener('click', (e) => {
       const hit = e.target.closest('[data-key]');
       if (hit) setActiveBucket(hit.getAttribute('data-key'));
