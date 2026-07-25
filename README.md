@@ -178,6 +178,15 @@ email never blocks the expense from going through.
 - Leave `RESEND_API_KEY` unset to keep notifications off — the app works exactly
   the same, people just check the app themselves.
 
+### Filing receipts from your email (optional)
+
+Rembly can find the receipts and invoices already in your Gmail — and new ones
+as they arrive — and file them for you as Submitted expenses, with the amount,
+date, merchant, and account read off each receipt by Claude. It runs from a
+small script in your own Google account, so nothing else sees your mail. Full
+setup (about 10 minutes) is in **[docs/EMAIL-RECEIPTS.md](docs/EMAIL-RECEIPTS.md)**;
+it needs `INBOUND_EMAIL_SECRET` set in Netlify alongside `ANTHROPIC_API_KEY`.
+
 ### iPhone / phone push alerts (optional)
 
 On top of email, Rembly can pop a notification straight onto someone's phone the

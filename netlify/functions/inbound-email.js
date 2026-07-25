@@ -1,8 +1,8 @@
 'use strict';
 
 // Turn a forwarded receipt email into a Submitted expense, automatically.
-// A small Google Apps Script (see integrations/gmail-to-reimbly.gs) watches a
-// Gmail label and POSTs each receipt email here. We read every receipt with
+// A small Google Apps Script (see integrations/gmail-to-rembly.gs) finds receipt
+// emails and POSTs each one here. We read every receipt with
 // Claude (image, PDF, or the email's own text) and file it for the sender to
 // review in "My expenses". Protected by a shared secret, not Google sign-in,
 // because it's called by a machine.
