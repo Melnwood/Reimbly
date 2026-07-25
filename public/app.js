@@ -1301,6 +1301,7 @@
   async function showAddExpense() {
     if (el.addList) el.addList.innerHTML = `<div class="state">Loading…</div>`;
     loadInbox(); // held email receipts now live on this tab too
+    loadDuplicates(); // flag any likely duplicate expenses
     try {
       await ensureReportsData();
       populateReportPicker();
@@ -1308,6 +1309,52 @@
     } catch (e) {
       if (el.addList) el.addList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
     }
+  }
+
+  // ----- Possible duplicates -----
+
+  async function loadDuplicates() {
+    const panel = $('#dupes-panel');
+    const list = $('#dupes-list');
+    if (!panel || !list) return;
+    try {
+      const data = await api('duplicates');
+      const groups = data.groups || [];
+      if (!groups.length) { panel.hidden = true; return; }
+      panel.hidden = false;
+      list.innerHTML = groups.map(dupGroupHtml).join('');
+    } catch (e) {
+      panel.hidden = true;
+    }
+  }
+
+  function dupItemHtml(e) {
+    const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
+    const who = e.merchant || e.description || '(no description)';
+    return `
+      <div class="dup-item" data-id="${escapeHtml(e.id)}">
+        <div class="dup-item-main">
+          <div class="dup-item-top"><strong>${escapeHtml(who)}</strong><span class="dup-item-amt">${escapeHtml(amt)}</span></div>
+          <div class="dup-item-meta">${cardMeta(e, [fmtDate(e.date), e.account || e.category])}</div>
+          <div class="dup-item-tags">${statusBadge(e.status)}${sourceBadge(e.source)}${e.reportName ? `<span class="src-badge">🗂️ ${escapeHtml(e.reportName)}</span>` : ''}${receiptLink(e)}</div>
+        </div>
+        <button type="button" class="btn ghost small" data-act="dup-delete" data-id="${escapeHtml(e.id)}">Delete this one</button>
+      </div>`;
+  }
+
+  function dupGroupHtml(g) {
+    return `
+      <div class="dup-group">
+        <div class="dup-reason">💡 Why flagged: ${escapeHtml(g.reason)}</div>
+        ${g.items.map(dupItemHtml).join('')}
+      </div>`;
+  }
+
+  function onDuplicatesClick(event) {
+    const btn = event.target.closest('button[data-act="dup-delete"]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    deleteExpense(id, () => { invalidateReports(); loadDuplicates(); showAddExpense(); });
   }
 
   // ----- My-reports tab: report cards with status + Submit -----
@@ -2751,6 +2798,7 @@
     bindDashboard();
     el.addList.addEventListener('click', onAddListClick);
     el.addList.addEventListener('change', onAddListChange);
+    $('#dupes-list').addEventListener('click', onDuplicatesClick);
     el.reportsList.addEventListener('click', onReportsClick);
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
