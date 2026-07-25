@@ -67,7 +67,14 @@ async function verifyRequest(headers) {
   const email = String(payload.email).toLowerCase();
   const domain = email.split('@')[1];
   const expected = (allowedDomain || '').toLowerCase();
-  if (expected && domain !== expected) {
+  // A short allow-list (ALLOWED_EMAILS, comma-separated) lets specific outside
+  // accounts in — e.g. a tester — without opening the whole app to their domain.
+  const extra = (process.env.ALLOWED_EMAILS || '')
+    .toLowerCase()
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (expected && domain !== expected && !extra.includes(email)) {
     const err = new Error(`Only ${expected} accounts can use Rembly.`);
     err.statusCode = 403;
     throw err;
