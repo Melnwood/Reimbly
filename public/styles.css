@@ -135,6 +135,21 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 }
 .tab:hover { color: var(--ink); }
 .tab.active { background: var(--card); color: var(--brand-ink); box-shadow: var(--shadow); }
+
+/* "Management" dropdown that groups the admin screens */
+.tab-menu { flex: 0 0 auto; }
+.tab-menu-list {
+  position: fixed; z-index: 50; min-width: 200px;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(22, 32, 58, 0.18); padding: 6px;
+  display: flex; flex-direction: column;
+}
+.menu-item {
+  border: 0; background: none; cursor: pointer; font: inherit; font-weight: 600; color: var(--ink);
+  text-align: left; padding: 10px 12px; border-radius: 8px; white-space: nowrap;
+}
+.menu-item:hover { background: var(--bg-soft); }
+.menu-item.active { color: var(--brand-ink); background: #fff5fa; }
 .who { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .who-name { font-weight: 600; }
 .pill {

@@ -60,12 +60,17 @@
         <nav class="tabs" id="tabs" role="tablist">
           <button class="tab" data-view="submit" role="tab">Add expense</button>
           <button class="tab" data-view="mine" role="tab">My reports</button>
-          <button class="tab" data-view="approvals" role="tab" hidden>Approvals</button>
-          <button class="tab" data-view="audit" role="tab" hidden>Audit</button>
-          <button class="tab" data-view="dashboard" role="tab" hidden>Dashboard</button>
-          <button class="tab" data-view="archive" role="tab" hidden>Paid</button>
-          <button class="tab" data-view="rates" role="tab" hidden>Rates</button>
-          <button class="tab" data-view="people" role="tab" hidden>People</button>
+          <button class="tab" data-view="dashboard" role="tab">Dashboard</button>
+          <div class="tab-menu" id="mgmt-menu" hidden>
+            <button type="button" class="tab" id="mgmt-btn" aria-haspopup="true" aria-expanded="false">Management ▾</button>
+            <div class="tab-menu-list" id="mgmt-list" hidden>
+              <button type="button" class="menu-item" data-view="approvals">Approvals</button>
+              <button type="button" class="menu-item" data-view="audit">Audit</button>
+              <button type="button" class="menu-item" data-view="archive">Paid</button>
+              <button type="button" class="menu-item mgmt-finance" data-view="rates">Mileage rates</button>
+              <button type="button" class="menu-item mgmt-finance" data-view="people">People &amp; access</button>
+            </div>
+          </div>
         </nav>
         <div class="who">
           <span id="who-name" class="who-name"></span>

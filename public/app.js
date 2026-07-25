@@ -393,12 +393,12 @@
     el.whoName.textContent = state.me.name;
     el.whoRole.textContent = state.me.role;
 
-    $('.tab[data-view="approvals"]').hidden = !state.me.canApprove;
-    $('.tab[data-view="audit"]').hidden = !state.me.canApprove;
-    $('.tab[data-view="dashboard"]').hidden = false; // everyone gets their own spending breakdown
-    $('.tab[data-view="archive"]').hidden = !state.me.canApprove;
-    $('.tab[data-view="rates"]').hidden = state.me.role !== 'Finance';
-    $('.tab[data-view="people"]').hidden = state.me.role !== 'Finance';
+    // Everyone sees the everyday tabs (Add expense, My reports, Dashboard). The
+    // admin screens live under a single "Management" menu shown only to
+    // approvers/Finance — so you see exactly what everyone else sees, plus that
+    // extra menu. Mileage rates + People are Finance-only within it.
+    $('#mgmt-menu').hidden = !state.me.canApprove;
+    $$('.mgmt-finance').forEach((b) => { b.hidden = state.me.role !== 'Finance'; });
 
     // Default the date field to today.
     const dateInput = $('#f-date');
@@ -508,9 +508,16 @@
     updateDescribeBtn();
   }
 
+  const MGMT_VIEWS = ['approvals', 'audit', 'archive', 'rates', 'people'];
+
   function switchView(view) {
     state.view = view;
-    $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
+    $$('.tab[data-view]').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
+    $$('#mgmt-list .menu-item').forEach((m) => m.classList.toggle('active', m.dataset.view === view));
+    // The "Management" button lights up while any admin screen is open.
+    const mgmtBtn = $('#mgmt-btn');
+    if (mgmtBtn) mgmtBtn.classList.toggle('active', MGMT_VIEWS.includes(view));
+    closeMgmtMenu();
     $$('.view').forEach((v) => { v.hidden = v.dataset.view !== view; });
 
     if (view === 'submit') showAddExpense();
@@ -521,6 +528,30 @@
     if (view === 'archive' && !state.loaded.archive) loadArchive();
     if (view === 'rates' && !state.loaded.rates) loadRates();
     if (view === 'people' && !state.loaded.people) loadPeople();
+  }
+
+  // The "Management" dropdown that holds the admin screens.
+  function toggleMgmtMenu() {
+    const list = $('#mgmt-list');
+    const btn = $('#mgmt-btn');
+    if (!list || !btn) return;
+    const open = list.hidden;
+    if (open) {
+      // The tab bar scrolls, so anchor the menu with fixed coords to escape it.
+      const r = btn.getBoundingClientRect();
+      list.style.top = `${Math.round(r.bottom + 6)}px`;
+      list.style.left = `${Math.round(Math.min(r.left, window.innerWidth - 220))}px`;
+    }
+    list.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+  }
+  function closeMgmtMenu() {
+    const list = $('#mgmt-list');
+    if (list && !list.hidden) {
+      list.hidden = true;
+      const btn = $('#mgmt-btn');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
   }
 
   // ---------- Receipt inbox (held email receipts) ----------
@@ -2630,8 +2661,15 @@
 
   function bind() {
     el.tabs.addEventListener('click', (e) => {
-      const tab = e.target.closest('.tab');
-      if (tab && !tab.hidden) switchView(tab.dataset.view);
+      // The "Management" button opens/closes its dropdown; everything else with
+      // a data-view (a normal tab or a menu item) switches to that view.
+      if (e.target.closest('#mgmt-btn')) { toggleMgmtMenu(); return; }
+      const item = e.target.closest('[data-view]');
+      if (item && !item.hidden) switchView(item.dataset.view);
+    });
+    // Close the Management menu when clicking anywhere outside it.
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#mgmt-menu')) closeMgmtMenu();
     });
     $('#signout').addEventListener('click', () => signOut('Signed out. See you soon!'));
     $('#lock-unlock').addEventListener('click', unlockWithFaceId);
