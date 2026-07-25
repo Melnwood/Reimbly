@@ -60,7 +60,6 @@
         <nav class="tabs" id="tabs" role="tablist">
           <button class="tab" data-view="submit" role="tab">Add expense</button>
           <button class="tab" data-view="mine" role="tab">My reports</button>
-          <button class="tab" data-view="import" role="tab">Import</button>
           <button class="tab" data-view="approvals" role="tab" hidden>Approvals</button>
           <button class="tab" data-view="audit" role="tab" hidden>Audit</button>
           <button class="tab" data-view="dashboard" role="tab" hidden>Dashboard</button>
@@ -188,6 +187,53 @@
             </div>
           </div>
 
+          <div class="panel" id="inbox-panel" hidden>
+            <h2>🧾 Receipts waiting from email</h2>
+            <p class="panel-sub">These arrived in your email and are held until a row from your budget import claims them. Import your YNAB export below and Rembly attaches each receipt to the matching expense automatically.</p>
+            <div id="inbox-list" class="import-preview"></div>
+          </div>
+
+          <div class="panel add-panel">
+            <button type="button" class="add-toggle" id="import-toggle" aria-expanded="false">
+              <span class="add-plus" aria-hidden="true">＋</span>
+              <span class="add-toggle-title">Import a spreadsheet</span>
+              <span class="mini-caret" aria-hidden="true">▾</span>
+            </button>
+            <div id="import-body" hidden>
+              <div class="type-toggle import-mode" role="group" aria-label="Import mode">
+                <button type="button" class="type-btn active" data-mode="add">➕ Add expenses</button>
+                <button type="button" class="type-btn" data-mode="reconcile">✓ Check coverage</button>
+              </div>
+              <p id="import-mode-hint" class="panel-sub">Upload your budget export (YNAB works — Date, Payee, Outflow, Memo). Rembly turns each row into an expense and automatically attaches the matching receipt from your email. It flags duplicates and lets you review before anything is added.</p>
+              <div class="import-bar">
+                <button type="button" class="btn ghost small" id="import-choose">📄 Choose a file</button>
+                <button type="button" class="link-btn" id="import-template">Download a template</button>
+                <button type="button" class="link-btn" id="import-copy">Copy instructions for Claude</button>
+                <input id="import-file" type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+                <span id="import-name" class="file-hint"></span>
+              </div>
+              <details class="import-help">
+                <summary>What columns should the file have?</summary>
+                <p>One row per expense, with a header row on top. Rembly recognizes these columns (extra columns are ignored):</p>
+                <ul>
+                  <li><strong>Date</strong> — best as <code>YYYY-MM-DD</code> (e.g. 2026-07-01)</li>
+                  <li><strong>Amount</strong> — the number only, in the original currency</li>
+                  <li><strong>Currency</strong> — USD, EUR, CZK, PLN, GBP, RON, HUF, BGN, RSD, UAH (defaults to USD)</li>
+                  <li><strong>Merchant</strong> — where it was spent</li>
+                  <li><strong>Description</strong> — what it was for</li>
+                  <li><strong>Account</strong> — the GL code (e.g. 8147000); leave blank to choose it here</li>
+                </ul>
+                <p class="import-note">Use “Copy instructions for Claude” to paste these rules into whatever puts your monthly file together.</p>
+              </details>
+              <div id="import-summary"></div>
+              <div id="import-preview" class="import-preview"></div>
+              <div id="import-actions" class="import-actions" hidden>
+                <button type="button" class="btn primary" id="import-commit-btn">Import selected</button>
+                <button type="button" class="link-btn" id="import-cancel">Clear</button>
+              </div>
+            </div>
+          </div>
+
           <div class="panel">
             <div class="panel-head">
               <h2>Your expenses</h2>
@@ -199,49 +245,6 @@
             <p class="panel-sub">Everything you've added. Edit any of them, and choose which report each one goes into.</p>
             <div id="rescan-note" class="import-note" hidden></div>
             <div id="add-list" class="list"></div>
-          </div>
-        </section>
-
-        <!-- Import from spreadsheet -->
-        <section id="view-import" class="view" data-view="import" hidden>
-          <div class="panel" id="inbox-panel" hidden>
-            <h2>🧾 Receipts waiting from email</h2>
-            <p class="panel-sub">These arrived in your email and are held until a row from your budget import claims them. Import your YNAB export below and Rembly attaches each receipt to the matching expense automatically.</p>
-            <div id="inbox-list" class="import-preview"></div>
-          </div>
-          <div class="panel">
-            <h2>Import from a spreadsheet</h2>
-            <div class="type-toggle import-mode" role="group" aria-label="Import mode">
-              <button type="button" class="type-btn active" data-mode="add">➕ Add expenses</button>
-              <button type="button" class="type-btn" data-mode="reconcile">✓ Check coverage</button>
-            </div>
-            <p id="import-mode-hint" class="panel-sub">Upload your budget export (YNAB works — Date, Payee, Outflow, Memo). Rembly turns each row into an expense and automatically attaches the matching receipt from your email. It flags duplicates and lets you review before anything is added.</p>
-            <div class="import-bar">
-              <button type="button" class="btn ghost small" id="import-choose">📄 Choose a file</button>
-              <button type="button" class="link-btn" id="import-template">Download a template</button>
-              <button type="button" class="link-btn" id="import-copy">Copy instructions for Claude</button>
-              <input id="import-file" type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-              <span id="import-name" class="file-hint"></span>
-            </div>
-            <details class="import-help">
-              <summary>What columns should the file have?</summary>
-              <p>One row per expense, with a header row on top. Rembly recognizes these columns (extra columns are ignored):</p>
-              <ul>
-                <li><strong>Date</strong> — best as <code>YYYY-MM-DD</code> (e.g. 2026-07-01)</li>
-                <li><strong>Amount</strong> — the number only, in the original currency</li>
-                <li><strong>Currency</strong> — USD, EUR, CZK, PLN, GBP, RON, HUF, BGN, RSD, UAH (defaults to USD)</li>
-                <li><strong>Merchant</strong> — where it was spent</li>
-                <li><strong>Description</strong> — what it was for</li>
-                <li><strong>Account</strong> — the GL code (e.g. 8147000); leave blank to choose it here</li>
-              </ul>
-              <p class="import-note">Use “Copy instructions for Claude” to paste these rules into whatever puts your monthly file together.</p>
-            </details>
-            <div id="import-summary"></div>
-            <div id="import-preview" class="import-preview"></div>
-            <div id="import-actions" class="import-actions" hidden>
-              <button type="button" class="btn primary" id="import-commit-btn">Import selected</button>
-              <button type="button" class="link-btn" id="import-cancel">Clear</button>
-            </div>
           </div>
         </section>
 

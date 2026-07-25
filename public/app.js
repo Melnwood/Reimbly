@@ -521,7 +521,6 @@
     if (view === 'archive' && !state.loaded.archive) loadArchive();
     if (view === 'rates' && !state.loaded.rates) loadRates();
     if (view === 'people' && !state.loaded.people) loadPeople();
-    if (view === 'import') loadInbox();
   }
 
   // ---------- Receipt inbox (held email receipts) ----------
@@ -1212,6 +1211,7 @@
 
   async function showAddExpense() {
     if (el.addList) el.addList.innerHTML = `<div class="state">Loading…</div>`;
+    loadInbox(); // held email receipts now live on this tab too
     try {
       await ensureReportsData();
       populateReportPicker();
@@ -2265,10 +2265,12 @@
       const extra = bits.length ? ` · ${bits.join(' · ')}` : '';
       toast(`Imported ${created} expense${created === 1 ? '' : 's'}${extra} 🎉`, 'good');
       clearImport();
+      $('#import-body').hidden = true;
+      $('#import-toggle').classList.remove('open');
       state.loaded.mine = false;
       state.loaded.audit = false;
       state.loaded.dashboard = false;
-      switchView('mine');
+      showAddExpense(); // land back on the list so you can file the new expenses into reports
     } catch (e) {
       toast(`Imported ${created} so far, then hit an error: ${e.message}`, 'bad');
     } finally {
@@ -2621,6 +2623,13 @@
     $('#lock-unlock').addEventListener('click', unlockWithFaceId);
     $('#lock-google').addEventListener('click', showSignin);
     $('#add-toggle').addEventListener('click', toggleAddForm);
+    $('#import-toggle').addEventListener('click', () => {
+      const body = $('#import-body');
+      const open = body.hidden;
+      body.hidden = !open;
+      $('#import-toggle').classList.toggle('open', open);
+      $('#import-toggle').setAttribute('aria-expanded', String(open));
+    });
     $('#cancel-edit').addEventListener('click', () => { cancelEdit(); setAddFormOpen(false); });
     el.form.addEventListener('submit', onSubmit);
     el.receiptInput.addEventListener('change', onReceiptChange);
