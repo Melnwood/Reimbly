@@ -254,6 +254,12 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .dot.rejected { background: #dc2626; }
 .dot.reimbursed { background: #2563eb; }
 .dot.draft { background: #9ca3af; }
+/* Source dots — the color tells you where an expense came from */
+.dot.src-ynab { background: #16a34a; }
+.dot.src-email { background: #2563eb; }
+.dot.src-photo { background: #0891b2; }
+.dot.src-manual { background: #8b5cf6; }
+.dot.src-csv { background: #d97706; }
 .mini-caret { flex: none; color: var(--ink-soft); font-size: 0.7rem; transition: transform 0.15s; }
 .expense.mini.open .mini-caret { transform: rotate(180deg); }
 .mini-details { padding: 4px 16px 14px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
@@ -284,7 +290,23 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .src-badge.src-ynab { background: #ecfdf5; color: #05704f; border-color: #c9f0df; }
 .src-badge.src-csv { background: #fef6e7; color: #92600e; border-color: #f6e6c4; }
 .src-badge.src-manual { background: #f3f1f5; color: #5b4b6b; border-color: #e6e1ec; }
+.src-badge.src-photo { background: #e6f7fb; color: #076983; border-color: #c7ebf4; }
 .mini-src { flex: none; font-size: 0.9rem; line-height: 1; opacity: 0.85; }
+
+/* The "What does the dot mean?" legend above the expense list */
+.key { margin: 4px 0 10px; font-size: 0.82rem; }
+.key > summary {
+  cursor: pointer; color: #6b6357; font-weight: 600;
+  padding: 4px 0; list-style: none; user-select: none;
+}
+.key > summary::-webkit-details-marker { display: none; }
+.key > summary::before { content: '▸ '; color: #b0a892; }
+.key[open] > summary::before { content: '▾ '; }
+.key-body { padding: 6px 2px 2px; }
+.key-note { margin: 4px 0; color: #6b6357; }
+.key-group { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 6px 0; }
+.key-item { display: inline-flex; align-items: center; gap: 7px; color: #4a4438; }
+.key-item .dot { width: 10px; height: 10px; }
 
 .expense-note {
   font-size: 0.85rem; color: var(--warn);

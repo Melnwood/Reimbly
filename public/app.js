@@ -1244,22 +1244,23 @@
     return `<span class="dot ${cls}" title="${escapeHtml(statusLabel(status))}"></span>`;
   }
 
-  // How the expense got into Rembly: typed, from email, or an import.
+  // How the expense got into Rembly. The colored dot on each row means *source*
+  // (where it came from) — that's what Mel reads at a glance. [emoji, words, colorKey]
   const SOURCE_META = {
-    Manual: ['✍️', 'Manual'],
-    Email: ['📧', 'Email'],
-    CSV: ['📄', 'CSV'],
-    YNAB: ['📊', 'YNAB'],
+    YNAB: ['📊', 'Imported from YNAB', 'ynab'],
+    Email: ['📧', 'Imported from email', 'email'],
+    Photo: ['📷', 'Taken by a picture', 'photo'],
+    Manual: ['✍️', 'Entered by hand', 'manual'],
+    CSV: ['📄', 'Imported from a file', 'csv'],
   };
   function sourceBadge(src) {
-    const meta = SOURCE_META[src];
-    if (!meta) return '';
-    return `<span class="src-badge src-${src.toLowerCase()}">${meta[0]} ${escapeHtml(meta[1])}</span>`;
+    const meta = SOURCE_META[src] || SOURCE_META.Manual;
+    return `<span class="src-badge src-${meta[2]}">${meta[0]} ${escapeHtml(meta[1])}</span>`;
   }
+  // The colored dot on a row: its color tells you the source.
   function sourceDot(src) {
-    const meta = SOURCE_META[src];
-    if (!meta) return '';
-    return `<span class="mini-src" title="Added: ${escapeHtml(meta[1])}">${meta[0]}</span>`;
+    const meta = SOURCE_META[src] || SOURCE_META.Manual;
+    return `<span class="dot src-${meta[2]}" title="${escapeHtml(meta[1])}"></span>`;
   }
 
   function receiptLink(expense) {
@@ -1348,7 +1349,6 @@
           <span class="mini-amt">${escapeHtml(amt)}</span>
           ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
           ${sourceDot(e.source)}
-          ${statusDot(e.status)}
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
         <div class="mini-details" hidden></div>

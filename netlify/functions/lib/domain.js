@@ -459,6 +459,7 @@ function sourceOf(fields = {}) {
   if (/from email|captured from email/i.test(notes)) return 'Email';
   if (/imported from ynab|from ynab/i.test(notes)) return 'YNAB';
   if (/imported from/i.test(notes)) return 'CSV';
+  if (/added by photo|by photo/i.test(notes)) return 'Photo';
   return 'Manual';
 }
 

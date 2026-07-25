@@ -125,6 +125,9 @@ exports.handler = async (event) => {
     if (reportLink) fields.Report = [reportLink];
     if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
+    // Provenance: a manual entry that arrives with a photo is "taken by a
+    // picture"; one typed in by hand has no receipt. sourceOf() reads this.
+    if (receipt) fields.Notes = fields.Notes ? `${fields.Notes}\nAdded by photo` : 'Added by photo';
 
     // Soft duplicate heads-up — same person, same amount, same day. Never blocks.
     let dupWarning = null;
