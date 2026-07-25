@@ -164,9 +164,13 @@
               </label>
 
               <label class="field">
-                <span>Description <em class="opt mode-mileage-hint" hidden>(e.g. trip from Frýdlant to Ostrava)</em></span>
+                <span class="field-label-row">
+                  <span>Description <em class="opt mode-mileage-hint" hidden>(e.g. trip from Frýdlant to Ostrava)</em></span>
+                  <button type="button" id="describe-btn" class="link-btn" hidden>✨ Write it for me</button>
+                </span>
                 <input id="f-description" name="description" type="text"
                        maxlength="120" placeholder="e.g. Team dinner after camp planning" />
+                <div id="describe-options" class="describe-options" hidden></div>
               </label>
 
               <button id="submit-btn" class="btn primary" type="submit">Submit expense</button>

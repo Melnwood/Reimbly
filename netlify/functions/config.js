@@ -21,6 +21,9 @@ exports.handler = async (event) => {
       appName: 'Rembly',
       // Public VAPID key lets the browser subscribe to push. Empty = push off.
       vapidPublicKey: process.env.VAPID_PUBLIC_KEY || '',
+      // Whether the Claude-powered helpers (receipt scan, "write my description")
+      // are available, so the UI can show/hide the ✨ buttons.
+      aiEnabled: !!process.env.ANTHROPIC_API_KEY,
     });
   } catch (err) {
     return error(err);

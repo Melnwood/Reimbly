@@ -404,6 +404,7 @@
     if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
 
     loadOptions();
+    updateDescribeBtn();
     switchView('submit');
   }
 
@@ -501,6 +502,9 @@
       ? 'e.g. trip from Frýdlant to Ostrava (optional)'
       : 'e.g. Team dinner after camp planning';
     if (mileage) updateMileageCalc();
+    const box = $('#describe-options');
+    if (box) { box.hidden = true; box.innerHTML = ''; }
+    updateDescribeBtn();
   }
 
   function switchView(view) {
@@ -596,6 +600,103 @@
 
   function currentReceipt() {
     return el.receiptInput.files[0] || el.receiptCamera.files[0];
+  }
+
+  // ---------- "Write it for me" (AI description helper) ----------
+  // For hand-entered expenses with no receipt to read: Claude proposes three
+  // short descriptions from whatever's filled in, and you tap the one you like.
+
+  function updateDescribeBtn() {
+    const btn = $('#describe-btn');
+    if (!btn) return;
+    const on = !!(state.config && state.config.aiEnabled) && state.expenseType !== 'mileage';
+    btn.hidden = !on;
+    if (!on) { const box = $('#describe-options'); if (box) { box.hidden = true; box.innerHTML = ''; } }
+  }
+
+  function accountLabel() {
+    const sel = $('#f-account');
+    const opt = sel && sel.options[sel.selectedIndex];
+    return opt && opt.value ? opt.textContent : '';
+  }
+
+  function describeBody(extra) {
+    return Object.assign({
+      merchant: $('#f-business').value.trim(),
+      amount: parseFloat($('#f-amount').value) || undefined,
+      currency: $('#f-currency').value,
+      account: accountLabel(),
+      hint: $('#f-description').value.trim(),
+      date: $('#f-date').value,
+    }, extra || {});
+  }
+
+  function renderDescribeChips(remembered, options) {
+    const box = $('#describe-options');
+    if (!box) return;
+    const chips = [];
+    (remembered || []).forEach((o) => chips.push(`<button type="button" class="describe-chip remembered" data-desc="${escapeHtml(o)}">↺ ${escapeHtml(o)}</button>`));
+    (options || []).forEach((o) => chips.push(`<button type="button" class="describe-chip" data-desc="${escapeHtml(o)}">✨ ${escapeHtml(o)}</button>`));
+    if (!chips.length) { box.hidden = true; box.innerHTML = ''; return; }
+    const cap = remembered && remembered.length
+      ? (options && options.length ? 'You’ve used these here before — or try a new one:' : 'You’ve used these here before — tap one:')
+      : 'Tap one to use it:';
+    box.innerHTML = `<div class="describe-cap">${cap}</div>${chips.join('')}`;
+    box.hidden = false;
+  }
+
+  // Tracks the latest description request so a slow background recall can't
+  // overwrite a fuller result the person just asked for with the ✨ button.
+  let describeSeq = 0;
+
+  // Auto-memory: when the merchant is filled in, quietly bring back the
+  // descriptions this person has used there before. No AI, no button.
+  async function recallDescriptions() {
+    if (state.editingId || state.expenseType === 'mileage') return;
+    const merchant = $('#f-business').value.trim();
+    if (!merchant || $('#f-description').value.trim()) return; // don't override what they typed
+    const seq = ++describeSeq;
+    try {
+      const res = await api('suggest-description', { method: 'POST', body: describeBody({ recallOnly: true }) });
+      if (seq !== describeSeq) return; // a newer request has taken over
+      if (res && res.remembered && res.remembered.length) renderDescribeChips(res.remembered, []);
+    } catch (e) { /* memory is a nicety — never interrupt */ }
+  }
+
+  // The ✨ button: memory first, then Claude fills in fresh ideas.
+  async function suggestDescription() {
+    const btn = $('#describe-btn');
+    const body = describeBody();
+    if (!body.merchant && !body.hint && !body.account) {
+      return toast('Add where you spent it (or a couple of words) first.', 'bad');
+    }
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = '✨ Thinking…';
+    const seq = ++describeSeq;
+    try {
+      const res = await api('suggest-description', { method: 'POST', body });
+      if (seq !== describeSeq) return; // superseded by a newer request
+      const remembered = (res && res.remembered) || [];
+      const options = (res && res.options) || [];
+      if (!remembered.length && !options.length) { toast('Couldn’t think of one — try adding a bit more detail.', 'bad'); return; }
+      renderDescribeChips(remembered, options);
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+
+  function onDescribeOptionClick(event) {
+    const chip = event.target.closest('.describe-chip');
+    if (!chip) return;
+    $('#f-description').value = chip.getAttribute('data-desc');
+    const box = $('#describe-options');
+    box.hidden = true;
+    box.innerHTML = '';
+    toast('Description filled in — tweak it if you like.', 'good');
   }
 
   async function onReceiptChange(event) {
@@ -2263,6 +2364,9 @@
     el.receiptCamera.addEventListener('change', onReceiptChange);
     $('#btn-choose').addEventListener('click', () => el.receiptInput.click());
     $('#btn-camera').addEventListener('click', () => el.receiptCamera.click());
+    $('#describe-btn').addEventListener('click', suggestDescription);
+    $('#describe-options').addEventListener('click', onDescribeOptionClick);
+    $('#f-business').addEventListener('change', recallDescriptions);
     $('#rescan-dates').addEventListener('click', rescanDates);
     $('#submit-all-btn').addEventListener('click', () => submitBatch({ all: true }));
     $('#import-choose').addEventListener('click', () => el.importFile.click());
