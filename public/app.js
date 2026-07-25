@@ -1032,6 +1032,12 @@
     const btn = event.target.closest('button[data-act]');
     if (!btn) return false;
     const act = btn.dataset.act;
+    if (act === 'ie-receipt-choose') {
+      const details = btn.closest('.mini-details');
+      const input = details && $('.ie-receipt-input', details);
+      if (input) input.click();
+      return true;
+    }
     if (act === 'toggle') {
       const card = btn.closest('.expense');
       if (!card) return false;
@@ -1101,6 +1107,15 @@
   // it creates the report and selects it. Picking an existing report is saved
   // when the line is closed (together with any field edits), so nothing is lost.
   async function onAddListChange(event) {
+    // A receipt was picked in the inline editor — show its name; it attaches on Save.
+    const fileInput = event.target.closest('.ie-receipt-input');
+    if (fileInput) {
+      const details = fileInput.closest('.mini-details');
+      const name = details && $('.ie-receipt-name', details);
+      const f = fileInput.files && fileInput.files[0];
+      if (name) name.textContent = f ? `${f.name} — attaches when you Save` : '';
+      return;
+    }
     const sel = event.target.closest('select[data-role="report-pick"]');
     if (!sel || sel.value !== '__new__') return;
     const name = (window.prompt('Name the new report (e.g. “General Fund – July”):') || '').trim();
@@ -1331,6 +1346,7 @@
           <span class="mini-date">${escapeHtml(fmtDateShort(e.date))}</span>
           <span class="mini-who">${escapeHtml(who)}</span>
           <span class="mini-amt">${escapeHtml(amt)}</span>
+          ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
           ${sourceDot(e.source)}
           ${statusDot(e.status)}
           <span class="mini-caret" aria-hidden="true">▾</span>
@@ -1435,9 +1451,19 @@
           <div class="ie-describe-options describe-options" hidden></div>
         </label>
         <label class="report-row"><span>Report</span>${reportSelectHtml(e.reportId, `data-role="report-pick" data-id="${escapeHtml(e.id)}"`)}</label>
+        <div class="ie-f">
+          <span>Receipt</span>
+          <div class="ie-receipt">
+            ${e.receipt && e.receipt.url
+              ? `<a class="receipt-link" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">📎 View receipt</a>`
+              : '<span class="ie-noreceipt">No receipt yet</span>'}
+            <button type="button" class="btn ghost small" data-act="ie-receipt-choose">${e.receipt ? 'Replace receipt' : '📎 Add a receipt'}</button>
+            <input type="file" class="ie-receipt-input" accept="image/*,application/pdf" hidden />
+            <span class="ie-receipt-name file-hint"></span>
+          </div>
+        </div>
         <div class="expense-actions">
           <button class="btn primary small" data-act="ie-save" data-id="${escapeHtml(e.id)}">Save</button>
-          ${receiptLink(e)}
           ${historyBtn(e.id)}
           <button class="link-btn danger" data-act="delete" data-id="${escapeHtml(e.id)}">Delete</button>
         </div>
@@ -1487,10 +1513,13 @@
     const reportVal = reportSel ? reportSel.value : undefined;
     const reportChanged = reportSel && reportVal !== '__new__' && reportVal !== (e.reportId || '');
 
+    const fileInput = details.querySelector('.ie-receipt-input');
+    const receiptFile = fileInput && fileInput.files && fileInput.files[0];
+
     const fieldsChanged = amount !== e.amount || currency !== (e.currency || 'USD')
       || account !== (e.accountCode || '') || date !== (e.date || '')
       || merchant !== (e.merchant || '') || description !== (e.description || '');
-    if (!fieldsChanged && !reportChanged) return 'unchanged';
+    if (!fieldsChanged && !reportChanged && !receiptFile) return 'unchanged';
 
     if (!description) { toast('Add a short description.', 'bad'); return false; }
     if (!(amount > 0)) { toast('Amount must be greater than zero.', 'bad'); return false; }
@@ -1499,11 +1528,18 @@
 
     const body = { id, amount, currency, account, date, description, merchant };
     if (reportChanged) body.reportId = reportVal; // '' removes from its report
+    if (receiptFile) {
+      body.receipt = {
+        filename: receiptFile.name,
+        contentType: receiptFile.type || 'application/octet-stream',
+        base64: await readFileAsBase64(receiptFile),
+      };
+    }
 
     try {
       await api('update-expense', { method: 'POST', body });
       bumpAccountUsage(account);
-      toast(reportChanged && reportVal ? 'Saved and filed into the report.' : 'Saved.', 'good');
+      toast(receiptFile ? 'Saved with your receipt.' : (reportChanged && reportVal ? 'Saved and filed into the report.' : 'Saved.'), 'good');
       return 'saved';
     } catch (err) {
       toast(err.message, 'bad');

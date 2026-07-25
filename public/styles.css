@@ -383,6 +383,10 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .ie-cur { flex: 0 0 96px; }
 .ie-f input, .ie-f select { font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fffdfa; width: 100%; }
 .ie-hint { font-size: 0.78rem; color: var(--ink-soft); }
+.ie-receipt { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.ie-noreceipt { font-size: 0.88rem; color: var(--ink-soft); }
+.ie-receipt-name { flex-basis: 100%; }
+.mini-clip { font-size: 0.85rem; }
 
 /* Per-expense report picker on the Add-expense list */
 .report-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.88rem; color: var(--ink-soft); }
