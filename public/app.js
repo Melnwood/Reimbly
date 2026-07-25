@@ -1017,9 +1017,20 @@
   // Handle a click on an expense card (used by both the Add-expense list and the
   // expenses inside a report). Returns true if it handled the click.
   function onExpenseCardClick(event) {
+    // Tapping a suggested-description chip in the inline editor fills it in.
+    const chip = event.target.closest('.ie-describe-options .describe-chip');
+    if (chip) {
+      const details = chip.closest('.mini-details');
+      const input = details && $('.ie-description', details);
+      if (input) input.value = chip.getAttribute('data-desc');
+      const box = chip.closest('.ie-describe-options');
+      if (box) { box.hidden = true; box.innerHTML = ''; }
+      return true;
+    }
     const btn = event.target.closest('button[data-act]');
     if (!btn) return false;
     const act = btn.dataset.act;
+    if (act === 'ie-describe') { inlineDescribe(btn); return true; }
     if (act === 'toggle') {
       const card = btn.closest('.expense');
       if (!card) return false;
@@ -1049,6 +1060,48 @@
   }
 
   function onAddListClick(event) { onExpenseCardClick(event); }
+
+  // "✨ Write it for me" inside the inline editor — same helper as the new-expense
+  // form, but reads/writes this row's fields (imported rows often just have the
+  // merchant copied into the description, so this gives a real one).
+  async function inlineDescribe(btn) {
+    const details = btn.closest('.mini-details');
+    if (!details) return;
+    const box = $('.ie-describe-options', details);
+    const acctSel = $('.ie-account', details);
+    const acctOpt = acctSel && acctSel.options[acctSel.selectedIndex];
+    const body = {
+      merchant: $('.ie-business', details).value.trim(),
+      amount: parseFloat($('.ie-amount', details).value) || undefined,
+      currency: $('.ie-currency', details).value,
+      account: acctOpt && acctOpt.value ? acctOpt.textContent : '',
+      hint: $('.ie-description', details).value.trim(),
+      date: $('.ie-date', details).value,
+    };
+    if (!body.merchant && !body.hint && !body.account) {
+      return toast('Add where you spent it (or a couple of words) first.', 'bad');
+    }
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = '✨ Thinking…';
+    try {
+      const res = await api('suggest-description', { method: 'POST', body });
+      const remembered = (res && res.remembered) || [];
+      const options = (res && res.options) || [];
+      if (!remembered.length && !options.length) { toast('Couldn’t think of one — add a bit more detail.', 'bad'); return; }
+      const chips = [];
+      remembered.forEach((o) => chips.push(`<button type="button" class="describe-chip remembered" data-desc="${escapeHtml(o)}">↺ ${escapeHtml(o)}</button>`));
+      options.forEach((o) => chips.push(`<button type="button" class="describe-chip" data-desc="${escapeHtml(o)}">✨ ${escapeHtml(o)}</button>`));
+      const cap = remembered.length ? 'You’ve used these here before — or try a new one:' : 'Tap one to use it:';
+      box.innerHTML = `<div class="describe-cap">${cap}</div>${chips.join('')}`;
+      box.hidden = false;
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
 
   // The only report-picker change we act on immediately is "＋ New report" —
   // it creates the report and selects it. Picking an existing report is saved
@@ -1341,7 +1394,11 @@
         <label class="ie-f"><span>Account</span><select class="ie-account">${ieAccountOptions(e.accountCode)}</select></label>
         <label class="ie-f"><span>Date</span><input class="ie-date" type="date" value="${escapeHtml(e.date || '')}" /></label>
         <label class="ie-f"><span>Where (business)</span><input class="ie-business" type="text" maxlength="80" value="${escapeHtml(e.merchant || '')}" /></label>
-        <label class="ie-f"><span>Description</span><input class="ie-description" type="text" maxlength="120" value="${escapeHtml(e.description || '')}" /></label>
+        <label class="ie-f">
+          <span class="field-label-row"><span>Description</span>${(state.config && state.config.aiEnabled) ? '<button type="button" class="link-btn" data-act="ie-describe">✨ Write it for me</button>' : ''}</span>
+          <input class="ie-description" type="text" maxlength="120" value="${escapeHtml(e.description || '')}" />
+          <div class="ie-describe-options describe-options" hidden></div>
+        </label>
         <label class="report-row"><span>Report</span>${reportSelectHtml(e.reportId, `data-role="report-pick" data-id="${escapeHtml(e.id)}"`)}</label>
         <div class="expense-actions">
           <button class="btn primary small" data-act="ie-save" data-id="${escapeHtml(e.id)}">Save</button>
