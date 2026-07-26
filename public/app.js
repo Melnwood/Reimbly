@@ -857,6 +857,7 @@
     if (s.account && hasOption('#f-account', s.account)) $('#f-account').value = s.account;
     if (s.merchant) $('#f-business').value = s.merchant;
     if (s.description || s.merchant) $('#f-description').value = s.description || s.merchant;
+    state.scanTime = s.time || ''; // carried through to save, for repeat-charge matching
   }
 
   function currentReceipt() {
@@ -1029,6 +1030,7 @@
     // Unsubmitted, until the report is submitted).
     const reportId = !editing ? ($('#f-report') && $('#f-report').value) : '';
     if (reportId && reportId !== '__new__') body.reportId = reportId;
+    if (!editing && state.scanTime) body.time = state.scanTime; // time read off the photo
 
     el.submitBtn.disabled = true;
     el.submitBtn.textContent = editing ? 'Saving…' : 'Submitting…';
@@ -1160,6 +1162,7 @@
 
   function cancelEdit() {
     state.editingId = null;
+    state.scanTime = '';
     el.form.reset();
     $('#f-date').value = new Date().toISOString().slice(0, 10);
     el.receiptName.textContent = '';

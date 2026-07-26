@@ -28,11 +28,12 @@ function receiptTool() {
         amount: { type: ['number', 'null'], description: 'The total amount paid, as a number (no currency symbol). null if not legible.' },
         currency: { type: ['string', 'null'], enum: [...CURRENCY_CODES, null], description: 'ISO code of the currency shown on the receipt.' },
         date: { type: ['string', 'null'], description: 'Date of purchase as YYYY-MM-DD. null if not legible.' },
+        time: { type: ['string', 'null'], description: 'Time of day printed on the receipt, in 24-hour HH:MM (e.g. "14:32"). Important for things like road tolls. null if no time is shown.' },
         merchant: { type: ['string', 'null'], description: 'The store or vendor name.' },
         description: { type: ['string', 'null'], description: 'A short, human description in English, e.g. "Lunch at Cafe Louvre" or "Train ticket Praha–Ostrava".' },
         account: { type: ['string', 'null'], description: 'The single best-fit GL account CODE from the account list in the instructions. Return only the numeric code, e.g. "8394000". null if unsure.' },
       },
-      required: ['amount', 'currency', 'date', 'merchant', 'description', 'account'],
+      required: ['amount', 'currency', 'date', 'time', 'merchant', 'description', 'account'],
       additionalProperties: false,
     },
   };
@@ -50,7 +51,10 @@ function prompt(accounts) {
     'receipt is day-first (e.g. a Czech/Polish receipt showing 12.07.2026 or 12/07/2026 ' +
     'means 12 July 2026); a US receipt is month-first (07/12/2026 means 12 July 2026 too, ' +
     'but 03/05 means March 5). Decide from the receipt’s country, currency, language, and ' +
-    'how the date is written — do NOT assume one convention. Return the result as YYYY-MM-DD.\n\n' +
+    'how the date is written — do NOT assume one convention. Return the result as YYYY-MM-DD. ' +
+    'Also read the TIME of day if the receipt shows one (common on tolls, parking, and fuel) ' +
+    'and return it as 24-hour HH:MM in "time" — it helps tell apart several identical charges ' +
+    'made on the same day.\n\n' +
     'For "description", say in plain English WHAT the money was for — the product or service, ' +
     'not just the vendor name. If you recognize the vendor, name what they actually sell: e.g. ' +
     'Anthropic → "Claude AI subscription"; Starlink → "Starlink satellite internet"; a hotel → ' +
@@ -81,12 +85,17 @@ function normalize(input = {}, { accountCodes = new Set() } = {}) {
   const currency = clean(input.currency);
   const date = clean(input.date);
   const account = clean(input.account);
+  // Time as HH:MM (24h). Accept "9:5" → "09:05".
+  const timeRaw = clean(input.time);
+  const tm = /^(\d{1,2}):(\d{2})/.exec(timeRaw || '');
+  const time = tm && Number(tm[1]) < 24 ? `${String(tm[1]).padStart(2, '0')}:${tm[2]}` : null;
   return {
     amount: isFinite(amount) && amount > 0 ? amount : null,
     currency: CURRENCY_CODES.includes(String(currency || '').toUpperCase())
       ? String(currency).toUpperCase()
       : null,
     date: /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : null,
+    time,
     merchant: clean(input.merchant) || null,
     description: clean(input.description) || null,
     account: account && accountCodes.has(String(account)) ? String(account) : null,

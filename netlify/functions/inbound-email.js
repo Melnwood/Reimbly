@@ -118,6 +118,7 @@ exports.handler = async (event) => {
         const heldCur = await resolveCurrencyId(scan.currency || 'USD');
         if (heldCur) heldFields.Currency = [heldCur];
         if (scan.merchant) heldFields.Merchant = scan.merchant;
+        if (scan.time) heldFields['Receipt Time'] = scan.time;
         // Keep the account Claude read off the receipt, so the held receipt (and
         // any YNAB row that later adopts it) comes in already coded.
         const heldAcct = scan.account ? await resolveAccountId(scan.account) : null;
@@ -145,6 +146,7 @@ exports.handler = async (event) => {
       if (currencyId) fields.Currency = [currencyId];
       if (accountId) fields.Account = [accountId];
       if (scan.merchant) fields.Merchant = scan.merchant;
+      if (scan.time) fields['Receipt Time'] = scan.time;
 
       const rec = await airtable.createRecord(TABLES.EXPENSES, fields);
       if (receipt) {

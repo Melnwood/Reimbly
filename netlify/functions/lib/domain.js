@@ -558,6 +558,7 @@ function shapeExpense(record, maps = {}) {
     originalAmount: f['Original Amount'] != null ? Number(f['Original Amount']) : null,
     originalCurrency: f['Original Currency'] || '',
     // Missing-receipt affidavit: a signed declaration used in place of a receipt.
+    receiptTime: f['Receipt Time'] || '',
     missingReceipt: !!f['Missing Receipt'],
     affidavitReason: f['Affidavit Reason'] || '',
     affidavitSignedBy: f['Affidavit Signed By'] || '',

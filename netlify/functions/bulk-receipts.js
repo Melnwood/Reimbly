@@ -82,6 +82,7 @@ exports.handler = async (event) => {
         const amount = scan && scan.amount != null ? Number(scan.amount) : null;
         const currency = scan && scan.currency ? String(scan.currency).toUpperCase() : 'USD';
         const date = (scan && scan.date) || null;
+        const time = (scan && scan.time) || '';
         const merchant = (scan && scan.merchant) || '';
         const accountCode = (scan && scan.account) ? String(scan.account) : '';
 
@@ -98,9 +99,12 @@ exports.handler = async (event) => {
           await airtable.uploadAttachment(cand.rec.id, 'Receipt', receipt);
           // If the receipt is foreign but the expense is the bank/USD amount,
           // record the original amount so the exchange rate can show.
+          const patch = {};
           if (currency && currency !== (cand.e.currency || 'USD') && (cand.e.currency || 'USD') === 'USD' && amount > 0) {
-            await airtable.updateRecord(TABLES.EXPENSES, cand.rec.id, { 'Original Amount': amount, 'Original Currency': currency });
+            patch['Original Amount'] = amount; patch['Original Currency'] = currency;
           }
+          if (time) patch['Receipt Time'] = time;
+          if (Object.keys(patch).length) await airtable.updateRecord(TABLES.EXPENSES, cand.rec.id, patch);
           await logActivity({ expenseId: cand.rec.id, event: EVENTS.EDITED, user, note: 'Receipt matched from a photo upload' });
           results.matched += 1;
           results.items.push({ file: receipt.filename, status: 'matched', into: cand.rec.id, merchant: cand.e.merchant });
@@ -119,6 +123,7 @@ exports.handler = async (event) => {
         if (merchant) fields.Merchant = merchant;
         if (amount != null && amount > 0) fields.Amount = amount;
         if (date) fields['Expense Date'] = date;
+        if (time) fields['Receipt Time'] = time;
         if (currencyId) fields.Currency = [currencyId];
         if (accountId) fields.Account = [accountId];
         const created = await airtable.createRecord(TABLES.EXPENSES, fields);

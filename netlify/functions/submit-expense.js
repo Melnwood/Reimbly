@@ -127,6 +127,9 @@ exports.handler = async (event) => {
     if (reportLink) fields.Report = [reportLink];
     if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
+    // Time read off the photo (HH:MM) — helps tell apart repeat charges like tolls.
+    const timeIn = /^(\d{1,2}):(\d{2})$/.exec(String(body.time || '').trim());
+    if (timeIn && Number(timeIn[1]) < 24) fields['Receipt Time'] = `${timeIn[1].padStart(2, '0')}:${timeIn[2]}`;
     // Provenance: a manual entry that arrives with a photo is "taken by a
     // picture"; one typed in by hand has no receipt. sourceOf() reads this.
     if (receipt) fields.Notes = fields.Notes ? `${fields.Notes}\nAdded by photo` : 'Added by photo';

@@ -161,12 +161,13 @@ exports.handler = async (event) => {
           const scan = await scanReceipt(receipt, { accounts: [] });
           const foreignCur = scan && scan.currency ? String(scan.currency).toUpperCase() : '';
           const foreignAmt = scan && scan.amount != null ? Number(scan.amount) : null;
+          const patch = {};
           if (foreignCur && foreignCur !== currency && foreignAmt > 0) {
-            await airtable.updateRecord(TABLES.EXPENSES, id, {
-              'Original Amount': foreignAmt,
-              'Original Currency': foreignCur,
-            });
+            patch['Original Amount'] = foreignAmt;
+            patch['Original Currency'] = foreignCur;
           }
+          if (scan && scan.time) patch['Receipt Time'] = scan.time; // helps tell apart repeat charges
+          if (Object.keys(patch).length) await airtable.updateRecord(TABLES.EXPENSES, id, patch);
         } catch (e) {
           console.error('[reimbly] fx read failed', e); // just skip the FX line
         }
