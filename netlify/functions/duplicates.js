@@ -57,6 +57,17 @@ function timesConflict(a, b) {
   return minutesApart(a.receiptTime, b.receiptTime) > 3;
 }
 
+// For the same-day pass where amounts differ: only near-identical totals look
+// like the same charge read twice (e.g. $23.71 vs $23.51). Two same-store buys
+// of clearly different amounts on one day are just two purchases, not a double.
+function amountsNear(a, b) {
+  if ((a.currency || 'USD') !== (b.currency || 'USD')) return false;
+  const x = Number(a.amount) || 0;
+  const y = Number(b.amount) || 0;
+  if (!x || !y) return false;
+  return Math.abs(x - y) <= 0.02 * Math.max(x, y); // within 2%
+}
+
 // Same-cost pass: two expenses of the identical amount look like one charge?
 function sameCostSame(a, b) {
   if (timesConflict(a, b)) return false; // different times on the receipts → not a double
@@ -118,6 +129,46 @@ function cluster(list, linked) {
   return groups;
 }
 
+// The pure core: given shaped expenses, return the likely-duplicate groups.
+function findDuplicateGroups(items) {
+  const list = items.filter((e) => e.amount != null && e.amount > 0);
+  const groups = [];
+  const grouped = new Set(); // expense ids already in a group
+
+  // Pass 1 — SAME EXACT COST. Bucket by currency+amount, then cluster.
+  const buckets = new Map();
+  for (const e of list) {
+    const key = `${e.currency || 'USD'}|${round2(e.amount)}`;
+    (buckets.get(key) || buckets.set(key, []).get(key)).push(e);
+  }
+  for (const bucket of buckets.values()) {
+    if (bucket.length < 2) continue;
+    for (const g of cluster(bucket, sameCostSame)) {
+      const gItems = g.slice().sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      gItems.forEach((e) => grouped.add(e.id));
+      groups.push({ reason: reasonFor(gItems, true), amount: round2(gItems[0].amount), items: gItems });
+    }
+  }
+
+  // Pass 2 — SAME DAY + SIMILAR NAME, even when the amounts differ (a double
+  // charge that got read with slightly different totals). Skip anything already
+  // caught above.
+  const rest = list.filter((e) => !grouped.has(e.id) && e.date);
+  const byDate = new Map();
+  for (const e of rest) (byDate.get(e.date) || byDate.set(e.date, []).get(e.date)).push(e);
+  for (const dayList of byDate.values()) {
+    if (dayList.length < 2) continue;
+    for (const g of cluster(dayList, (a, b) => merchantsRelated(nameOf(a), nameOf(b)) && amountsNear(a, b) && !timesConflict(a, b))) {
+      const gItems = g.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0));
+      gItems.forEach((e) => grouped.add(e.id));
+      groups.push({ reason: reasonFor(gItems, false), amount: round2(gItems[0].amount || 0), items: gItems });
+    }
+  }
+
+  groups.sort((a, b) => b.amount - a.amount);
+  return groups;
+}
+
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
   if (guard) return guard;
@@ -136,45 +187,12 @@ exports.handler = async (event) => {
     // Real expenses only — held email receipts live in the inbox.
     const items = records
       .filter((r) => !isHeldEmailReceipt(r.fields))
-      .map((r) => shapeExpense(r, maps))
-      .filter((e) => e.amount != null && e.amount > 0);
+      .map((r) => shapeExpense(r, maps));
 
-    const groups = [];
-    const grouped = new Set(); // expense ids already in a group
-
-    // Pass 1 — SAME EXACT COST. Bucket by currency+amount, then cluster.
-    const buckets = new Map();
-    for (const e of items) {
-      const key = `${e.currency || 'USD'}|${round2(e.amount)}`;
-      (buckets.get(key) || buckets.set(key, []).get(key)).push(e);
-    }
-    for (const bucket of buckets.values()) {
-      if (bucket.length < 2) continue;
-      for (const g of cluster(bucket, sameCostSame)) {
-        const gItems = g.slice().sort((a, b) => String(a.date).localeCompare(String(b.date)));
-        gItems.forEach((e) => grouped.add(e.id));
-        groups.push({ reason: reasonFor(gItems, true), amount: round2(gItems[0].amount), items: gItems });
-      }
-    }
-
-    // Pass 2 — SAME DAY + SIMILAR NAME, even when the amounts differ (a double
-    // charge that got read with slightly different totals). Skip anything already
-    // caught above.
-    const rest = items.filter((e) => !grouped.has(e.id) && e.date);
-    const byDate = new Map();
-    for (const e of rest) (byDate.get(e.date) || byDate.set(e.date, []).get(e.date)).push(e);
-    for (const dayList of byDate.values()) {
-      if (dayList.length < 2) continue;
-      for (const g of cluster(dayList, (a, b) => merchantsRelated(nameOf(a), nameOf(b)) && !timesConflict(a, b))) {
-        const gItems = g.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0));
-        gItems.forEach((e) => grouped.add(e.id));
-        groups.push({ reason: reasonFor(gItems, false), amount: round2(gItems[0].amount || 0), items: gItems });
-      }
-    }
-
-    groups.sort((a, b) => b.amount - a.amount);
-    return ok({ groups });
+    return ok({ groups: findDuplicateGroups(items) });
   } catch (err) {
     return error(err);
   }
 };
+
+module.exports.findDuplicateGroups = findDuplicateGroups;
