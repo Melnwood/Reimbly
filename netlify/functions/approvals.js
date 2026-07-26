@@ -20,16 +20,30 @@ exports.handler = async (event) => {
       throw err;
     }
 
-    const [records, maps] = await Promise.all([
+    const year = new Date().getUTCFullYear();
+    const [records, missingRecords, maps] = await Promise.all([
       airtable.listRecords(TABLES.EXPENSES, {
         filterByFormula: `{Status} = '${STATUS.SUBMITTED}'`,
         'sort[0][field]': 'Submitted On',
         'sort[0][direction]': 'asc',
       }),
+      // Every missing-receipt affidavit this year, any status — for the per-person
+      // year-to-date count shown on the review queue.
+      airtable.listRecords(TABLES.EXPENSES, {
+        filterByFormula: `AND({Missing Receipt} = 1, YEAR({Submitted On}) = ${year})`,
+      }),
       displayMaps(),
     ]);
 
     let expenses = records.map((r) => shapeExpense(r, maps));
+
+    // ytdMissing: submitterId -> how many missing-receipt affidavits they've signed
+    // this year. A rising count is the cue for a gentle check-in (not a gotcha).
+    const ytdMissing = {};
+    for (const r of missingRecords) {
+      const e = shapeExpense(r, maps);
+      if (e.submitterId) ytdMissing[e.submitterId] = (ytdMissing[e.submitterId] || 0) + 1;
+    }
 
     // Finance sees everything; an approver sees expenses from the people who
     // report to them (Upline = them), plus any with no upline set yet.
@@ -41,7 +55,7 @@ exports.handler = async (event) => {
       });
     }
 
-    return ok({ expenses, role });
+    return ok({ expenses, role, ytdMissing });
   } catch (err) {
     return error(err);
   }

@@ -518,7 +518,7 @@
     updateDescribeBtn();
   }
 
-  const MGMT_VIEWS = ['approvals', 'audit', 'archive', 'timing', 'rates', 'people'];
+  const MGMT_VIEWS = ['review', 'approvals', 'audit', 'archive', 'timing', 'rates', 'people'];
 
   function switchView(view) {
     state.view = view;
@@ -532,6 +532,7 @@
 
     if (view === 'submit') showAddExpense();
     if (view === 'mine') showReports();
+    if (view === 'review' && !state.loaded.review) loadReview();
     if (view === 'approvals' && !state.loaded.approvals) loadApprovals();
     if (view === 'audit' && !state.loaded.audit) loadAudit();
     if (view === 'dashboard' && !state.loaded.dashboard) loadDashboard();
@@ -2550,6 +2551,224 @@
     }
   }
 
+  // ---------- Review (split-inbox approval queue) ----------
+
+  let reviewReports = [];
+  let reviewSel = null;
+
+  const isMileage = (e) => e.distance != null || e.mileageRate != null;
+  // The one signal that makes a line "need a look": a missing-receipt affidavit,
+  // or a plain expense with no receipt and no affidavit. Everything else is in order.
+  function expenseFlag(e) {
+    if (e.missingReceipt) return { kind: 'affidavit' };
+    if (!e.receipt && !isMileage(e)) return { kind: 'noreceipt' };
+    return null;
+  }
+  function daysSince(dateStr) {
+    const d = new Date(dateStr);
+    if (isNaN(d)) return 0;
+    return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+  }
+
+  // Group submitted expenses into per-report piles with a clear/needs-a-look state.
+  function buildReviewReports(expenses, ytd) {
+    const byKey = new Map();
+    for (const e of expenses) {
+      const key = e.reportId || `s:${e.submitterId || e.submitterEmail}`;
+      let r = byKey.get(key);
+      if (!r) {
+        r = { key, name: e.reportName || 'Expenses', submitterId: e.submitterId, person: e.submitterName || e.submitterEmail || 'Someone', submittedOn: e.submittedOn, expenses: [] };
+        byKey.set(key, r);
+      }
+      r.expenses.push(e);
+      if (e.submittedOn && (!r.submittedOn || e.submittedOn < r.submittedOn)) r.submittedOn = e.submittedOn;
+    }
+    const list = [...byKey.values()].map((r) => {
+      r.total = r.expenses.reduce((s, e) => s + (Number(e.amountUsd) || 0), 0);
+      r.flags = r.expenses.filter((e) => expenseFlag(e)).length;
+      r.clear = r.flags === 0;
+      r.count = r.expenses.length;
+      r.days = r.submittedOn ? daysSince(r.submittedOn) : 0;
+      r.ytd = (ytd && r.submitterId && ytd[r.submitterId]) || 0;
+      return r;
+    });
+    list.sort((a, b) => (a.clear - b.clear) || (b.days - a.days));
+    return list;
+  }
+
+  function reviewSummary() {
+    const rs = reviewReports;
+    const needLook = rs.filter((r) => !r.clear).length;
+    return { waiting: rs.length, needLook, allClear: rs.length - needLook, pending: rs.reduce((s, r) => s + r.total, 0), oldest: rs.length ? Math.max(...rs.map((r) => r.days)) : 0 };
+  }
+
+  const daysAgo = (n) => (n === 0 ? 'today' : n === 1 ? '1 day ago' : `${n} days ago`);
+
+  function reviewExpRow(e) {
+    const flag = expenseFlag(e);
+    let orig = '';
+    if (e.originalAmount != null && e.originalCurrency) orig = ` <span class="rv-orig">${escapeHtml(e.originalAmount.toLocaleString())} ${escapeHtml(e.originalCurrency)}</span>`;
+    else if (e.currency && e.currency !== 'USD' && e.amount != null) orig = ` <span class="rv-orig">${escapeHtml(e.amount.toLocaleString())} ${escapeHtml(e.currency)}</span>`;
+    const title = e.description || e.merchant || e.category || 'Expense';
+    const meta = [e.category, e.account, fmtDateShort(e.date)].filter(Boolean).map(escapeHtml).join(' · ');
+    let note = '', tag = '';
+    if (flag && flag.kind === 'affidavit') {
+      const who = e.affidavitSignedBy || e.person || '';
+      const when = e.affidavitSignedOn ? ` on ${escapeHtml(fmtDate(e.affidavitSignedOn))}` : '';
+      note = `<div class="rv-note"><span class="rv-chip flag">Missing receipt</span><div class="rv-note-body"><b>Signed affidavit${who ? ` by ${escapeHtml(who)}` : ''}${when}.</b> ${e.affidavitReason ? `<span class="rv-q">“${escapeHtml(e.affidavitReason)}”</span>` : '<span class="rv-q">No reason given.</span>'}</div></div>`;
+    } else if (flag && flag.kind === 'noreceipt') {
+      note = `<div class="rv-note"><span class="rv-chip flag">No receipt</span><div class="rv-note-body">No receipt attached and no affidavit signed.</div></div>`;
+    } else {
+      tag = isMileage(e) ? '<span class="rv-ok">✓ mileage</span>' : (e.receipt ? '<span class="rv-ok">✓ receipt attached</span>' : '');
+    }
+    return `<div class="rv-exp ${flag ? 'flagged' : ''}">
+      <div class="rv-exp-main"><div class="rv-desc">${escapeHtml(title)}</div><div class="rv-sub">${meta}</div></div>
+      <div class="rv-exp-right"><span class="rv-amt tnum">${escapeHtml(money(e.amountUsd, 'USD'))}${orig}</span>${tag}</div>
+      ${note}
+    </div>`;
+  }
+
+  function reviewDetailHTML(r) {
+    const flagged = r.expenses.filter((e) => expenseFlag(e));
+    const clean = r.expenses.filter((e) => !expenseFlag(e));
+    const verified = r.count - flagged.length;
+    const banner = r.clear
+      ? `<div class="rv-banner clear"><span class="rv-bic">✓</span><div><h4>All ${r.count} item${r.count === 1 ? '' : 's'} in order.</h4><p>Every expense has a receipt or a signed affidavit. You're good to approve.</p></div></div>`
+      : `<div class="rv-banner flag"><span class="rv-bic">!</span><div><h4>${verified} of ${r.count} in order · ${flagged.length} need${flagged.length > 1 ? '' : 's'} a look.</h4><p>Everything else is fine — you only weigh in on the highlighted ${flagged.length > 1 ? 'ones' : 'one'}.</p></div></div>`;
+    const flaggedHtml = flagged.length ? `<div class="rv-group">Needs your attention</div>${flagged.map(reviewExpRow).join('')}` : '';
+    const cleanHtml = clean.length ? `<div class="rv-group">In order — ${clean.length}</div>${clean.map(reviewExpRow).join('')}` : '';
+    const ytd = r.ytd >= 5
+      ? `<div class="rv-ytd hot"><b>Pattern worth a look:</b> ${escapeHtml(r.person)} has signed <b>${r.ytd} missing-receipt affidavits</b> this year — higher than most. Might be worth a friendly check-in.</div>`
+      : (r.ytd ? `<div class="rv-ytd">${escapeHtml(r.person)} has signed <b>${r.ytd} missing-receipt affidavit${r.ytd > 1 ? 's' : ''}</b> this year — within normal.</div>` : '');
+    return `
+      <div class="rv-detail-head"><h3>${escapeHtml(r.name)}</h3><div class="rv-detail-sub">${escapeHtml(r.person)} · ${r.count} item${r.count === 1 ? '' : 's'} · ${escapeHtml(money(r.total, 'USD'))} · submitted ${daysAgo(r.days)}</div></div>
+      ${banner}${flaggedHtml}${cleanHtml}${ytd}
+      <div class="rv-actions">
+        <button class="btn ghost" data-act="sendback-toggle" data-key="${escapeHtml(r.key)}">Send back</button>
+        <button class="btn ${r.clear ? 'good' : 'primary'}" data-act="approve-report" data-key="${escapeHtml(r.key)}">Approve report</button>
+      </div>
+      <div class="rv-sendback" id="rv-sendback" hidden>
+        <input type="text" id="rv-sendback-note" placeholder="What needs fixing? (the person sees this)" maxlength="200" />
+        <button class="btn primary small" data-act="sendback-confirm" data-key="${escapeHtml(r.key)}">Send report back</button>
+      </div>`;
+  }
+
+  function reviewListItem(r) {
+    const chip = r.clear ? '<span class="rv-chip clear">✓ all clear</span>' : `<span class="rv-chip flag">${r.flags} to check</span>`;
+    const ytd = r.ytd >= 5 ? `<div class="rv-ytdchip">⚑ ${r.ytd} missing YTD</div>` : '';
+    return `<button class="rv-item ${reviewSel === r.key ? 'on' : ''}" data-review-sel="${escapeHtml(r.key)}">
+      <span class="rv-dot ${r.clear ? 'clear' : 'flag'}"></span>
+      <div class="rv-item-main"><div class="rv-item-name">${escapeHtml(r.person)}</div><div class="rv-item-sub">${escapeHtml(r.name)} · ${escapeHtml(money(r.total, 'USD'))} · ${r.days}d</div>${ytd}</div>
+      ${chip}
+    </button>`;
+  }
+
+  function renderReview() {
+    const body = $('#review-body');
+    if (!body) return;
+    if (reviewSel && !reviewReports.some((r) => r.key === reviewSel)) reviewSel = null;
+    if (!reviewReports.length) {
+      body.innerHTML = '<div class="state"><span class="emoji">🎉</span>Nothing waiting — every report has been reviewed.</div>';
+      return;
+    }
+    const s = reviewSummary();
+    const clearSum = reviewReports.filter((r) => r.clear).reduce((a, r) => a + r.total, 0);
+    const banner = s.allClear
+      ? `<div class="rv-clearbanner"><span class="rv-cbic">✓</span><div class="rv-cbtext"><b>${s.allClear} report${s.allClear > 1 ? 's are' : ' is'} all clear — ${escapeHtml(money(clearSum, 'USD'))}</b><span>Rembly checked every receipt. Clear these first, then tackle the ${s.needLook} that need a look.</span></div><button class="btn good" data-act="approve-clear">✓ Approve all ${s.allClear}</button></div>`
+      : '';
+    const pane = reviewSel
+      ? reviewDetailHTML(reviewReports.find((r) => r.key === reviewSel))
+      : '<div class="rv-empty">👈 Pick a report to review it here.<br><span>Orange means it needs a look; teal means all clear.</span></div>';
+    body.innerHTML = `
+      <p class="rv-lede"><b>${s.waiting} report${s.waiting > 1 ? 's' : ''}</b> waiting — <b>${s.needLook} need a look</b>, the rest are ready to approve.</p>
+      <div class="rv-tiles">
+        <div class="rv-tile"><span class="rv-tk">Waiting</span><span class="rv-tv tnum">${s.waiting}</span></div>
+        <div class="rv-tile warn"><span class="rv-tk">Need a look</span><span class="rv-tv tnum">${s.needLook}</span></div>
+        <div class="rv-tile good"><span class="rv-tk">All clear</span><span class="rv-tv tnum">${s.allClear}</span></div>
+        <div class="rv-tile"><span class="rv-tk">Pending</span><span class="rv-tv tnum">${escapeHtml(money(s.pending, 'USD'))}</span></div>
+        <div class="rv-tile"><span class="rv-tk">Oldest</span><span class="rv-tv tnum">${s.oldest}d</span></div>
+      </div>
+      ${banner}
+      <div class="rv-inbox">
+        <div class="rv-list">${reviewReports.map(reviewListItem).join('')}</div>
+        <div class="rv-pane">${pane}</div>
+      </div>`;
+  }
+
+  async function loadReview() {
+    const body = $('#review-body');
+    if (body) body.innerHTML = '<div class="state">Loading…</div>';
+    try {
+      const data = await api('approvals');
+      state.loaded.review = true;
+      reviewReports = buildReviewReports(data.expenses || [], data.ytdMissing || {});
+      renderReview();
+    } catch (e) {
+      if (body) body.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function reviewInvalidate() {
+    afterApprovalsChange();
+    state.loaded.approvals = false; // the old Approvals view shares this data
+    state.loaded.timing = false; // approve-time / volume changed
+  }
+
+  async function reviewApprove(keys) {
+    const ids = reviewReports.filter((r) => keys.includes(r.key)).flatMap((r) => r.expenses.map((e) => e.id));
+    if (!ids.length) return;
+    try {
+      const res = await api('decide-batch', { method: 'POST', body: { ids, decision: 'approve' } });
+      reviewReports = reviewReports.filter((r) => !keys.includes(r.key));
+      if (keys.includes(reviewSel)) reviewSel = null;
+      reviewInvalidate();
+      toast(`Approved ${res.approved} expense${res.approved === 1 ? '' : 's'} ✅`, 'good');
+      renderReview();
+    } catch (e) {
+      toast(e.message, 'bad');
+      loadReview();
+    }
+  }
+
+  async function reviewSendBack(key, note) {
+    const r = reviewReports.find((x) => x.key === key);
+    if (!r) return;
+    try {
+      await api('decide-batch', { method: 'POST', body: { ids: r.expenses.map((e) => e.id), decision: 'sendback', note } });
+      reviewReports = reviewReports.filter((x) => x.key !== key);
+      if (reviewSel === key) reviewSel = null;
+      reviewInvalidate();
+      state.loaded.mine = false;
+      toast('Sent back ↩︎', 'good');
+      renderReview();
+    } catch (e) {
+      toast(e.message, 'bad');
+      loadReview();
+    }
+  }
+
+  function onReviewClick(event) {
+    const btn = event.target.closest('button[data-act]');
+    if (btn) {
+      const act = btn.dataset.act;
+      if (act === 'approve-clear') return reviewApprove(reviewReports.filter((r) => r.clear).map((r) => r.key));
+      if (act === 'approve-report') return reviewApprove([btn.dataset.key]);
+      if (act === 'sendback-toggle') {
+        const box = $('#rv-sendback');
+        if (box) { box.hidden = !box.hidden; if (!box.hidden) $('#rv-sendback-note').focus(); }
+        return;
+      }
+      if (act === 'sendback-confirm') {
+        const note = ($('#rv-sendback-note').value || '').trim();
+        if (!note) return toast('Add a short note so they know what to fix.', 'bad');
+        return reviewSendBack(btn.dataset.key, note);
+      }
+      return;
+    }
+    const item = event.target.closest('[data-review-sel]');
+    if (item) { reviewSel = item.getAttribute('data-review-sel'); renderReview(); }
+  }
+
   // ---------- Timing / turnaround ----------
 
   async function loadTiming() {
@@ -3735,6 +3954,8 @@
     el.reportsList.addEventListener('click', onReportsClick);
     el.reportsList.addEventListener('change', onAddListChange);
     el.approvalsList.addEventListener('click', onApprovalsClick);
+    const reviewBody = $('#review-body');
+    if (reviewBody) reviewBody.addEventListener('click', onReviewClick);
     el.auditList.addEventListener('click', onAuditClick);
     el.archiveReady.addEventListener('click', onArchiveClick);
     el.archiveReady.addEventListener('change', onArchiveChange);
@@ -3743,7 +3964,7 @@
     const refreshers = {
       add: () => { invalidateReports(); showAddExpense(); },
       mine: () => { invalidateReports(); showReports(); },
-      approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, timing: loadTiming, rates: loadRates, people: loadPeople,
+      review: loadReview, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, timing: loadTiming, rates: loadRates, people: loadPeople,
     };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())

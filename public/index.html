@@ -64,6 +64,7 @@
           <div class="tab-menu" id="mgmt-menu" hidden>
             <button type="button" class="tab" id="mgmt-btn" aria-haspopup="true" aria-expanded="false">Management ▾</button>
             <div class="tab-menu-list" id="mgmt-list" hidden>
+              <button type="button" class="menu-item" data-view="review">Review</button>
               <button type="button" class="menu-item" data-view="approvals">Approvals</button>
               <button type="button" class="menu-item" data-view="audit">Audit</button>
               <button type="button" class="menu-item" data-view="archive">Paid</button>
@@ -427,6 +428,17 @@
               </div>
               <div id="dash-detail-list" class="list"></div>
             </div>
+          </div>
+        </section>
+
+        <!-- Review queue (split inbox) -->
+        <section id="view-review" class="view" data-view="review" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Review</h2>
+              <button class="link-btn" data-refresh="review" title="Refresh">↻ Refresh</button>
+            </div>
+            <div id="review-body"><div class="state">Loading…</div></div>
           </div>
         </section>
 
