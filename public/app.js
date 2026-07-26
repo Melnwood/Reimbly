@@ -660,6 +660,57 @@
     });
   }
 
+  // Turn a picked file into the {filename, contentType, base64} we upload.
+  // Phone photos are big — a full-res camera shot, once base64-encoded, can blow
+  // past the serverless request-size limit and make the whole save fail. So for
+  // images we downscale to a sane size and re-encode as JPEG first (this also
+  // quietly converts iPhone HEIC photos to something everything can open). PDFs
+  // and anything non-image pass through untouched.
+  async function prepareReceipt(file) {
+    const raw = async () => ({
+      filename: file.name,
+      contentType: file.type || 'application/octet-stream',
+      base64: await readFileAsBase64(file),
+    });
+    const type = (file.type || '').toLowerCase();
+    if (!type.startsWith('image/')) return raw();
+    try {
+      const shrunk = await new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const MAX = 1600;
+          let w = img.naturalWidth || img.width;
+          let h = img.naturalHeight || img.height;
+          if (!w || !h) return reject(new Error('no dimensions'));
+          if (Math.max(w, h) > MAX) {
+            const s = MAX / Math.max(w, h);
+            w = Math.round(w * s);
+            h = Math.round(h * s);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject(new Error('no canvas'));
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          if (!dataUrl || dataUrl.indexOf(',') < 0) return reject(new Error('encode failed'));
+          const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+          const name = `${file.name.replace(/\.[^.]+$/, '') || 'receipt'}.jpg`;
+          resolve({ filename: name, contentType: 'image/jpeg', base64 });
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('load failed')); };
+        img.src = url;
+      });
+      return shrunk;
+    } catch (e) {
+      // Anything odd (unsupported format, canvas blocked) — fall back to raw bytes.
+      return raw();
+    }
+  }
+
   // ---------- Receipt scan (auto-fill) ----------
 
   function hasOption(sel, value) {
@@ -792,10 +843,9 @@
     el.receiptName.textContent = `${file.name} · reading…`;
     el.submitBtn.disabled = true;
     try {
-      const base64 = await readFileAsBase64(file);
       const result = await api('scan-receipt', {
         method: 'POST',
-        body: { receipt: { filename: file.name, contentType: file.type || 'application/octet-stream', base64 } },
+        body: { receipt: await prepareReceipt(file) },
       });
       if (result && result.scan) {
         applyScan(result.scan);
@@ -852,11 +902,7 @@
 
     try {
       if (file) {
-        body.receipt = {
-          filename: file.name,
-          contentType: file.type || 'application/octet-stream',
-          base64: await readFileAsBase64(file),
-        };
+        body.receipt = await prepareReceipt(file);
       }
       if (editing) body.id = state.editingId;
 
@@ -1541,17 +1587,14 @@
     const body = { id, amount, currency, account, date, description, merchant };
     if (reportChanged) body.reportId = reportVal; // '' removes from its report
     if (receiptFile) {
-      body.receipt = {
-        filename: receiptFile.name,
-        contentType: receiptFile.type || 'application/octet-stream',
-        base64: await readFileAsBase64(receiptFile),
-      };
+      body.receipt = await prepareReceipt(receiptFile);
     }
 
     try {
-      await api('update-expense', { method: 'POST', body });
+      const res = await api('update-expense', { method: 'POST', body });
       bumpAccountUsage(account);
-      toast(receiptFile ? 'Saved with your receipt.' : (reportChanged && reportVal ? 'Saved and filed into the report.' : 'Saved.'), 'good');
+      if (res && res.warning) toast(res.warning, 'bad');
+      else toast(receiptFile ? 'Saved with your receipt.' : (reportChanged && reportVal ? 'Saved and filed into the report.' : 'Saved.'), 'good');
       return 'saved';
     } catch (err) {
       toast(err.message, 'bad');

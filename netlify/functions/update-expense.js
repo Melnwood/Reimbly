@@ -120,13 +120,23 @@ exports.handler = async (event) => {
       fields['Approver Note'] = '';
     }
 
+    // Save the edits first so they're never lost to a receipt problem.
+    await airtable.updateRecord(TABLES.EXPENSES, id, fields);
+
+    // Attaching the receipt is best-effort: if the upload fails (e.g. the photo
+    // is too big for Airtable), the edit still sticks and we just warn.
+    let receiptWarning = null;
     const receipt = validateReceipt(body.receipt);
     if (receipt) {
-      await airtable.updateRecord(TABLES.EXPENSES, id, { Receipt: [] }); // replace, don't append
-      await airtable.uploadAttachment(id, 'Receipt', receipt);
+      try {
+        await airtable.updateRecord(TABLES.EXPENSES, id, { Receipt: [] }); // replace, don't append
+        await airtable.uploadAttachment(id, 'Receipt', receipt);
+      } catch (e) {
+        console.error('[reimbly] receipt upload failed', e);
+        receiptWarning = 'Your changes were saved, but the receipt didn’t attach. Try a smaller photo.';
+      }
     }
 
-    await airtable.updateRecord(TABLES.EXPENSES, id, fields);
     await logActivity({
       expenseId: id,
       event: wasRejected ? EVENTS.RESUBMITTED : EVENTS.EDITED,
@@ -134,7 +144,7 @@ exports.handler = async (event) => {
     });
 
     const [fresh, maps] = await Promise.all([getExpenseById(id), displayMaps()]);
-    return ok({ expense: shapeExpense(fresh || current, maps), resubmitted: wasRejected });
+    return ok({ expense: shapeExpense(fresh || current, maps), resubmitted: wasRejected, warning: receiptWarning });
   } catch (err) {
     return error(err);
   }
