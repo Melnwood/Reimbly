@@ -518,7 +518,7 @@
     updateDescribeBtn();
   }
 
-  const MGMT_VIEWS = ['approvals', 'audit', 'archive', 'rates', 'people'];
+  const MGMT_VIEWS = ['approvals', 'audit', 'archive', 'timing', 'rates', 'people'];
 
   function switchView(view) {
     state.view = view;
@@ -536,6 +536,7 @@
     if (view === 'audit' && !state.loaded.audit) loadAudit();
     if (view === 'dashboard' && !state.loaded.dashboard) loadDashboard();
     if (view === 'archive' && !state.loaded.archive) loadArchive();
+    if (view === 'timing' && !state.loaded.timing) loadTiming();
     if (view === 'rates' && !state.loaded.rates) loadRates();
     if (view === 'people' && !state.loaded.people) loadPeople();
   }
@@ -2549,6 +2550,110 @@
     }
   }
 
+  // ---------- Timing / turnaround ----------
+
+  async function loadTiming() {
+    const body = $('#timing-body');
+    if (body) body.innerHTML = `<div class="state">Loading…</div>`;
+    try {
+      const d = await api('timing');
+      state.loaded.timing = true;
+      renderTiming(d);
+    } catch (e) {
+      if (body) body.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  // "2.3" → "2.3 days", null → an em dash. Small helper for the metric numbers.
+  function days1(n) {
+    return n == null ? '—' : `${n}`;
+  }
+
+  // A month-by-month bar chart of average days. `accent` is 'approve' or 'pay'.
+  function timingBars(trend, accent) {
+    const vals = trend.map((t) => t.d).filter((n) => n != null);
+    if (!vals.length) {
+      return `<div class="state">No data yet — numbers will appear here as reports are ${accent === 'pay' ? 'paid' : 'approved'}.</div>`;
+    }
+    const max = Math.max(...vals) * 1.15 || 1;
+    return `<div class="timing-bars ${accent === 'pay' ? 'pay' : ''}">${trend.map((t, i) => {
+      const now = i === trend.length - 1;
+      const h = t.d == null ? 0 : Math.max(4, Math.round((t.d / max) * 100));
+      const val = t.d == null ? '·' : t.d.toFixed(1);
+      return `<div class="timing-bar ${now ? 'now' : ''}" title="${escapeHtml(t.m)}: ${t.count} report${t.count === 1 ? '' : 's'}">
+        <span class="tb-val">${val}</span>
+        <div class="tb-col" style="height:${h}%"></div>
+        <span class="tb-lab">${escapeHtml(t.m)}</span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  // The delta line under a metric ("0.8 day faster than last month").
+  function timingDelta(thisAvg, prevAvg, lowerIsBetter = true) {
+    if (thisAvg == null || prevAvg == null) return `<div class="metric-delta muted">Not enough history yet to compare</div>`;
+    const diff = Math.round((prevAvg - thisAvg) * 10) / 10; // + means quicker this month
+    if (diff === 0) return `<div class="metric-delta muted">Same as last month</div>`;
+    const quicker = diff > 0;
+    const good = lowerIsBetter ? quicker : !quicker;
+    const word = quicker ? 'faster' : 'slower';
+    return `<div class="metric-delta ${good ? 'good' : 'bad'}">${quicker ? '▼' : '▲'} ${Math.abs(diff)} day ${word} than last month</div>`;
+  }
+
+  function renderTiming(d) {
+    const body = $('#timing-body');
+    if (!body) return;
+    const a = d.approve || {}, p = d.pay || {}, w = d.awaiting || {};
+
+    const payMetric = d.paidTrackedInApp
+      ? `<div class="metric-big tnum">${days1(p.avgDays)}<span> days avg</span></div>
+         ${timingDelta(p.thisMonthAvg, p.prevMonthAvg)}`
+      : `<div class="metric-big muted">Not tracked yet</div>
+         <div class="metric-delta muted">No reimbursements have been marked paid in Rembly</div>`;
+
+    const oldestWarn = w.oldestDays >= 14;
+
+    body.innerHTML = `
+      <div class="timing-metrics">
+        <div class="metric-card approve">
+          <span class="metric-rail"></span>
+          <div class="metric-cap">Time to approve</div>
+          <div class="metric-stage">submitted → approved</div>
+          <div class="metric-big tnum">${days1(a.avgDays)}<span> days avg</span></div>
+          ${timingDelta(a.thisMonthAvg, a.prevMonthAvg)}
+          <div class="metric-foot">${a.count} report${a.count === 1 ? '' : 's'} measured</div>
+        </div>
+        <div class="metric-card pay">
+          <span class="metric-rail"></span>
+          <div class="metric-cap">Time to reimburse</div>
+          <div class="metric-stage">approved → paid</div>
+          ${payMetric}
+          <div class="metric-foot">${p.count} report${p.count === 1 ? '' : 's'} measured</div>
+        </div>
+      </div>
+
+      <div class="timing-strip">
+        <div class="ts"><span class="ts-k">Approved this month</span><span class="ts-v tnum">${d.approvedThisMonth}</span></div>
+        <div class="ts-div"></div>
+        <div class="ts"><span class="ts-k">Awaiting payment</span><span class="ts-v tnum">${w.count}</span></div>
+        <div class="ts"><span class="ts-k">…worth</span><span class="ts-v tnum">${escapeHtml(money(w.usd, 'USD'))}</span></div>
+        <div class="ts-div"></div>
+        <div class="ts"><span class="ts-k">Oldest unpaid</span><span class="ts-v tnum ${oldestWarn ? 'warn' : ''}">${w.oldestDays} day${w.oldestDays === 1 ? '' : 's'}</span></div>
+      </div>
+
+      <div class="timing-charts">
+        <div class="timing-chart">
+          <div class="tc-head"><h3>Time to approve</h3><span class="tc-sub">avg days · last 6 months</span></div>
+          ${timingBars(d.trend.approve, 'approve')}
+        </div>
+        <div class="timing-chart">
+          <div class="tc-head"><h3>Approved → paid</h3><span class="tc-sub">avg days · last 6 months</span></div>
+          ${timingBars(d.trend.pay, 'pay')}
+        </div>
+      </div>
+
+      ${d.paidTrackedInApp ? '' : `<div class="timing-note">To see the <strong>approved → paid</strong> clock, reimbursements need to be marked paid in Rembly — Finance can do that on the <strong>Paid</strong> screen (it also emails the person they've been reimbursed). Until then, that half stays blank.</div>`}`;
+  }
+
   // ---------- Paid / archive ----------
 
   // A read-only expense card (used in the paid history).
@@ -3428,7 +3533,7 @@
     const refreshers = {
       add: () => { invalidateReports(); showAddExpense(); },
       mine: () => { invalidateReports(); showReports(); },
-      approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, rates: loadRates, people: loadPeople,
+      approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, timing: loadTiming, rates: loadRates, people: loadPeople,
     };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())

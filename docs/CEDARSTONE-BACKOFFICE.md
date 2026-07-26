@@ -157,6 +157,28 @@ standing rule (what it's for, sign-in link, which Netlify env var holds its key)
 Note: the base already has a `Paid On` field and a `Mark paid` function — the
 `approved → paid` clock can likely hang off that once payment is recorded in Rembly.
 
+### Closing the loop: a "waiting to be paid" queue
+
+The real-world payment flow Mel described, and how it should feel in Rembly:
+
+1. CedarStone **downloads the CSV** of all approved reports (their hand-off into
+   their own payment process). That export action should also **move those reports
+   into a "Waiting to be paid" state** — so the app tracks that they've left approval
+   and are now in the payment queue.
+2. A **"Waiting to be paid" dashboard** lists those reports. CedarStone can
+   **bulk-select (or select all) and hit one button → marks them paid.** That single
+   action stamps `Paid On`, flips them to Reimbursed, and (already built) emails each
+   person they've been reimbursed — which is what makes the approved→paid clock real.
+
+**What already exists to build on:** Rembly's **Paid** screen (`archive.js` +
+`mark-paid.js`) already shows approved expenses grouped by person as "Ready to pay"
+and lets **Finance mark a whole group paid in one click**. So the bulk-mark-paid
+half is largely done. The **new** pieces are: (a) the **CSV export** of approved
+reports, and (b) making that export **transition reports to an explicit "Waiting to
+be paid" state** (today "Approved" implicitly means that) so the queue is its own
+clear stage. Decide whether "Waiting to be paid" is a real new status or just a view
+over Approved-not-yet-Reimbursed.
+
 ---
 
 ## 5. CedarStone at scale — many ministries (the bigger vision)

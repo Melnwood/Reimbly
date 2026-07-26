@@ -711,3 +711,61 @@ body.modal-open { overflow: hidden; }
   .tabs { order: 3; width: 100%; margin-left: 0; justify-content: flex-start; }
   .who { order: 2; }
 }
+
+/* ---------- Timing / turnaround ---------- */
+.panel-sub { color: var(--ink-soft); margin: -4px 0 18px; font-size: 0.95rem; }
+.timing-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.metric-card {
+  position: relative; overflow: hidden; background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px 20px; box-shadow: var(--shadow);
+}
+.metric-rail { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
+.metric-card.approve .metric-rail { background: var(--brand); }
+.metric-card.pay .metric-rail { background: var(--accent); }
+.metric-cap { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft); }
+.metric-stage { font-size: 0.84rem; color: var(--ink-soft); margin-top: 1px; }
+.metric-big { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; margin: 8px 0 4px; }
+.metric-big span { font-size: 1.05rem; font-weight: 800; color: var(--ink-soft); }
+.metric-big.muted { font-size: 1.4rem; color: var(--ink-soft); }
+.metric-card.approve .metric-big { color: var(--brand-ink); }
+.metric-card.pay .metric-big { color: #0a7a6d; }
+.metric-delta { font-size: 0.83rem; font-weight: 700; }
+.metric-delta.good { color: #0a7a6d; }
+.metric-delta.bad { color: var(--warn); }
+.metric-delta.muted { color: var(--ink-soft); font-weight: 600; }
+.metric-foot { font-size: 0.78rem; color: var(--ink-soft); margin-top: 8px; }
+
+.timing-strip {
+  display: flex; gap: 22px; flex-wrap: wrap; align-items: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 18px; box-shadow: var(--shadow); margin-bottom: 18px;
+}
+.timing-strip .ts { display: flex; flex-direction: column; }
+.timing-strip .ts-k { font-size: 0.71rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft); }
+.timing-strip .ts-v { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+.timing-strip .ts-v.warn { color: var(--warn); }
+.timing-strip .ts-div { width: 1px; align-self: stretch; background: var(--line); }
+
+.timing-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.timing-chart { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px 18px; box-shadow: var(--shadow); }
+.tc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.tc-head h3 { font-size: 1rem; margin: 0; }
+.tc-sub { font-size: 0.8rem; color: var(--ink-soft); }
+.timing-bars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-items: end; height: 140px; }
+.timing-bar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; height: 100%; }
+.timing-bar .tb-col {
+  width: 62%; max-width: 38px; border-radius: 7px 7px 3px 3px;
+  background: color-mix(in srgb, var(--brand) 30%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--brand) 42%, var(--line));
+}
+.timing-bar.now .tb-col { background: var(--brand); border-color: var(--brand); }
+.timing-bars.pay .timing-bar .tb-col { background: color-mix(in srgb, var(--accent) 28%, var(--card)); border-color: color-mix(in srgb, var(--accent) 42%, var(--line)); }
+.timing-bars.pay .timing-bar.now .tb-col { background: var(--accent); border-color: var(--accent); }
+.timing-bar .tb-val { font-size: 0.78rem; font-weight: 800; }
+.timing-bar .tb-lab { font-size: 0.73rem; color: var(--ink-soft); font-weight: 700; }
+.timing-note {
+  margin-top: 16px; padding: 13px 16px; border-radius: var(--radius);
+  border: 1px dashed var(--line); background: var(--bg-soft); color: var(--ink-soft); font-size: 0.86rem;
+}
+.timing-note strong { color: var(--ink); }

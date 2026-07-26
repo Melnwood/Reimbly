@@ -67,6 +67,7 @@
               <button type="button" class="menu-item" data-view="approvals">Approvals</button>
               <button type="button" class="menu-item" data-view="audit">Audit</button>
               <button type="button" class="menu-item" data-view="archive">Paid</button>
+              <button type="button" class="menu-item" data-view="timing">Timing</button>
               <button type="button" class="menu-item mgmt-finance" data-view="rates">Mileage rates</button>
               <button type="button" class="menu-item mgmt-finance" data-view="people">People &amp; access</button>
               <button type="button" class="menu-item mgmt-finance" data-action="rescan">Re-read receipt dates</button>
@@ -426,6 +427,18 @@
               </div>
               <div id="dash-detail-list" class="list"></div>
             </div>
+          </div>
+        </section>
+
+        <!-- Timing / turnaround -->
+        <section id="view-timing" class="view" data-view="timing" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>How we're keeping up</h2>
+              <button class="link-btn" data-refresh="timing" title="Refresh">↻ Refresh</button>
+            </div>
+            <p class="panel-sub">Two clocks: how long reports take to <strong>approve</strong>, and how long from <strong>approved</strong> to <strong>paid</strong>. Read from the dates on each expense.</p>
+            <div id="timing-body"><div class="state">Loading…</div></div>
           </div>
         </section>
 
