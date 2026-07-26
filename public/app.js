@@ -385,6 +385,13 @@
 
   // ---------- App ----------
 
+  // Measure the sticky top bar so floating headers (the sort bar) can sit right
+  // under it. It re-wraps by width, so re-measure whenever the window changes.
+  function updateTopbarVar() {
+    const tb = document.querySelector('.topbar');
+    if (tb) document.documentElement.style.setProperty('--topbar-h', `${Math.round(tb.getBoundingClientRect().height)}px`);
+  }
+
   function enterApp() {
     el.signin.hidden = true;
     el.lock.hidden = true;
@@ -392,6 +399,7 @@
     saveSession(); // remember this session so Face ID can restore it
     updateFaceIdToggle();
     updatePushToggle();
+    updateTopbarVar();
     el.whoName.textContent = state.me.name;
     el.whoRole.textContent = state.me.role;
 
@@ -553,6 +561,50 @@
       list.hidden = true;
       const btn = $('#mgmt-btn');
       if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  // The account menu behind the person's name — Face ID, alerts, sign out.
+  function toggleAcctMenu() {
+    const list = $('#acct-list');
+    const btn = $('#acct-btn');
+    if (!list || !btn) return;
+    const open = list.hidden;
+    if (open) {
+      const r = btn.getBoundingClientRect();
+      list.style.top = `${Math.round(r.bottom + 6)}px`;
+      // Right-align to the button so it never runs off the edge.
+      list.style.left = `${Math.round(Math.max(8, r.right - 220))}px`;
+    }
+    list.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+  }
+  function closeAcctMenu() {
+    const list = $('#acct-list');
+    if (list && !list.hidden) {
+      list.hidden = true;
+      const btn = $('#acct-btn');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  // The "Re-read receipt dates" tool lives in a closed window, opened from
+  // Management. It's a maintenance tool, so it stays out of the everyday view.
+  async function openRescanModal() {
+    const wrap = $('#rescan-modal');
+    if (!wrap) return;
+    const note = $('#rescan-note');
+    if (note) { note.hidden = true; note.textContent = ''; }
+    wrap.hidden = false;
+    document.body.classList.add('modal-open');
+    // It reads your expenses' receipts — make sure they're loaded.
+    try { await ensureReportsData(); } catch (e) { /* the tool will just say none */ }
+  }
+  function closeRescanModal() {
+    const wrap = $('#rescan-modal');
+    if (wrap && !wrap.hidden) {
+      wrap.hidden = true;
+      document.body.classList.remove('modal-open');
     }
   }
 
@@ -3065,12 +3117,25 @@
       // The "Management" button opens/closes its dropdown; everything else with
       // a data-view (a normal tab or a menu item) switches to that view.
       if (e.target.closest('#mgmt-btn')) { toggleMgmtMenu(); return; }
+      const action = e.target.closest('[data-action]');
+      if (action && !action.hidden) {
+        if (action.dataset.action === 'rescan') { closeMgmtMenu(); openRescanModal(); }
+        return;
+      }
       const item = e.target.closest('[data-view]');
       if (item && !item.hidden) switchView(item.dataset.view);
     });
-    // Close the Management menu when clicking anywhere outside it.
+    // Keep the floating sort bar aligned under the top bar as it re-wraps.
+    window.addEventListener('resize', updateTopbarVar);
+    // The person's name opens the account menu; picking anything closes it.
+    $('#acct-btn').addEventListener('click', (e) => { e.stopPropagation(); toggleAcctMenu(); });
+    $('#acct-list').addEventListener('click', (e) => {
+      if (e.target.closest('.menu-item')) closeAcctMenu();
+    });
+    // Close either menu when clicking anywhere outside it.
     document.addEventListener('click', (e) => {
       if (!e.target.closest('#mgmt-menu')) closeMgmtMenu();
+      if (!e.target.closest('#acct-menu')) closeAcctMenu();
     });
     $('#signout').addEventListener('click', () => signOut('Signed out. See you soon!'));
     $('#lock-unlock').addEventListener('click', unlockWithFaceId);
@@ -3087,6 +3152,9 @@
     $('#describe-options').addEventListener('click', onDescribeOptionClick);
     $('#f-business').addEventListener('change', recallDescriptions);
     $('#rescan-dates').addEventListener('click', rescanDates);
+    $('#rescan-close').addEventListener('click', closeRescanModal);
+    $('#rescan-modal').addEventListener('click', (e) => { if (e.target.id === 'rescan-modal') closeRescanModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeRescanModal(); });
     $('#add-sort').addEventListener('click', onSortClick);
     updateSortHeader();
     $('#new-report-btn').addEventListener('click', createReportPrompt);

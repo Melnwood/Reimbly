@@ -152,6 +152,22 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .menu-item.active { color: var(--brand-ink); background: #fff5fa; }
 .who { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .who-name { font-weight: 600; }
+/* The name is a button that opens the account menu (Face ID, alerts, sign out). */
+.who-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line); background: #fff; cursor: pointer;
+  font: inherit; color: var(--ink); padding: 6px 12px; border-radius: 999px;
+}
+.who-btn:hover { background: var(--bg-soft); }
+.who-caret { color: var(--ink-soft); font-size: 0.75rem; }
+.acct-list { right: 0; }
+.acct-list .menu-item { width: 100%; }
+.acct-list .menu-item.danger { color: var(--danger); }
+.acct-role {
+  margin: 2px 4px 6px; padding: 0 8px 8px; border-bottom: 1px solid var(--line);
+  font-size: 0.8rem; color: var(--ink-soft); white-space: nowrap;
+}
+.acct-role strong { color: var(--ink); }
 .pill {
   font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--brand-ink); background: var(--brand-soft);
@@ -387,8 +403,14 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 
 .mini-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 
-/* Clickable Date / Description / Cost sort headers above an expense list */
-.sort-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+/* Clickable Date / Description / Cost sort headers above an expense list.
+   Floats just under the (sticky) top bar so it stays reachable while scrolling. */
+.sort-head {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  position: sticky; top: var(--topbar-h, 62px); z-index: 6;
+  background: var(--card); padding: 8px 0; margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
 .sort-hint { font-size: 0.8rem; color: var(--ink-soft); font-weight: 600; margin-right: 2px; }
 .sort-col {
   font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; color: var(--ink-soft);

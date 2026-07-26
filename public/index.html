@@ -69,15 +69,21 @@
               <button type="button" class="menu-item" data-view="archive">Paid</button>
               <button type="button" class="menu-item mgmt-finance" data-view="rates">Mileage rates</button>
               <button type="button" class="menu-item mgmt-finance" data-view="people">People &amp; access</button>
+              <button type="button" class="menu-item mgmt-finance" data-action="rescan">Re-read receipt dates</button>
             </div>
           </div>
         </nav>
-        <div class="who">
-          <span id="who-name" class="who-name"></span>
-          <span id="who-role" class="pill"></span>
-          <button id="faceid-toggle" class="link-btn" hidden></button>
-          <button id="push-toggle" class="link-btn" hidden></button>
-          <button id="signout" class="link-btn">Sign out</button>
+        <div class="who tab-menu" id="acct-menu">
+          <button type="button" class="who-btn" id="acct-btn" aria-haspopup="true" aria-expanded="false">
+            <span id="who-name" class="who-name"></span>
+            <span class="who-caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="tab-menu-list acct-list" id="acct-list" hidden>
+            <p class="acct-role">Signed in as <strong id="who-role"></strong></p>
+            <button id="faceid-toggle" class="menu-item" hidden></button>
+            <button id="push-toggle" class="menu-item" hidden></button>
+            <button id="signout" class="menu-item danger">Sign out</button>
+          </div>
         </div>
       </header>
 
@@ -246,12 +252,10 @@
             <div class="panel-head">
               <h2>Not in a report yet</h2>
               <span class="head-actions">
-                <button class="link-btn" id="rescan-dates" title="Re-read the date from each receipt image with the latest reader">🔁 Re-read receipt dates</button>
                 <button class="link-btn" data-refresh="add">Refresh</button>
               </span>
             </div>
             <p class="panel-sub">Tap one to edit it and choose which report it goes into — it then moves into that report (see “My reports”). Filed expenses live under their report.</p>
-            <div id="rescan-note" class="import-note" hidden></div>
             <details class="key">
               <summary>What does the dot mean?</summary>
               <div class="key-body">
@@ -273,6 +277,19 @@
               <button type="button" class="sort-col" data-sort="amt">Cost</button>
             </div>
             <div id="add-list" class="list"></div>
+          </div>
+
+          <!-- Maintenance tool, opened from Management → "Re-read receipt dates" -->
+          <div id="rescan-modal" class="modal-overlay" hidden>
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rescan-title">
+              <div class="detail-head">
+                <h3 id="rescan-title">Re-read receipt dates</h3>
+                <button class="link-btn" id="rescan-close">✕ Close</button>
+              </div>
+              <p class="panel-sub">Re-reads the date from each receipt image with the latest reader, in case an older import got a date wrong. Only the date is changed — nothing else is touched.</p>
+              <div id="rescan-note" class="import-note" hidden></div>
+              <button class="btn primary" id="rescan-dates" title="Re-read the date from each receipt image">🔁 Re-read receipt dates now</button>
+            </div>
           </div>
         </section>
 
