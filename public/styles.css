@@ -886,3 +886,31 @@ body.modal-open { overflow: hidden; }
 @media (max-width: 720px) {
   .rv-inbox { grid-template-columns: 1fr; }
 }
+
+/* Timing — sent-back → resubmitted (bounce) accent, amber like a gentle nudge */
+.metric-card.bounce .metric-rail { background: var(--warn); }
+.metric-card.bounce .metric-big { color: var(--warn); }
+.timing-bars.bounce .timing-bar .tb-col {
+  background: color-mix(in srgb, var(--warn) 26%, var(--card));
+  border-color: color-mix(in srgb, var(--warn) 40%, var(--line));
+}
+.timing-bars.bounce .timing-bar.now .tb-col { background: var(--warn); border-color: var(--warn); }
+
+/* ---------- Sent-back visibility (My reports) ---------- */
+.tab-badge {
+  display: inline-grid; place-content: center; min-width: 18px; height: 18px;
+  padding: 0 5px; margin-left: 6px; border-radius: 999px;
+  background: var(--warn); color: #fff; font-size: 0.72rem; font-weight: 800; line-height: 1;
+  vertical-align: middle;
+}
+.fix-banner {
+  background: color-mix(in srgb, var(--warn) 10%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--warn) 34%, var(--line));
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
+}
+.fix-head { font-weight: 800; color: var(--warn); font-size: 0.98rem; margin-bottom: 8px; }
+.fix-item { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 5px 0; border-top: 1px dashed color-mix(in srgb, var(--warn) 24%, var(--line)); }
+.fix-who { font-weight: 700; font-size: 0.9rem; }
+.fix-note { color: var(--ink-soft); font-size: 0.85rem; font-style: italic; }
+.fix-tip { margin-top: 9px; font-size: 0.84rem; color: var(--ink-soft); }
+.fix-tip b { color: var(--ink); }

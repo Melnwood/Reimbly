@@ -417,6 +417,9 @@
     loadOptions();
     updateDescribeBtn();
     switchView('submit');
+    // Quietly pre-load the person's reports so the "sent back" tab badge shows on
+    // open, before they visit My reports.
+    ensureReportsData().then(updateMineBadge).catch(() => {});
   }
 
   // Per-person account usage, kept on this device — the app "learns" which
@@ -2014,12 +2017,38 @@
       </div>`;
   }
 
+  // A small count on the "My reports" tab so a sent-back report is impossible to
+  // miss the moment someone opens the app.
+  function updateMineBadge() {
+    const n = (state.mineExpenses || []).filter((e) => e.status === 'Rejected').length;
+    const tab = document.querySelector('.tab[data-view="mine"]');
+    if (!tab) return;
+    let b = tab.querySelector('.tab-badge');
+    if (n) {
+      if (!b) { b = document.createElement('span'); b.className = 'tab-badge'; tab.appendChild(b); }
+      b.textContent = n;
+      b.hidden = false;
+    } else if (b) {
+      b.hidden = true;
+    }
+  }
+
   function renderReports() {
     const box = el.reportsList;
     if (!box) return;
     const reports = state.reports || [];
     const unfiled = (state.mineExpenses || []).filter((e) => !e.reportId).length;
+    const sentBack = (state.mineExpenses || []).filter((e) => e.status === 'Rejected');
     let html = '';
+    // Sent-back items float to the very top with the reviewer's note, so people
+    // can fix and resubmit quickly and keep the loop moving.
+    if (sentBack.length) {
+      html += `<div class="fix-banner">
+        <div class="fix-head">↩︎ ${sentBack.length} expense${sentBack.length === 1 ? '' : 's'} sent back — needs your fix</div>
+        ${sentBack.map((e) => `<div class="fix-item"><span class="fix-who">${escapeHtml(e.merchant || e.description || '(no description)')}</span>${e.notes ? `<span class="fix-note">“${escapeHtml(e.notes)}”</span>` : ''}</div>`).join('')}
+        <div class="fix-tip">Open the report below, fix ${sentBack.length === 1 ? 'it' : 'them'}, then hit <b>Submit report for approval</b> again.</div>
+      </div>`;
+    }
     if (!reports.length) {
       html += `<div class="state"><span class="emoji">🗂️</span>No reports yet. Tap “＋ New report”, then file expenses into it from the “Add expense” tab.</div>`;
     } else {
@@ -2029,6 +2058,7 @@
       html += `<p class="import-note">You still have ${unfiled} expense${unfiled === 1 ? '' : 's'} not in a report — file ${unfiled === 1 ? 'it' : 'them'} on the “Add expense” tab.</p>`;
     }
     box.innerHTML = html;
+    updateMineBadge();
   }
 
   async function showReports() {
@@ -2792,10 +2822,11 @@
   function timingBars(trend, accent) {
     const vals = trend.map((t) => t.d).filter((n) => n != null);
     if (!vals.length) {
-      return `<div class="state">No data yet — numbers will appear here as reports are ${accent === 'pay' ? 'paid' : 'approved'}.</div>`;
+      const word = accent === 'pay' ? 'paid' : accent === 'bounce' ? 'resubmitted' : 'approved';
+      return `<div class="state">No data yet — numbers will appear here as reports are ${word}.</div>`;
     }
     const max = Math.max(...vals) * 1.15 || 1;
-    return `<div class="timing-bars ${accent === 'pay' ? 'pay' : ''}">${trend.map((t, i) => {
+    return `<div class="timing-bars ${accent || ''}">${trend.map((t, i) => {
       const now = i === trend.length - 1;
       const h = t.d == null ? 0 : Math.max(4, Math.round((t.d / max) * 100));
       const val = t.d == null ? '·' : t.d.toFixed(1);
@@ -2885,7 +2916,8 @@
   function renderTiming(d) {
     const body = $('#timing-body');
     if (!body) return;
-    const a = d.approve || {}, p = d.pay || {}, w = d.awaiting || {}, v = d.volume || {};
+    const a = d.approve || {}, p = d.pay || {}, w = d.awaiting || {}, v = d.volume || {}, bb = d.bounceBack || {};
+    const bbWait = bb.waiting || {};
 
     const payMetric = d.paidTrackedInApp
       ? `<div class="metric-big tnum">${days1(p.avgDays)}<span> days avg</span></div>
@@ -2920,6 +2952,13 @@
           ${volumeDelta(v.thisMonth, v.prevMonth)}
           <div class="metric-foot">${v.total6mo || 0} in the last 6 months</div>
         </div>
+        <div class="metric-card bounce">
+          <span class="metric-rail"></span>
+          <div class="metric-cap">Sent back → resubmitted</div>
+          <div class="metric-stage">how fast people fix &amp; resend</div>
+          <div class="metric-big tnum">${bb.avgDays == null ? '—' : bb.avgDays}${bb.avgDays == null ? '' : '<span> days avg</span>'}</div>
+          <div class="metric-foot">${bb.count || 0} fixed this year · <b>${bbWait.count || 0} still out</b></div>
+        </div>
       </div>
 
       <div class="timing-strip">
@@ -2930,6 +2969,8 @@
         <div class="ts"><span class="ts-k">…worth</span><span class="ts-v tnum">${escapeHtml(money(w.usd, 'USD'))}</span></div>
         <div class="ts-div"></div>
         <div class="ts"><span class="ts-k">Oldest unpaid</span><span class="ts-v tnum ${oldestWarn ? 'warn' : ''}">${w.oldestDays} day${w.oldestDays === 1 ? '' : 's'}</span></div>
+        <div class="ts-div"></div>
+        <div class="ts"><span class="ts-k">Out for fixes</span><span class="ts-v tnum ${bbWait.oldestDays >= 14 ? 'warn' : ''}">${bbWait.count || 0}</span></div>
       </div>
 
       <div class="timing-chart combo-card">
@@ -2953,6 +2994,10 @@
         <div class="timing-chart">
           <div class="tc-head"><h3>Reports came in</h3><span class="tc-sub">count · last 6 months</span></div>
           ${volumeBars((v.trend) || [])}
+        </div>
+        <div class="timing-chart">
+          <div class="tc-head"><h3>Sent back → resubmitted</h3><span class="tc-sub">avg days · last 6 months</span></div>
+          ${timingBars((bb.trend) || [], 'bounce')}
         </div>
       </div>
 

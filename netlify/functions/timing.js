@@ -11,7 +11,7 @@
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, STATUS, ensureStaff, isApprover, displayMaps, shapeExpense } = require('./lib/domain');
+const { TABLES, STATUS, EVENTS, ensureStaff, isApprover, displayMaps, shapeExpense } = require('./lib/domain');
 
 const DAY = 24 * 60 * 60 * 1000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -129,6 +129,53 @@ function reportVolume(reportRecords, now = new Date()) {
   };
 }
 
+/**
+ * How long people take to fix a sent-back report and resubmit it — read from the
+ * Activity Log. Each "Sent back"/"Kicked back" is paired with the next
+ * "Resubmitted" on the same expense; anything still unpaired is "out for fixes".
+ */
+function bounceBack(activityRows, now = new Date()) {
+  const byExpense = new Map();
+  for (const r of activityRows) {
+    if (!r.at || !r.expenseId) continue;
+    if (!byExpense.has(r.expenseId)) byExpense.set(r.expenseId, []);
+    byExpense.get(r.expenseId).push(r);
+  }
+  const durations = []; // { days, at } keyed by the resubmit moment
+  const stillOut = []; // sent-back timestamps with no resubmit yet
+  for (const evs of byExpense.values()) {
+    evs.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    let pending = null;
+    for (const e of evs) {
+      if (e.event === EVENTS.SENT_BACK || e.event === EVENTS.KICKED_BACK) {
+        pending = e.at;
+      } else if (e.event === EVENTS.RESUBMITTED && pending) {
+        const d = (new Date(e.at) - new Date(pending)) / DAY;
+        if (d >= 0) durations.push({ days: d, at: e.at });
+        pending = null;
+      }
+    }
+    if (pending) stillOut.push(pending);
+  }
+  const byMonth = {};
+  for (const d of durations) {
+    const k = monthKey(new Date(d.at));
+    (byMonth[k] = byMonth[k] || []).push(d.days);
+  }
+  const trend = lastMonths(now, 6).map((m) => ({
+    m: m.label,
+    d: byMonth[m.key] ? round1(mean(byMonth[m.key])) : null,
+    count: byMonth[m.key] ? byMonth[m.key].length : 0,
+  }));
+  const oldestOut = stillOut.reduce((mx, t) => Math.max(mx, Math.floor((now - new Date(t)) / DAY)), 0);
+  return {
+    avgDays: durations.length ? round1(mean(durations.map((d) => d.days))) : null,
+    count: durations.length,
+    waiting: { count: stillOut.length, oldestDays: oldestOut },
+    trend,
+  };
+}
+
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
   if (guard) return guard;
@@ -143,16 +190,30 @@ exports.handler = async (event) => {
     }
 
     const now = new Date();
-    const [records, reportRecords, maps] = await Promise.all([
+    const sinceYear = now.getUTCFullYear() - 1;
+    const [records, reportRecords, activityRecords, maps] = await Promise.all([
       airtable.listRecords(TABLES.EXPENSES, {
         filterByFormula: `OR({Status} = '${STATUS.APPROVED}', {Status} = '${STATUS.REIMBURSED}')`,
       }),
       airtable.listRecords(TABLES.REPORTS, {}),
+      airtable.listRecords(TABLES.ACTIVITY, {
+        filterByFormula: `AND(OR({Event} = '${EVENTS.SENT_BACK}', {Event} = '${EVENTS.KICKED_BACK}', {Event} = '${EVENTS.RESUBMITTED}'), YEAR({At}) > ${sinceYear})`,
+      }),
       displayMaps(),
     ]);
     const expenses = records.map((r) => shapeExpense(r, maps));
+    const activityRows = activityRecords.map((r) => ({
+      expenseId: (r.fields && r.fields['Expense ID']) || '',
+      event: (r.fields && r.fields.Event) || '',
+      at: (r.fields && r.fields.At) || null,
+    }));
 
-    return ok({ role, ...summarize(expenses, now), volume: reportVolume(reportRecords, now) });
+    return ok({
+      role,
+      ...summarize(expenses, now),
+      volume: reportVolume(reportRecords, now),
+      bounceBack: bounceBack(activityRows, now),
+    });
   } catch (err) {
     return error(err);
   }
@@ -160,3 +221,4 @@ exports.handler = async (event) => {
 
 module.exports.summarize = summarize; // exported for a quick sanity check / future test
 module.exports.reportVolume = reportVolume;
+module.exports.bounceBack = bounceBack;
