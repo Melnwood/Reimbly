@@ -121,6 +121,73 @@ instead of grind-through-everything.
 
 ---
 
+## 4. How CedarStone is doing — timing / throughput view
+
+> **Priority: wanted for JV now** (not parked). Unlike the rest of this doc, this
+> view builds on data the live app **already records** — every expense is stamped
+> with `Submitted On`, `Decided On`, and `Paid On` — so "time to approve" is real
+> today, and "approved → paid" is real wherever payment has been marked. This is the
+> near-term build for JV.
+
+A **health view** (not a to-do list) so leaders can see whether the whole
+loop is keeping up. Two headline numbers:
+
+- **Time to approve** — average days from **submitted → approved**. Are reports
+  sitting in CedarStone's queue too long?
+- **Time to reimburse** — average days from **approved → paid**. Once approved, how
+  long until the person actually gets their money back?
+
+Supporting figures: approved this month, number (and $) **awaiting payment**, and
+**oldest unpaid**. A simple month-by-month trend for each metric shows whether it's
+getting quicker or slower. Concept mocked as a fourth "Timing" view in the layout
+prototype.
+
+### The dependency this creates: knowing when something was *paid*
+
+"Approved → paid" can only be measured if Rembly knows **when the reimbursement went
+out**. Today that's marked **outside Rembly** — it sounds like CedarStone records
+payment in **Expense Wire**. So this view needs one of:
+
+- a quick **"Mark as paid"** action in Rembly (a tap when the payment goes out), or
+- a small **sync from Expense Wire** (if it can export/notify payment events).
+
+Decide which before building the timing view. **If we integrate or sync Expense
+Wire, it must be added to [EXTERNAL-SERVICES.md](EXTERNAL-SERVICES.md)** per the
+standing rule (what it's for, sign-in link, which Netlify env var holds its key).
+Note: the base already has a `Paid On` field and a `Mark paid` function — the
+`approved → paid` clock can likely hang off that once payment is recorded in Rembly.
+
+---
+
+## 5. CedarStone at scale — many ministries (the bigger vision)
+
+CedarStone is a **back office that serves ~200 ministries**. The hope is that a large
+share of them adopt Rembly — which means Rembly can't assume a single organization.
+It has to let CedarStone **stand above many ministries at once**.
+
+The shape of it:
+
+- A **top-level CedarStone dashboard** that lists **every ministry/account they
+  serve** — each with its own at-a-glance state (reports waiting, needs-a-look count,
+  $ pending, timing).
+- CedarStone **drills into a ministry** to get the exact review experience described
+  in sections 1–4 (that ministry's waiting reports, flags, approvals, timing).
+- Back out, and they're looking across the whole portfolio again.
+
+This is a **multi-tenant** model: each ministry is its own isolated set of people,
+accounts, categories, and expenses; CedarStone is the shared back office that can see
+across all of them, while an individual ministry only ever sees itself. It overlaps
+heavily with the household-invites multi-tenant thinking — see
+[HOUSEHOLD-INVITES.md](HOUSEHOLD-INVITES.md); reconcile the two account/org models
+when this is built.
+
+**Status: parked on purpose.** This is the large, later dashboard — written down now
+so the vision isn't lost, but **not** the next thing to build. The near-term work is
+the single-back-office review experience (sections 1–4) for JV. The 200-ministry
+portfolio view comes after that proves out.
+
+---
+
 ## What NOT to do now
 
 - Do **not** change the live JV app. This turns on only for a deliberate CedarStone
@@ -135,6 +202,9 @@ instead of grind-through-everything.
   amounts CedarStone **always** wants to eyeball?
 - Do accounts ever need their **own** category lists, or is one standard list + an
   account tag enough to start?
+- For the timing view: is **"paid" marked in Rembly** (a Mark-as-paid tap) or should
+  we **sync from Expense Wire**? Confirm the tool name and whether it can export
+  payment events.
 > Resolved (threshold): don't pick a number up front — it'd be a guess. **Track the
 > per-person YTD count first, watch what "normal" looks like across JV for a while,
 > then set the highlight threshold from real data.** Build the counter now; leave the
@@ -159,6 +229,18 @@ instead of grind-through-everything.
 6. Track a **per-person year-to-date missing-receipt count**; show it on the report
    header / waiting list. Leave the highlight threshold **configurable and unset at
    first** — set it later from real JV usage rather than guessing up front.
-7. Tests: receiptless-undeclared can't submit; declared-missing can and is flagged;
+7. Build the **timing view**: time-to-approve (submitted→approved) and
+   time-to-reimburse (approved→paid) averages + trend; awaiting-payment and
+   oldest-unpaid figures. Requires a **Mark-as-paid** step or an Expense Wire sync so
+   `Paid On` is recorded.
+8. Tests: receiptless-undeclared can't submit; declared-missing can and is flagged;
    amount mismatch flags; all-clear report bulk-approves; account picker hidden for
    people with no accounts.
+
+## Later (parked): the 200-ministry portfolio
+
+9. A **top-level CedarStone dashboard** across all ministries they serve — per-
+   ministry state (waiting, needs-a-look, pending, timing), drill into one to get the
+   sections 1–4 experience, back out to the portfolio. Multi-tenant isolation per
+   ministry. See section 5 — build **after** the single-back-office experience proves
+   out for JV.
