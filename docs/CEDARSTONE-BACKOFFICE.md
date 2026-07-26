@@ -43,6 +43,13 @@ An expense **cannot go into a report** unless one of these is true:
 If it's neither — no receipt and not properly declared missing — the app **blocks
 submission**. A bare, receiptless, half-filled expense can never reach a report.
 
+**Why this beats today's practice.** Currently a missing receipt is handled by just
+entering a **handwritten receipt** and moving on — a quiet substitution. The new way
+is deliberately *not* that: the person must **declare "I don't have a receipt, and
+here's why"** and enter the details. Same situation, but now it's an honest,
+**flaggable, countable** declaration the app and CedarStone can actually see —
+rather than something hidden inside a handwritten note.
+
 Consequences:
 - The "silently no receipt" case **stops existing** — impossible to create.
 - The only receiptless items that survive are **deliberately declared** missing,
@@ -95,6 +102,19 @@ and spend attention only on the yellow. Don't make them read every expense.
   **"receipt matches"** — visible but not demanding time.
 - Reviewer resolves the flagged one(s), hits **Approve report**.
 
+### Per-person missing-receipt trend (year-to-date)
+
+When a person's name comes up (in their report header, and/or on the waiting list),
+show a running **year-to-date count of their missing-receipt declarations** — e.g.
+**"Mel — 7 missing-receipt declarations YTD."**
+
+This is about the **pattern, not any single expense**. One or two is normal. If the
+count starts climbing past a comfortable level, that's the signal for **someone to
+have a friendly check-in** — a lost habit, a system problem, whatever it is. The app
+surfaces the trend so it's a caring conversation, not a gotcha. Consider a gentle
+threshold (configurable) that visibly highlights the count once it's high enough to
+warrant a chat.
+
 The point: the app isn't dumping expenses on the reviewer — it's saying *"I looked,
 here's what's true, here's the one I couldn't vouch for."* Glance-and-approve
 instead of grind-through-everything.
@@ -113,9 +133,14 @@ instead of grind-through-everything.
 
 - Besides missing receipts and amount mismatches, are there categories or dollar
   amounts CedarStone **always** wants to eyeball?
-- Is the "missing receipt" declaration already part of today's workflow?
 - Do accounts ever need their **own** category lists, or is one standard list + an
   account tag enough to start?
+- What's a sensible **threshold** for the year-to-date missing-receipt count before
+  it highlights for a check-in?
+
+> Resolved: the "missing receipt" idea replaces today's practice of quietly entering
+> a **handwritten receipt** — see the note in section 2. The new declaration is the
+> deliberate, flaggable, countable version of that.
 
 ## Build checklist (when the time comes)
 
@@ -129,6 +154,8 @@ instead of grind-through-everything.
    aging; sortable report list; bulk-approve all-clear.
 5. Build the **report detail**: reassurance banner, attention-sorted rows,
    per-line "receipt matches" checks, approve.
-6. Tests: receiptless-undeclared can't submit; declared-missing can and is flagged;
+6. Track a **per-person year-to-date missing-receipt count**; show it on the report
+   header / waiting list and highlight it past a configurable threshold.
+7. Tests: receiptless-undeclared can't submit; declared-missing can and is flagged;
    amount mismatch flags; all-clear report bulk-approves; account picker hidden for
    people with no accounts.
