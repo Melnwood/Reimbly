@@ -608,6 +608,44 @@
     }
   }
 
+  // ----- Bulk receipt upload: read a batch of photos and auto-connect them -----
+  async function onBulkReceipts(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!files.length) return;
+    const statusEl = $('#bulk-receipts-status');
+    const setStatus = (html, done) => {
+      statusEl.hidden = false;
+      statusEl.classList.toggle('all-done', !!done);
+      statusEl.innerHTML = html;
+    };
+    setStatus(`<span class="rs-icon">🧾</span><span>Reading ${files.length} receipt${files.length === 1 ? '' : 's'}…</span>`);
+    let matched = 0; let created = 0; let failed = 0; let done = 0;
+    const BATCH = 6; // keep each request comfortably under the size limit
+    try {
+      for (let i = 0; i < files.length; i += BATCH) {
+        const chunk = files.slice(i, i + BATCH);
+        const prepared = await Promise.all(chunk.map((f) => prepareReceipt(f).catch(() => null)));
+        const receipts = prepared.filter(Boolean);
+        failed += chunk.length - receipts.length;
+        if (receipts.length) {
+          const res = await api('bulk-receipts', { method: 'POST', body: { receipts } });
+          matched += res.matched || 0; created += res.created || 0; failed += res.failed || 0;
+        }
+        done += chunk.length;
+        setStatus(`<span class="rs-icon">🧾</span><span>Reading… ${Math.min(done, files.length)} of ${files.length}</span>`);
+      }
+      const parts = [];
+      if (matched) parts.push(`<strong class="rs-have">${matched}</strong> connected to an expense`);
+      if (created) parts.push(`<strong>${created}</strong> added as new`);
+      if (failed) parts.push(`<strong class="rs-need">${failed}</strong> couldn’t be read`);
+      setStatus(`<span class="rs-icon">✅</span><span>Done — ${parts.join(' · ') || 'nothing to do'}.</span>`, failed === 0);
+      await refreshExpenseViews();
+    } catch (e) {
+      setStatus(`<span class="rs-icon">⚠️</span><span>${escapeHtml(e.message)}</span>`);
+    }
+  }
+
   // ----- Missing-receipt affidavit window -----
   function openAffidavitModal(id) {
     const e = (state.mineExpenses || []).find((x) => x.id === id);
@@ -1219,7 +1257,27 @@
       openAffidavitModal(btn.dataset.id);
       return true;
     }
+    if (act === 'ie-receipt-remove') {
+      removeReceipt(btn.dataset.id);
+      return true;
+    }
     return false;
+  }
+
+  // Take the (wrong) receipt off an expense, keeping the editor open so the
+  // right one can be added straight away.
+  async function removeReceipt(id) {
+    try {
+      await api('update-expense', { method: 'POST', body: { id, removeReceipt: true } });
+      const e = (state.mineExpenses || []).find((x) => x.id === id);
+      if (e) { e.receipt = null; e.originalAmount = null; e.originalCurrency = ''; }
+      toast('Receipt removed — add the right one below.', 'good');
+      const card = document.querySelector(`.expense[data-id="${id}"]`);
+      const details = card && $('.mini-details', card);
+      if (details && !details.hasAttribute('hidden')) buildInlineEdit(details, id);
+    } catch (err) {
+      toast(err.message, 'bad');
+    }
   }
 
   function onAddListClick(event) { onExpenseCardClick(event); }
@@ -1711,10 +1769,11 @@
           <span>Receipt</span>
           <div class="ie-receipt">
             ${e.receipt && e.receipt.url
-              ? `<a class="receipt-link" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">📎 View receipt</a>`
+              ? `<a class="receipt-link" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">📎 View receipt</a>
+                 <button type="button" class="btn ghost small ie-remove" data-act="ie-receipt-remove" data-id="${escapeHtml(e.id)}">🗑️ Remove receipt</button>`
               : (e.missingReceipt ? '' : '<span class="ie-noreceipt">No receipt yet</span>')}
-            <button type="button" class="btn ghost small" data-act="ie-receipt-camera">📷 Take a picture</button>
-            <button type="button" class="btn ghost small" data-act="ie-receipt-choose">📎 Add a receipt</button>
+            <button type="button" class="btn ghost small" data-act="ie-receipt-camera">📷 ${e.receipt ? 'Replace with a picture' : 'Take a picture'}</button>
+            <button type="button" class="btn ghost small" data-act="ie-receipt-choose">📎 ${e.receipt ? 'Replace with a file' : 'Add a receipt'}</button>
             ${!e.receipt ? `<button type="button" class="btn ghost small" data-act="ie-missing" data-id="${escapeHtml(e.id)}">🖊️ ${e.missingReceipt ? 'Re-sign declaration' : 'No receipt? Declare it'}</button>` : ''}
             <input type="file" class="ie-receipt-input" accept="image/*,application/pdf" hidden />
             <span class="ie-receipt-name file-hint"></span>
@@ -3294,6 +3353,8 @@
     $('#lock-google').addEventListener('click', showSignin);
     $('#add-toggle').addEventListener('click', toggleAddForm);
     $('#import-toggle').addEventListener('click', () => setImportOpen($('#import-body').hidden));
+    $('#bulk-receipts-btn').addEventListener('click', () => $('#bulk-receipts-input').click());
+    $('#bulk-receipts-input').addEventListener('change', onBulkReceipts);
     $('#cancel-edit').addEventListener('click', () => { cancelEdit(); setAddFormOpen(false); });
     el.form.addEventListener('submit', onSubmit);
     el.receiptInput.addEventListener('change', onReceiptChange);

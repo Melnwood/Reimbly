@@ -392,10 +392,12 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 /* "New expense" + "Import" buttons, side by side, on the Add-expense tab */
 .add-actions { display: flex; gap: 10px; }
 .add-action {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm);
-  background: #fff; cursor: pointer; font: inherit; font-weight: 800; font-size: 1rem; color: var(--ink);
+  flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: #fff; cursor: pointer; font: inherit; font-weight: 800; font-size: 0.95rem; color: var(--ink);
+  text-align: center;
 }
+.add-action span:not(.add-plus):not(.add-ico) { white-space: normal; }
 .add-action:hover { background: var(--bg-soft); }
 .add-action.active { border-color: var(--brand); background: #fff5fa; color: var(--brand-ink); }
 .add-action.ghost { font-weight: 700; color: var(--ink-soft); }

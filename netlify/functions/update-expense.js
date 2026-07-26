@@ -67,6 +67,18 @@ exports.handler = async (event) => {
       throw err;
     }
 
+    // Just remove the receipt (the wrong one was attached) — a standalone action
+    // that doesn't need the rest of the form. Also clears the foreign amount that
+    // was read off that receipt, since it came from the wrong image.
+    if (body.removeReceipt === true && !body.receipt) {
+      await airtable.updateRecord(TABLES.EXPENSES, id, {
+        Receipt: [], 'Original Amount': null, 'Original Currency': '',
+      });
+      await logActivity({ expenseId: id, event: EVENTS.EDITED, user, note: 'Removed the receipt' });
+      const [fresh, maps] = await Promise.all([getExpenseById(id), displayMaps()]);
+      return ok({ expense: shapeExpense(fresh || current, maps) });
+    }
+
     const description = String(body.description || '').trim();
     const merchant = String(body.merchant || '').trim();
     const amount = Number(body.amount);

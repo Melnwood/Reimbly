@@ -100,7 +100,13 @@
                 <span class="add-ico" aria-hidden="true">⬆</span>
                 <span>Import</span>
               </button>
+              <button type="button" class="add-action ghost" id="bulk-receipts-btn">
+                <span class="add-ico" aria-hidden="true">🧾</span>
+                <span>Upload receipts</span>
+              </button>
+              <input type="file" id="bulk-receipts-input" accept="image/*,application/pdf" multiple hidden />
             </div>
+            <div id="bulk-receipts-status" class="over50-summary" hidden></div>
             <div id="add-form-body" hidden>
             <p class="panel-sub">Reimbursed in USD. Foreign amounts convert automatically.</p>
             <div id="edit-banner" class="edit-banner" hidden>
