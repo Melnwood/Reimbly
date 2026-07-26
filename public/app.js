@@ -1445,18 +1445,30 @@
 
   // ----- Add-expense tab: expenses not yet filed into a report -----
 
+  // The amount in US dollars, used for the "over $50" rule and cost sorting.
+  const RECEIPT_THRESHOLD = 50;
+  function usdAmount(e) {
+    return Number(e.amountUsd != null ? e.amountUsd : e.amount) || 0;
+  }
+
   // One collapsed expense row that opens into the inline editor. Shared by the
-  // Add-expense list and the expenses inside each report card.
+  // Add-expense list and the expenses inside each report card. Expenses over $50
+  // are highlighted (those are the ones that need a receipt); if one over $50 is
+  // still missing its receipt, it's flagged harder.
   function expenseRowHtml(e) {
     const who = e.merchant || e.description || '(no description)';
     const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
+    const over = usdAmount(e) >= RECEIPT_THRESHOLD;
+    const needsReceipt = over && !e.receipt;
+    const cls = `expense mini${over ? ' over50' : ''}${needsReceipt ? ' needs-receipt' : ''}`;
     return `
-      <article class="expense mini" data-id="${escapeHtml(e.id)}">
+      <article class="${cls}" data-id="${escapeHtml(e.id)}">
         <button type="button" class="mini-row" data-act="toggle" aria-expanded="false">
           <span class="mini-date">${escapeHtml(fmtDateShort(e.date))}</span>
           <span class="mini-who">${escapeHtml(who)}</span>
           <span class="mini-amt">${escapeHtml(amt)}</span>
           ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
+          ${needsReceipt ? '<span class="mini-need" title="Over $50 and no receipt yet">needs receipt</span>' : ''}
           ${sourceDot(e.source)}
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
@@ -1511,11 +1523,30 @@
     // Only expenses not yet in a report — once you file one it moves to that
     // report (and shows under "My reports").
     const unfiled = sortExpenses((state.mineExpenses || []).filter((e) => !e.reportId));
+    renderReceiptSummary(unfiled);
     if (!unfiled.length) {
       box.innerHTML = `<div class="state"><span class="emoji">✅</span>Nothing loose here — every expense is filed into a report. Add a new one above, or see them under “My reports.”</div>`;
       return;
     }
     box.innerHTML = unfiled.map(expenseRowHtml).join('');
+  }
+
+  // A little scoreboard for the expenses that actually need a receipt (over $50):
+  // how many have one and how many still don't.
+  function renderReceiptSummary(list) {
+    const box = $('#over50-summary');
+    if (!box) return;
+    const over = list.filter((e) => usdAmount(e) >= RECEIPT_THRESHOLD);
+    if (!over.length) { box.hidden = true; box.innerHTML = ''; return; }
+    const withR = over.filter((e) => e.receipt).length;
+    const without = over.length - withR;
+    box.hidden = false;
+    box.classList.toggle('all-done', without === 0);
+    if (without === 0) {
+      box.innerHTML = `<span class="rs-icon">🎉</span><span>All <strong>${over.length}</strong> expense${over.length === 1 ? '' : 's'} over $${RECEIPT_THRESHOLD} have a receipt.</span>`;
+    } else {
+      box.innerHTML = `<span class="rs-icon">🧾</span><span>Over $${RECEIPT_THRESHOLD}: <strong class="rs-have">${withR}</strong> ${withR === 1 ? 'has' : 'have'} a receipt · <strong class="rs-need">${without}</strong> still ${without === 1 ? 'needs' : 'need'} one.</span>`;
+    }
   }
 
   // Reload the expense data and re-render both places it shows (the Add-expense
@@ -1761,7 +1792,7 @@
 
   function reportCardHtml(r) {
     const { items, total, counts, status } = reportRollup(r.id);
-    const badge = status === 'Empty' ? '<span class="badge draft">Empty</span>' : statusBadge(status);
+    const badge = status === 'Empty' ? '<span class="badge empty">Empty</span>' : statusBadge(status);
     const canSubmit = counts.unsubmitted > 0;
     return `
       <div class="report-card" data-report="${escapeHtml(r.id)}">

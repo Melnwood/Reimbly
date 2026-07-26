@@ -278,6 +278,28 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .dot.src-csv { background: #d97706; }
 .mini-caret { flex: none; color: var(--ink-soft); font-size: 0.7rem; transition: transform 0.15s; }
 .expense.mini.open .mini-caret { transform: rotate(180deg); }
+
+/* Over $50 — the ones that need a receipt. Highlighted so they stand out;
+   the amount is emphasized, and any still missing a receipt is flagged amber. */
+.expense.mini.over50 { border-color: #f5d9a8; background: #fffaf0; }
+.expense.mini.over50 .mini-amt { color: #92600e; }
+.expense.mini.needs-receipt { border-color: #f0b46a; background: #fff6ea; }
+.mini-need {
+  flex: none; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;
+  color: #9a3412; background: #ffe4c4; border: 1px solid #f6cfa0;
+  padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+}
+
+/* The over-$50 receipt scoreboard at the top of the list */
+.over50-summary {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: #fff6ea; border: 1px solid #f5d9a8; border-radius: var(--radius-sm);
+  padding: 10px 14px; margin-bottom: 12px; font-size: 0.92rem; color: var(--ink);
+}
+.over50-summary.all-done { background: #eefaf0; border-color: #bfe6c8; }
+.over50-summary .rs-icon { font-size: 1.05rem; }
+.over50-summary .rs-have { color: #15803d; }
+.over50-summary .rs-need { color: #b45309; }
 .mini-details { padding: 4px 16px 14px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
 .mini-desc { font-weight: 700; margin-top: 10px; }
 .expense.mini .trail-box { padding: 12px 16px; margin-top: 0; }
@@ -290,11 +312,15 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
   font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
   padding: 3px 9px; border-radius: 999px; white-space: nowrap;
 }
-.badge.draft { background: #eef1f5; color: #4b5563; }
-.badge.submitted { background: #fef3c7; color: #92400e; }
-.badge.approved { background: #ccfbf1; color: #0f766e; }
-.badge.rejected { background: #fee2e2; color: #b91c1c; }
-.badge.reimbursed { background: #dbeafe; color: #1e40af; }
+/* Status badges read as a journey: from the pink of a fresh (Unsubmitted)
+   expense, warming through approval, and cooling to green once it's Paid.
+   Denied sits off that happy path in red; Empty is a neutral "not started". */
+.badge.empty { background: #eef1f5; color: #6b7280; }        /* not started */
+.badge.draft { background: #ffe1ec; color: #b4145a; }        /* Unsubmitted — pink, like "New report" */
+.badge.submitted { background: #ffe6c9; color: #9a5300; }    /* Pending approval — orange */
+.badge.approved { background: #e6f4c3; color: #4d7000; }     /* Pending payment — lime, nearing green */
+.badge.reimbursed { background: #c9edd4; color: #15803d; }   /* Paid — green */
+.badge.rejected { background: #fee2e2; color: #b91c1c; }     /* Denied — off the happy path */
 
 /* How an expense got in (provenance) */
 .src-badge {
