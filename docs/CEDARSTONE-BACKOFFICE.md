@@ -160,8 +160,10 @@ it two honest ways:
   spike in reports sitting next to steady speed reads as "handled it well," and slow
   speed *without* a volume spike reads as a genuine flag.
 
-Next step for the timing view: the overlay/keeping-up chart. (The pieces — monthly
-volume, monthly approve-time, approved-this-month — are all already computed.)
+**Built and shipped:** the overlay/keeping-up chart. The Timing screen now has a
+"Speed vs. how much came in" card — reports-in as bars with average days-to-approve
+as a line on one timeline — plus a plain-language "Keeping up / Backlog building"
+note (came-in vs approved this month).
 
 ### The dependency this creates: knowing when something was *paid*
 

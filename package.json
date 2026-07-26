@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "netlify dev",
-    "check": "for f in netlify/functions/*.js netlify/functions/lib/*.js; do node --check \"$f\" || exit 1; done"
+    "check": "for f in netlify/functions/*.js netlify/functions/lib/*.js; do node --check \"$f\" || exit 1; done",
+    "test": "node --test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.3",
