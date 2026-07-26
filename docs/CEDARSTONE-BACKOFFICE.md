@@ -170,14 +170,30 @@ The real-world payment flow Mel described, and how it should feel in Rembly:
    action stamps `Paid On`, flips them to Reimbursed, and (already built) emails each
    person they've been reimbursed — which is what makes the approved→paid clock real.
 
-**What already exists to build on:** Rembly's **Paid** screen (`archive.js` +
-`mark-paid.js`) already shows approved expenses grouped by person as "Ready to pay"
-and lets **Finance mark a whole group paid in one click**. So the bulk-mark-paid
-half is largely done. The **new** pieces are: (a) the **CSV export** of approved
-reports, and (b) making that export **transition reports to an explicit "Waiting to
-be paid" state** (today "Approved" implicitly means that) so the queue is its own
-clear stage. Decide whether "Waiting to be paid" is a real new status or just a view
-over Approved-not-yet-Reimbursed.
+**Status — mostly built.** The **Paid** screen (`archive.js` + `mark-paid.js`) is now
+a **"Waiting to be paid"** queue: **Export CSV** of all approved expenses, **select
+all / per-report checkboxes**, and one **"Mark N paid"** button that reimburses the
+whole selection at once (and emails each person). The one piece **not** built is
+making the export **transition reports to an explicit "Waiting to be paid" status**
+— today "Approved" implicitly is that stage, and the queue simply shows all approved-
+not-yet-paid reports. Decide whether "Waiting to be paid" needs to be a real new
+status (a schema change to the base) or stays a view over Approved-not-Reimbursed.
+
+### A third clock: sent back → resubmitted
+
+When a reviewer hits **"Send report back,"** the JV staff member has to know quickly
+and turn it around, or the whole loop stalls at that person. Two parts:
+
+- **Visibility for the submitter.** The app already emails (and can push) the person
+  on the "Sent back" moment. Make it **unmissable in-app** too: a badge/attention
+  marker on **My reports**, and the sent-back report surfaced at the top with the
+  reviewer's note, so they can jump straight to fixing it.
+- **A turnaround metric** on the timing dashboard: average time from **sent back →
+  resubmitted**, and a way to spot reports sent back and **sitting untouched** too
+  long. The **Activity Log already records** `Sent back` / `Kicked back` and
+  `Resubmitted` events with timestamps, so it's computable — but it means reading the
+  activity trail, not just the date fields on the expense, so it's a follow-on to the
+  first two clocks.
 
 ---
 
