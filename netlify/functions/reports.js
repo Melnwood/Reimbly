@@ -10,7 +10,8 @@ const airtable = require('./lib/airtable');
 const {
   TABLES, STATUS, EVENTS,
   ensureStaff, staffById, logActivity,
-  getReportById, listReportsOwnedBy, createReport, setExpenseReport, reportOwnedBy,
+  getReportById, listReportsOwnedByAny, createReport, setExpenseReport, reportOwnedBy,
+  householdScope, submitterEmailFormula,
   displayMaps, shapeExpense, isHeldEmailReceipt,
 } = require('./lib/domain');
 const { pickBest } = require('./lib/matching');
@@ -21,12 +22,11 @@ const firstLookup = (v) => (Array.isArray(v) ? v[0] : v);
 const firstLinkId = (v) => (Array.isArray(v) && v.length ? v[0] : null);
 const esc = (s) => String(s).replace(/'/g, "\\'");
 
-// The caller's own expenses that belong to a given report (queried directly, so
+// The household's expenses that belong to a given report (queried directly, so
 // we never depend on Airtable's cached reverse-link being up to date).
-async function membersOf(reportId, email) {
-  const em = String(email).toLowerCase().replace(/'/g, "\\'");
+async function membersOf(reportId, emails) {
   const mine = await airtable.listRecords(TABLES.EXPENSES, {
-    filterByFormula: `LOWER(ARRAYJOIN({Submitter Email})) = '${em}'`,
+    filterByFormula: submitterEmailFormula(emails),
   });
   return mine.filter((r) => firstLinkId(r.fields && r.fields.Report) === reportId);
 }
@@ -42,13 +42,14 @@ function forbidden(message) {
   return err;
 }
 
-async function ownExpense(expenseId, email) {
+// Is this one of the household's expenses? (Any pooled member may manage it.)
+async function ownExpense(expenseId, emails) {
   const rec = await airtable.findFirst(TABLES.EXPENSES, {
     filterByFormula: `RECORD_ID() = '${esc(expenseId)}'`,
   });
   if (!rec) return null;
   const owner = String(firstLookup(rec.fields['Submitter Email']) || '').toLowerCase();
-  return owner === email.toLowerCase() ? rec : false;
+  return emails.includes(owner) ? rec : false;
 }
 
 exports.handler = async (event) => {
@@ -58,11 +59,20 @@ exports.handler = async (event) => {
   try {
     const user = await verifyRequest(event.headers);
     const { id: staffId, record: staffRec } = await ensureStaff(user);
-    const me = user.email.toLowerCase();
+    // The household this person is pooled with (just themselves if none set).
+    const { ids: householdIds, emails: householdEmails } = await householdScope(staffRec);
 
     if ((event.httpMethod || 'GET').toUpperCase() === 'GET') {
-      const reports = await listReportsOwnedBy(staffId);
-      return ok({ reports: reports.map((r) => ({ id: r.id, name: r.name, submittedOn: r.submittedOn, count: r.expenseIds.length })) });
+      const reports = await listReportsOwnedByAny(householdIds);
+      // Resolve owner names so a couple can tell whose report is whose.
+      const maps = householdIds.size > 1 ? await displayMaps() : null;
+      return ok({ reports: reports.map((r) => ({
+        id: r.id,
+        name: r.name,
+        submittedOn: r.submittedOn,
+        count: r.expenseIds.length,
+        ownerName: maps && r.ownerId && maps.staff && maps.staff[r.ownerId] ? maps.staff[r.ownerId].name : '',
+      })) });
     }
 
     const body = parseBody(event);
@@ -83,7 +93,7 @@ exports.handler = async (event) => {
       if (!id || !name) throw badRequest('Need the report and a new name.');
       const report = await getReportById(id);
       if (!report) throw badRequest('That report no longer exists.');
-      if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
+      if (!reportOwnedBy(report, householdIds)) throw forbidden('That isn’t your report.');
       await airtable.updateRecord(TABLES.REPORTS, id, { Name: name });
       return ok({ report: { id, name } });
     }
@@ -94,8 +104,8 @@ exports.handler = async (event) => {
       if (!id) throw badRequest('Which report?');
       const report = await getReportById(id);
       if (!report) return ok({ deleted: true });
-      if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
-      const members = await membersOf(id, user.email);
+      if (!reportOwnedBy(report, householdIds)) throw forbidden('That isn’t your report.');
+      const members = await membersOf(id, householdEmails);
       if (members.length) throw badRequest('Move its expenses out first, then delete the report.');
       await airtable.deleteRecord(TABLES.REPORTS, id);
       return ok({ deleted: true });
@@ -106,13 +116,13 @@ exports.handler = async (event) => {
       const expenseId = String(body.expenseId || '').trim();
       const reportId = body.reportId ? String(body.reportId).trim() : null;
       if (!expenseId) throw badRequest('Which expense?');
-      const exp = await ownExpense(expenseId, user.email);
+      const exp = await ownExpense(expenseId, householdEmails);
       if (exp === null) throw badRequest('That expense no longer exists.');
       if (exp === false) throw forbidden('That isn’t your expense.');
       if (reportId) {
         const report = await getReportById(reportId);
         if (!report) throw badRequest('That report no longer exists.');
-        if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
+        if (!reportOwnedBy(report, householdIds)) throw forbidden('That isn’t your report.');
       }
       await setExpenseReport(expenseId, reportId);
       return ok({ assigned: true, expenseId, reportId });
@@ -128,21 +138,20 @@ exports.handler = async (event) => {
       if (!expenseId) throw badRequest('Which receipt?');
       const heldRec = await airtable.findFirst(TABLES.EXPENSES, { filterByFormula: `RECORD_ID() = '${esc(expenseId)}'` });
       if (!heldRec) throw badRequest('That receipt no longer exists.');
-      if (String(firstLookup(heldRec.fields['Submitter Email']) || '').toLowerCase() !== me) throw forbidden('That isn’t your receipt.');
+      if (!householdEmails.includes(String(firstLookup(heldRec.fields['Submitter Email']) || '').toLowerCase())) throw forbidden('That isn’t your receipt.');
       if (reportId) {
         const report = await getReportById(reportId);
         if (!report) throw badRequest('That report no longer exists.');
-        if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
+        if (!reportOwnedBy(report, householdIds)) throw forbidden('That isn’t your report.');
       }
 
       const maps = await displayMaps();
       const held = shapeExpense(heldRec, maps);
-      const meEsc = me.replace(/'/g, "\\'");
       const mineRecs = await airtable.listRecords(TABLES.EXPENSES, {
-        filterByFormula: `LOWER(ARRAYJOIN({Submitter Email})) = '${meEsc}'`,
+        filterByFormula: submitterEmailFormula(householdEmails),
       });
-      // Everything of mine that could be the real expense — not this receipt,
-      // and not another unclaimed email receipt.
+      // Everything in the household that could be the real expense — not this
+      // receipt, and not another unclaimed email receipt.
       const candidates = mineRecs
         .filter((r) => r.id !== expenseId && !isHeldEmailReceipt(r.fields))
         .map((r) => ({ rec: r, e: shapeExpense(r, maps) }));
@@ -178,9 +187,9 @@ exports.handler = async (event) => {
       if (!id) throw badRequest('Which report?');
       const report = await getReportById(id);
       if (!report) throw badRequest('That report no longer exists.');
-      if (!reportOwnedBy(report, staffId)) throw forbidden('That isn’t your report.');
+      if (!reportOwnedBy(report, householdIds)) throw forbidden('That isn’t your report.');
 
-      const members = await membersOf(id, user.email);
+      const members = await membersOf(id, householdEmails);
       let submitted = 0;
       let totalUsd = 0;
       for (const rec of members) {

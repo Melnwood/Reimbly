@@ -24,6 +24,7 @@ const ALIASES = {
   role: ['role', 'access', 'permission', 'type'],
   upline: ['upline', 'uplink', 'uplinks', 'supervisor', 'manager', 'approver', 'reports to', 'upline email', 'supervisor email'],
   accounts: ['accounts', 'allowed accounts', 'restricted accounts', 'account', 'account codes', 'funds', 'fund', 'general fund', 'general fund accounts', 'restricted account codes'],
+  household: ['household', 'family', 'couple', 'shared account', 'reimburse with', 'household group', 'spouse group'],
 };
 
 function badRequest(message) {
@@ -106,6 +107,10 @@ exports.handler = async (event) => {
         }
         fields['Allowed Accounts'] = ids;
       }
+
+      // Household: people sharing a value are pooled (e.g. a couple). Column
+      // present → authoritative, so a blank cell clears it.
+      if (map.household != null) fields.Household = String(at(row, 'household') || '').trim();
 
       const existing = await findStaffByEmail(email);
       if (existing) {

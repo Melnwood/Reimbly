@@ -23,6 +23,7 @@ const {
   staffById,
   getReportById,
   reportOwnedBy,
+  householdScope,
 } = require('./lib/domain');
 const notify = require('./lib/notify');
 
@@ -43,6 +44,7 @@ exports.handler = async (event) => {
   try {
     const user = await verifyRequest(event.headers);
     const { id: staffId, record: staffRec } = await ensureStaff(user);
+    const { ids: householdIds } = await householdScope(staffRec);
     const body = parseBody(event);
 
     let description = String(body.description || '').trim();
@@ -102,7 +104,7 @@ exports.handler = async (event) => {
     let reportLink = null;
     if (reportId) {
       const report = await getReportById(reportId);
-      if (!report || !reportOwnedBy(report, staffId)) {
+      if (!report || !reportOwnedBy(report, householdIds)) {
         const err = new Error('That isn’t one of your reports.');
         err.statusCode = 403;
         throw err;

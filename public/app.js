@@ -1468,6 +1468,18 @@
     const rate = usd != null && usd > 0 ? usd / amount : null;
     return { amount, currency, usd, rate };
   }
+  // In a pooled household, tag each row with the submitter's first name when it
+  // isn't the person looking — so Mel can tell his expenses from Amy's.
+  function firstNameOf(name) {
+    return String(name || '').trim().split(/\s+/)[0] || '';
+  }
+  function submitterTag(e) {
+    const meEmail = ((state.me && state.me.email) || '').toLowerCase();
+    const who = (e.submitterEmail || '').toLowerCase();
+    if (!who || who === meEmail || !e.submitterName) return '';
+    return `<span class="mini-who-tag" title="${escapeHtml(e.submitterEmail)}">${escapeHtml(firstNameOf(e.submitterName))}</span>`;
+  }
+
   // "1 PLN = $0.2463" — how many dollars one unit of the foreign currency cost.
   function fxRateText(fx) {
     if (!fx || fx.rate == null) return '';
@@ -1495,6 +1507,7 @@
         <button type="button" class="mini-row" data-act="toggle" aria-expanded="false">
           <span class="mini-date">${escapeHtml(fmtDateShort(e.date))}</span>
           <span class="mini-who">${escapeHtml(who)}</span>
+          ${submitterTag(e)}
           ${amtCell}
           ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
           ${needsReceipt ? '<span class="mini-need" title="Over $50 and no receipt yet">needs receipt</span>' : ''}
@@ -1834,7 +1847,7 @@
       <div class="report-card" data-report="${escapeHtml(r.id)}">
         <button type="button" class="rc-head" data-act="report-toggle">
           <div class="rc-main">
-            <div class="rc-name">${escapeHtml(r.name)}</div>
+            <div class="rc-name">${escapeHtml(r.name)}${r.ownerName && firstNameOf(r.ownerName).toLowerCase() !== firstNameOf((state.me && state.me.name) || '').toLowerCase() ? `<span class="mini-who-tag">${escapeHtml(firstNameOf(r.ownerName))}</span>` : ''}</div>
             <div class="rc-sub">${items.length} expense${items.length === 1 ? '' : 's'} · ${escapeHtml(money(total, 'USD'))}</div>
           </div>
           ${badge}
@@ -2981,21 +2994,23 @@
   // ---------- People & access (Finance management) ----------
 
   const PEOPLE_TEMPLATE =
-    'Name,Email,Role,Upline,Accounts\n' +
-    'Dana Director,director@josiahventure.com,Finance,,\n' +
-    'Mel Ellenwood,mel@josiahventure.com,Approver,director@josiahventure.com,"9100000, 9200000"\n' +
-    'Jana Novak,jana@josiahventure.com,Staff,mel@josiahventure.com,\n';
+    'Name,Email,Role,Upline,Accounts,Household\n' +
+    'Dana Director,director@josiahventure.com,Finance,,,\n' +
+    'Mel Ellenwood,mel@josiahventure.com,Approver,director@josiahventure.com,"9100000, 9200000",Ellenwood\n' +
+    'Amy Ellenwood,amy@josiahventure.com,Staff,director@josiahventure.com,,Ellenwood\n' +
+    'Jana Novak,jana@josiahventure.com,Staff,mel@josiahventure.com,,\n';
 
   const PEOPLE_INSTRUCTIONS = [
     'Build me a CSV of our people with ONE row per person and a header row using exactly these columns:',
     '',
-    'Name, Email, Role, Upline, Accounts',
+    'Name, Email, Role, Upline, Accounts, Household',
     '',
     '- Name: the person’s full name.',
     '- Email: their Josiah Venture email (this is how people are matched).',
     '- Role: one of Staff, Approver, or Finance.',
     '- Upline: the email of the person who approves their expenses (leave blank for top-level people).',
     '- Accounts: only for people who may use restricted general-fund accounts — the GL codes separated by commas (e.g. "9100000, 9200000"). Leave blank for everyone else.',
+    '- Household: a shared name (e.g. a surname) for people whose expenses are pooled and reimbursed together, like a married couple. Give both people the SAME word. Leave blank for everyone who is on their own.',
     '',
     'One person per row. Output plain CSV.',
   ].join('\n');

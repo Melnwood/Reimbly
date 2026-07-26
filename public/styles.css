@@ -263,6 +263,14 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 }
 .mini-date { flex: none; width: 48px; color: var(--ink-soft); font-size: 0.85rem; font-weight: 600; }
 .mini-who { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Whose expense this is, when pooled with a partner */
+.mini-who-tag {
+  flex: none; font-size: 0.68rem; font-weight: 700; vertical-align: middle;
+  color: #5b4b6b; background: #f0ecf5; border: 1px solid #e3dcec;
+  padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+}
+/* When it sits in the report-name (not a flex row), keep a little gap */
+.rc-name .mini-who-tag { margin-left: 7px; }
 .mini-amt { flex: none; font-weight: 800; white-space: nowrap; }
 /* Foreign expense: bank USD on top, the original amount + rate beneath */
 .mini-amt.has-fx { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }

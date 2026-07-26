@@ -8,7 +8,7 @@
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, ensureStaff, isApprover, displayMaps, shapeExpense } = require('./lib/domain');
+const { TABLES, ensureStaff, isApprover, displayMaps, shapeExpense, householdScope, submitterEmailFormula } = require('./lib/domain');
 
 // Statuses that count as real spend (money out or on its way out).
 const ACTIVE = new Set(['Submitted', 'Approved', 'Reimbursed']);
@@ -55,7 +55,7 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role } = await ensureStaff(user);
+    const { role, record: staffRec } = await ensureStaff(user);
     const canSeeAll = isApprover(role);
 
     const q = event.queryStringParameters || {};
@@ -66,8 +66,9 @@ exports.handler = async (event) => {
       'sort[0][direction]': 'desc',
     };
     if (!wantAll) {
-      const email = user.email.toLowerCase().replace(/'/g, "\\'");
-      params.filterByFormula = `LOWER(ARRAYJOIN({Submitter Email})) = '${email}'`;
+      // "My" spending pools the whole household.
+      const { emails } = await householdScope(staffRec);
+      params.filterByFormula = submitterEmailFormula(emails.length ? emails : [user.email.toLowerCase()]);
     }
 
     const [records, maps] = await Promise.all([

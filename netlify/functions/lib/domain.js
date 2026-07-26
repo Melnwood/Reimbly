@@ -171,10 +171,13 @@ function submitterEmailOf(fields = {}) {
 }
 
 // Decide whether `user` (with `role`) may edit/delete a raw expense record.
-function canModify(record, user, role) {
+function canModify(record, user, role, householdEmails = null) {
   const f = record.fields || {};
   const status = f.Status || 'Submitted';
-  const isOwner = submitterEmailOf(f).toLowerCase() === user.email.toLowerCase();
+  const owner = submitterEmailOf(f).toLowerCase();
+  const inHousehold = householdEmails
+    && (householdEmails.has ? householdEmails.has(owner) : householdEmails.includes(owner));
+  const isOwner = owner === user.email.toLowerCase() || !!inHousehold;
   return APPROVER_ROLES.has(role) || (isOwner && EDITABLE_STATUSES.has(status));
 }
 
@@ -443,10 +446,61 @@ async function setExpenseReport(expenseId, reportId) {
   return airtable.updateRecord(TABLES.EXPENSES, expenseId, { Report: reportId ? [reportId] : [] });
 }
 
-// Does this report belong to this staff member?
-function reportOwnedBy(report, staffId) {
+// Does this report belong to this staff member? Accepts a single id or a Set of
+// household ids (so a partner can see/manage the household's reports).
+function reportOwnedBy(report, staffIdOrSet) {
   const owners = Array.isArray(report.fields && report.fields.Owner) ? report.fields.Owner : [];
-  return owners.includes(staffId);
+  if (staffIdOrSet && staffIdOrSet.has) return owners.some((id) => staffIdOrSet.has(id));
+  return owners.includes(staffIdOrSet);
+}
+
+// ---- Households --------------------------------------------------------
+// Staff who share a "Household" value (case-insensitive) are pooled: they see
+// and manage each other's expenses and reports, and are reimbursed together.
+// Someone with no Household set is simply a household of one — themselves.
+function householdKeyOf(staffRecord) {
+  return String((staffRecord && staffRecord.fields && staffRecord.fields.Household) || '').trim().toLowerCase();
+}
+async function householdScope(staffRecord) {
+  const key = householdKeyOf(staffRecord);
+  let members = staffRecord ? [staffRecord] : [];
+  if (key) {
+    const all = await airtable.listRecords(TABLES.STAFF, {
+      filterByFormula: `LOWER({Household}) = '${esc(key)}'`,
+    });
+    if (all.length) members = all;
+    if (staffRecord && !members.some((r) => r.id === staffRecord.id)) members.push(staffRecord);
+  }
+  const ids = new Set(members.map((r) => r.id));
+  const emails = members
+    .map((r) => String((r.fields && r.fields.Email) || '').toLowerCase())
+    .filter(Boolean);
+  return { members, ids, emails, key };
+}
+// Airtable formula matching an expense whose submitter is any of these emails.
+function submitterEmailFormula(emails) {
+  const list = (emails && emails.length ? emails : [''])
+    .map((e) => `LOWER(ARRAYJOIN({Submitter Email})) = '${esc(String(e).toLowerCase())}'`);
+  return list.length === 1 ? list[0] : `OR(${list.join(', ')})`;
+}
+// Every report owned by anyone in the given set of staff ids, newest first.
+async function listReportsOwnedByAny(idSet) {
+  if (!idSet || !idSet.size) return [];
+  const records = await airtable.listRecords(TABLES.REPORTS, {});
+  return records
+    .filter((r) => (Array.isArray(r.fields && r.fields.Owner) ? r.fields.Owner : []).some((id) => idSet.has(id)))
+    .map((r) => {
+      const f = r.fields || {};
+      return {
+        id: r.id,
+        name: f.Name || 'Untitled report',
+        submittedOn: f['Submitted On'] || null,
+        ownerId: Array.isArray(f.Owner) && f.Owner.length ? f.Owner[0] : null,
+        expenseIds: Array.isArray(f.Expenses) ? f.Expenses : [],
+        createdTime: r.createdTime || null,
+      };
+    })
+    .sort((a, b) => String(b.createdTime || '').localeCompare(String(a.createdTime || '')));
 }
 
 // How an expense got into Rembly, for a provenance badge. Uses an explicit
@@ -613,9 +667,13 @@ module.exports = {
   sourceOf,
   getReportById,
   listReportsOwnedBy,
+  listReportsOwnedByAny,
   createReport,
   setExpenseReport,
   reportOwnedBy,
+  householdScope,
+  householdKeyOf,
+  submitterEmailFormula,
   receiptToken,
   verifyReceiptToken,
   getExpenseById,

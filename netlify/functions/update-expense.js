@@ -22,6 +22,7 @@ const {
   logActivity,
   getReportById,
   reportOwnedBy,
+  householdScope,
 } = require('./lib/domain');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
@@ -49,7 +50,10 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role, id: staffId } = await ensureStaff(user);
+    const { role, record: staffRec } = await ensureStaff(user);
+    // The household this person is pooled with — a partner may finish their
+    // expenses and file them into the household's reports.
+    const { ids: householdIds, emails: householdEmails } = await householdScope(staffRec);
     const body = parseBody(event);
 
     const id = String(body.id || '').trim();
@@ -57,7 +61,7 @@ exports.handler = async (event) => {
 
     const current = await getExpenseById(id);
     if (!current) throw badRequest('That expense no longer exists.');
-    if (!canModify(current, user, role)) {
+    if (!canModify(current, user, role, householdEmails)) {
       const err = new Error('You can only edit your own expenses before they’re approved.');
       err.statusCode = 403;
       throw err;
@@ -102,7 +106,7 @@ exports.handler = async (event) => {
       const reportId = String(body.reportId || '').trim();
       if (reportId) {
         const report = await getReportById(reportId);
-        if (!report || !reportOwnedBy(report, staffId)) {
+        if (!report || !reportOwnedBy(report, householdIds)) {
           const err = new Error('That isn’t one of your reports.');
           err.statusCode = 403;
           throw err;

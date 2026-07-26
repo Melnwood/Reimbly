@@ -6,7 +6,10 @@
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, displayMaps, shapeExpense, isHeldEmailReceipt } = require('./lib/domain');
+const {
+  TABLES, displayMaps, shapeExpense, isHeldEmailReceipt,
+  ensureStaff, householdScope, submitterEmailFormula,
+} = require('./lib/domain');
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
@@ -14,11 +17,14 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const email = user.email.toLowerCase().replace(/'/g, "\\'");
+    // Pool the whole household's expenses — a couple sees and manages one list.
+    const { record } = await ensureStaff(user);
+    const { emails } = await householdScope(record);
+    const formula = submitterEmailFormula(emails.length ? emails : [user.email.toLowerCase()]);
 
     const [records, maps] = await Promise.all([
       airtable.listRecords(TABLES.EXPENSES, {
-        filterByFormula: `LOWER(ARRAYJOIN({Submitter Email})) = '${email}'`,
+        filterByFormula: formula,
         'sort[0][field]': 'Submitted On',
         'sort[0][direction]': 'desc',
       }),
