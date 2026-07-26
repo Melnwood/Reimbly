@@ -1032,10 +1032,21 @@
     const btn = event.target.closest('button[data-act]');
     if (!btn) return false;
     const act = btn.dataset.act;
-    if (act === 'ie-receipt-choose') {
+    if (act === 'ie-receipt-choose' || act === 'ie-receipt-camera') {
       const details = btn.closest('.mini-details');
       const input = details && $('.ie-receipt-input', details);
-      if (input) input.click();
+      if (input) {
+        // Same hidden input drives both buttons. "Take a picture" asks the phone
+        // to open its camera; "Add a receipt" is the normal file/photo picker.
+        if (act === 'ie-receipt-camera') {
+          input.setAttribute('accept', 'image/*');
+          input.setAttribute('capture', 'environment');
+        } else {
+          input.setAttribute('accept', 'image/*,application/pdf');
+          input.removeAttribute('capture');
+        }
+        input.click();
+      }
       return true;
     }
     if (act === 'toggle') {
@@ -1457,7 +1468,8 @@
             ${e.receipt && e.receipt.url
               ? `<a class="receipt-link" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">📎 View receipt</a>`
               : '<span class="ie-noreceipt">No receipt yet</span>'}
-            <button type="button" class="btn ghost small" data-act="ie-receipt-choose">${e.receipt ? 'Replace receipt' : '📎 Add a receipt'}</button>
+            <button type="button" class="btn ghost small" data-act="ie-receipt-camera">📷 Take a picture</button>
+            <button type="button" class="btn ghost small" data-act="ie-receipt-choose">📎 Add a receipt</button>
             <input type="file" class="ie-receipt-input" accept="image/*,application/pdf" hidden />
             <span class="ie-receipt-name file-hint"></span>
           </div>
