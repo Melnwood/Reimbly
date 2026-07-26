@@ -59,6 +59,13 @@ The base ID is already set for you: `appquqkhFfrnoU6v9`.
 
 > You do **not** need a client secret — the app uses Google's ID-token sign-in only.
 
+> 📌 **Where does the Google project live once it's set up?** A plain-English
+> reference — project name/ID, console links, and how to rotate the Client ID — is
+> kept in **[docs/GOOGLE-CLOUD.md](docs/GOOGLE-CLOUD.md)** so you never have to
+> remember it. Every outside service the app uses is mapped in
+> **[docs/EXTERNAL-SERVICES.md](docs/EXTERNAL-SERVICES.md)** — the "where do I log
+> in to change X?" page.
+
 ### 3. Push to GitHub
 
 ```bash
