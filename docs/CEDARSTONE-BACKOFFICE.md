@@ -139,8 +139,29 @@ loop is keeping up. Two headline numbers:
 
 Supporting figures: approved this month, number (and $) **awaiting payment**, and
 **oldest unpaid**. A simple month-by-month trend for each metric shows whether it's
-getting quicker or slower. Concept mocked as a fourth "Timing" view in the layout
-prototype.
+getting quicker or slower. **Built and shipped** (`timing.js` + the Timing screen).
+
+### Volume, and reading speed against it
+
+Also shipped: **how many reports came in** each month (counted by `Submitted On` on
+the Reports table), shown next to the speed clocks with a "vs last month" delta and a
+6-month trend, plus **"came in this month" beside "approved this month"** so inflow
+and throughput read together.
+
+**The connection Mel flagged:** approval speed only means something *relative to how
+much came in*. A slow month during a flood of reports is very different from a slow
+month with barely any. Rather than invent a shaky "days per report" number, express
+it two honest ways:
+
+- **Keeping up** — came in vs approved (and vs paid) in the same period. If approved
+  keeps pace with came-in, they're staying even; if inflow outruns it, a backlog is
+  building. This is the real speed-against-load signal.
+- **Overlay** — put the volume bars and the approve-time on **one timeline**, so a
+  spike in reports sitting next to steady speed reads as "handled it well," and slow
+  speed *without* a volume spike reads as a genuine flag.
+
+Next step for the timing view: the overlay/keeping-up chart. (The pieces — monthly
+volume, monthly approve-time, approved-this-month — are all already computed.)
 
 ### The dependency this creates: knowing when something was *paid*
 
