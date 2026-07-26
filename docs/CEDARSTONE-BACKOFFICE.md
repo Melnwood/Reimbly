@@ -135,8 +135,10 @@ instead of grind-through-everything.
   amounts CedarStone **always** wants to eyeball?
 - Do accounts ever need their **own** category lists, or is one standard list + an
   account tag enough to start?
-- What's a sensible **threshold** for the year-to-date missing-receipt count before
-  it highlights for a check-in?
+> Resolved (threshold): don't pick a number up front — it'd be a guess. **Track the
+> per-person YTD count first, watch what "normal" looks like across JV for a while,
+> then set the highlight threshold from real data.** Build the counter now; leave the
+> threshold configurable and unset until there's history to base it on.
 
 > Resolved: the "missing receipt" idea replaces today's practice of quietly entering
 > a **handwritten receipt** — see the note in section 2. The new declaration is the
@@ -155,7 +157,8 @@ instead of grind-through-everything.
 5. Build the **report detail**: reassurance banner, attention-sorted rows,
    per-line "receipt matches" checks, approve.
 6. Track a **per-person year-to-date missing-receipt count**; show it on the report
-   header / waiting list and highlight it past a configurable threshold.
+   header / waiting list. Leave the highlight threshold **configurable and unset at
+   first** — set it later from real JV usage rather than guessing up front.
 7. Tests: receiptless-undeclared can't submit; declared-missing can and is flagged;
    amount mismatch flags; all-clear report bulk-approves; account picker hidden for
    people with no accounts.
