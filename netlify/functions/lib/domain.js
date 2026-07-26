@@ -497,6 +497,10 @@ function shapeExpense(record, maps = {}) {
     amount: f.Amount != null ? Number(f.Amount) : null,
     currency: (maps.currency && currencyId && maps.currency[currencyId]) || '',
     amountUsd: f['Amount (USD)'] != null ? Number(f['Amount (USD)']) : null,
+    // The foreign amount printed on the receipt (when the bank charged USD),
+    // so the browser can show "zł400 · $98.50 · rate 0.2463".
+    originalAmount: f['Original Amount'] != null ? Number(f['Original Amount']) : null,
+    originalCurrency: f['Original Currency'] || '',
     category: (maps.category && categoryId && maps.category[categoryId]) || '',
     account: account.name || '',
     accountCode: account.code || '',

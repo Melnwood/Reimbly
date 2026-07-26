@@ -1451,6 +1451,30 @@
     return Number(e.amountUsd != null ? e.amountUsd : e.amount) || 0;
   }
 
+  // Foreign-currency breakdown for an expense, or null if it's plainly in USD.
+  // Prefers the foreign amount read off the receipt (when the bank charged USD);
+  // otherwise a manually-entered foreign expense uses its own amount/currency.
+  // The rate is USD ÷ foreign — i.e. what your bank actually gave you.
+  function fxInfo(e) {
+    let amount = null;
+    let currency = '';
+    if (e.originalAmount != null && e.originalCurrency) {
+      amount = Number(e.originalAmount); currency = String(e.originalCurrency);
+    } else if (e.currency && e.currency.toUpperCase() !== 'USD' && e.amount != null) {
+      amount = Number(e.amount); currency = e.currency;
+    }
+    if (!(amount > 0) || !currency || currency.toUpperCase() === 'USD') return null;
+    const usd = e.amountUsd != null ? Number(e.amountUsd) : null;
+    const rate = usd != null && usd > 0 ? usd / amount : null;
+    return { amount, currency, usd, rate };
+  }
+  // "1 PLN = $0.2463" — how many dollars one unit of the foreign currency cost.
+  function fxRateText(fx) {
+    if (!fx || fx.rate == null) return '';
+    const digits = fx.rate < 0.1 ? 4 : (fx.rate < 1 ? 3 : 2);
+    return `1 ${fx.currency.toUpperCase()} = $${fx.rate.toFixed(digits)}`;
+  }
+
   // One collapsed expense row that opens into the inline editor. Shared by the
   // Add-expense list and the expenses inside each report card. Expenses over $50
   // are highlighted (those are the ones that need a receipt); if one over $50 is
@@ -1461,12 +1485,17 @@
     const over = usdAmount(e) >= RECEIPT_THRESHOLD;
     const needsReceipt = over && !e.receipt;
     const cls = `expense mini${over ? ' over50' : ''}${needsReceipt ? ' needs-receipt' : ''}`;
+    // For a foreign expense, stack the bank USD over the original amount + rate.
+    const fx = fxInfo(e);
+    const amtCell = fx
+      ? `<span class="mini-amt has-fx"><span class="ma-usd">${escapeHtml(fx.usd != null ? money(fx.usd, 'USD') : money(fx.amount, fx.currency))}</span><span class="ma-fx">${escapeHtml(money(fx.amount, fx.currency))}${fx.rate != null ? ` · ${escapeHtml(fxRateText(fx))}` : ''}</span></span>`
+      : `<span class="mini-amt">${escapeHtml(amt)}</span>`;
     return `
       <article class="${cls}" data-id="${escapeHtml(e.id)}">
         <button type="button" class="mini-row" data-act="toggle" aria-expanded="false">
           <span class="mini-date">${escapeHtml(fmtDateShort(e.date))}</span>
           <span class="mini-who">${escapeHtml(who)}</span>
-          <span class="mini-amt">${escapeHtml(amt)}</span>
+          ${amtCell}
           ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
           ${needsReceipt ? '<span class="mini-need" title="Over $50 and no receipt yet">needs receipt</span>' : ''}
           ${sourceDot(e.source)}
@@ -1575,9 +1604,16 @@
   // Tapping an expense opens it straight into editable fields — no extra "Edit"
   // step. Closing the line saves whatever changed.
   function inlineEditHtml(e) {
+    const fx = fxInfo(e);
+    const fxLine = fx ? `
+        <div class="ie-fx">
+          <span class="ie-fx-title">Foreign currency</span>
+          <span class="ie-fx-body">Receipt: <strong>${escapeHtml(money(fx.amount, fx.currency))}</strong>${fx.usd != null ? ` · Charged in USD: <strong>${escapeHtml(money(fx.usd, 'USD'))}</strong>` : ''}${fx.rate != null ? ` · Rate: <strong>${escapeHtml(fxRateText(fx))}</strong>` : ''}</span>
+        </div>` : '';
     return `
       <div class="inline-edit">
         <div class="mini-badges">${statusBadge(e.status)}${sourceBadge(e.source)}</div>
+        ${fxLine}
         <div class="ie-row">
           <label class="ie-f"><span>Amount</span><input class="ie-amount" type="number" inputmode="decimal" step="0.01" min="0" value="${e.amount != null ? e.amount : ''}" /></label>
           <label class="ie-f ie-cur"><span>Currency</span><select class="ie-currency">${ieCurrencyOptions(e.currency)}</select></label>

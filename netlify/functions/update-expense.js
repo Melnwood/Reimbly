@@ -7,6 +7,7 @@
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
+const { scanReceipt } = require('./lib/scanner');
 const {
   TABLES,
   STATUS,
@@ -134,6 +135,25 @@ exports.handler = async (event) => {
       } catch (e) {
         console.error('[reimbly] receipt upload failed', e);
         receiptWarning = 'Your changes were saved, but the receipt didn’t attach. Try a smaller photo.';
+      }
+      // Read the receipt for its ORIGINAL (foreign) amount. When the expense's
+      // own amount is the bank/USD figure (e.g. a YNAB import) and the receipt is
+      // in another currency, record that foreign amount so the app can show the
+      // real exchange rate (bank USD ÷ foreign). Best-effort — never blocks.
+      if (!receiptWarning && process.env.ANTHROPIC_API_KEY) {
+        try {
+          const scan = await scanReceipt(receipt, { accounts: [] });
+          const foreignCur = scan && scan.currency ? String(scan.currency).toUpperCase() : '';
+          const foreignAmt = scan && scan.amount != null ? Number(scan.amount) : null;
+          if (foreignCur && foreignCur !== currency && foreignAmt > 0) {
+            await airtable.updateRecord(TABLES.EXPENSES, id, {
+              'Original Amount': foreignAmt,
+              'Original Currency': foreignCur,
+            });
+          }
+        } catch (e) {
+          console.error('[reimbly] fx read failed', e); // just skip the FX line
+        }
       }
     }
 

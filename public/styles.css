@@ -264,6 +264,10 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .mini-date { flex: none; width: 48px; color: var(--ink-soft); font-size: 0.85rem; font-weight: 600; }
 .mini-who { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-amt { flex: none; font-weight: 800; white-space: nowrap; }
+/* Foreign expense: bank USD on top, the original amount + rate beneath */
+.mini-amt.has-fx { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+.mini-amt.has-fx .ma-usd { font-weight: 800; }
+.mini-amt.has-fx .ma-fx { font-size: 0.72rem; font-weight: 600; color: var(--ink-soft); }
 .dot { display: inline-block; flex: none; width: 9px; height: 9px; border-radius: 50%; background: #d6cbb8; }
 .dot.submitted { background: #f59e0b; }
 .dot.approved { background: #16a34a; }
@@ -447,6 +451,13 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 
 /* Inline editor shown when you open an expense */
 .inline-edit { display: flex; flex-direction: column; gap: 10px; }
+/* Read-only foreign-currency breakdown inside the editor */
+.ie-fx {
+  background: #eef4ff; border: 1px solid #d6e4ff; border-radius: var(--radius-sm);
+  padding: 8px 12px; display: flex; flex-direction: column; gap: 2px;
+}
+.ie-fx-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #1e4fa3; }
+.ie-fx-body { font-size: 0.88rem; color: var(--ink); }
 .ie-row { display: flex; gap: 10px; }
 .ie-f { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
 .ie-f > span { font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
