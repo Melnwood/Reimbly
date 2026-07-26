@@ -184,7 +184,12 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
   padding: 10px 14px; margin-bottom: 18px; font-weight: 600; font-size: 0.9rem;
 }
 
-.content { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: clamp(20px, 4vw, 36px) clamp(16px, 4vw, 24px) 64px; }
+.content { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px) 64px; }
+
+/* The New Expense / Import form reads best at a comfortable width, not stretched
+   across a big monitor — so cap just that entry panel while the data screens
+   (dashboard, timing, review, waiting-to-be-paid) spread to fill the laptop. */
+.add-panel { max-width: 760px; }
 
 /* ---------- Panels & forms ---------- */
 .panel {
@@ -638,7 +643,9 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .dash-range { display: flex; gap: 14px; flex-basis: 100%; font-size: 0.85rem; color: var(--ink-soft); }
 .dash-range input { font: inherit; margin-left: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
 
-.dash-grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+/* Chart and ranking sit side-by-side on a laptop, stack on smaller screens. */
+.dash-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
 .dash-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
 .donut-cap { font-size: 0.78rem; color: var(--ink-soft); font-weight: 600; }
 .donut-total { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); line-height: 1.1; }
