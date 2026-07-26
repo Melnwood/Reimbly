@@ -240,6 +240,12 @@ heavily with the household-invites multi-tenant thinking — see
 [HOUSEHOLD-INVITES.md](HOUSEHOLD-INVITES.md); reconcile the two account/org models
 when this is built.
 
+**The storage question at this scale (Airtable vs. a real database) is answered in
+its own note — see [DATA-AT-SCALE.md](DATA-AT-SCALE.md).** Short version: Airtable is
+right for JV and the first few ministries (add an "Organization" tag), but ~200
+ministries needs a move to Postgres; the code's single data layer keeps that move
+contained.
+
 **Status: parked on purpose.** This is the large, later dashboard — written down now
 so the vision isn't lost, but **not** the next thing to build. The near-term work is
 the single-back-office review experience (sections 1–4) for JV. The 200-ministry

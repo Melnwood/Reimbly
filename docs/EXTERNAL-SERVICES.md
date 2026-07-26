@@ -30,6 +30,8 @@ live in Netlify's environment variables, kept secret and out of the code.
 - **Sign in:** https://airtable.com → base `appquqkhFfrnoU6v9`
 - **Manage the key:** https://airtable.com/create/tokens
 - **Netlify variables:** `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`
+- **At scale:** great for JV now, but not the long-term store for ~200 ministries —
+  see [DATA-AT-SCALE.md](DATA-AT-SCALE.md) for the why and the migration path.
 
 ### 4. Google Cloud — sign-in
 - **What:** lets JV staff sign in with their `@josiahventure.com` Google account.
