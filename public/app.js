@@ -2613,6 +2613,45 @@
     return `<div class="metric-delta vol">${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)} ${diff > 0 ? 'more' : 'fewer'} than last month</div>`;
   }
 
+  // Volume (bars) and approve-speed (line) on one timeline, so you can read speed
+  // against load: a tall bar with a low line = lots came in and still got approved
+  // fast; a high line with a short bar = slow without the excuse of volume.
+  function comboChart(vol, approve) {
+    const W = 640, H = 250, padL = 8, padR = 8, padT = 22, padB = 28;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const n = vol.length || 1;
+    const band = plotW / n;
+    const barW = Math.min(46, band * 0.5);
+    const maxVol = Math.max(1, ...vol.map((t) => t.c));
+    const maxDays = Math.max(1, ...approve.map((t) => (t.d == null ? 0 : t.d)));
+    const cx = (i) => padL + i * band + band / 2;
+    const barTop = (c) => padT + plotH - (c / maxVol) * plotH;
+    const lineY = (d) => padT + plotH - (d / maxDays) * plotH;
+
+    const bars = vol.map((t, i) => {
+      const h = (t.c / maxVol) * plotH;
+      const top = padT + plotH - h;
+      const lab = t.c ? `<text x="${cx(i).toFixed(1)}" y="${(top - 6).toFixed(1)}" class="cc-barlab">${t.c}</text>` : '';
+      return `<rect x="${(cx(i) - barW / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(0, h).toFixed(1)}" rx="5" class="cc-bar" />${lab}`;
+    }).join('');
+    const pts = approve.map((t, i) => (t.d == null ? null : `${cx(i).toFixed(1)},${lineY(t.d).toFixed(1)}`)).filter(Boolean).join(' ');
+    const line = pts ? `<polyline points="${pts}" class="cc-line" />` : '';
+    const dots = approve.map((t, i) => (t.d == null ? '' :
+      `<circle cx="${cx(i).toFixed(1)}" cy="${lineY(t.d).toFixed(1)}" r="3.6" class="cc-dot" /><text x="${cx(i).toFixed(1)}" y="${(lineY(t.d) - 9).toFixed(1)}" class="cc-daylab">${t.d.toFixed(1)}d</text>`)).join('');
+    const labels = vol.map((t, i) => `<text x="${cx(i).toFixed(1)}" y="${(H - 9).toFixed(1)}" class="cc-mlab">${escapeHtml(t.m)}</text>`).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" class="combo-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Reports that came in each month, with average days to approve overlaid as a line.">${bars}${line}${dots}${labels}</svg>`;
+  }
+
+  // A plain-language "are they keeping pace?" line: flow in vs flow out this month.
+  function keepingUpNote(cameIn, approved) {
+    if (cameIn == null) return '';
+    if (approved >= cameIn) {
+      return `<div class="keeping-up good">✓ <b>Keeping up</b> — ${approved} approved this month against ${cameIn} that came in.</div>`;
+    }
+    const gap = cameIn - approved;
+    return `<div class="keeping-up warn">↗ <b>Backlog building</b> — ${cameIn} came in this month but only ${approved} were approved (${gap} more in than out).</div>`;
+  }
+
   // The delta line under a metric ("0.8 day faster than last month").
   function timingDelta(thisAvg, prevAvg, lowerIsBetter = true) {
     if (thisAvg == null || prevAvg == null) return `<div class="metric-delta muted">Not enough history yet to compare</div>`;
@@ -2672,6 +2711,15 @@
         <div class="ts"><span class="ts-k">…worth</span><span class="ts-v tnum">${escapeHtml(money(w.usd, 'USD'))}</span></div>
         <div class="ts-div"></div>
         <div class="ts"><span class="ts-k">Oldest unpaid</span><span class="ts-v tnum ${oldestWarn ? 'warn' : ''}">${w.oldestDays} day${w.oldestDays === 1 ? '' : 's'}</span></div>
+      </div>
+
+      <div class="timing-chart combo-card">
+        <div class="tc-head">
+          <div><h3>Speed vs. how much came in</h3><span class="tc-sub">reports in (bars) with average days to approve (line) · last 6 months</span></div>
+          <div class="combo-legend"><span class="cl"><span class="sw bar"></span>Reports in</span><span class="cl"><span class="sw line"></span>Days to approve</span></div>
+        </div>
+        ${comboChart(v.trend || [], d.trend.approve || [])}
+        ${keepingUpNote(v.thisMonth, d.approvedThisMonth)}
       </div>
 
       <div class="timing-charts">
