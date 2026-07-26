@@ -280,6 +280,7 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .dot.submitted { background: #f59e0b; }
 .dot.approved { background: #16a34a; }
 .dot.rejected { background: #dc2626; }
+.dot.waitingtobepaid { background: #7c3aed; }
 .dot.reimbursed { background: #2563eb; }
 .dot.draft { background: #9ca3af; }
 /* Source dots — the color tells you where an expense came from */
@@ -331,6 +332,7 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .badge.draft { background: #ffe1ec; color: #b4145a; }        /* Unsubmitted — pink, like "New report" */
 .badge.submitted { background: #ffe6c9; color: #9a5300; }    /* Pending approval — orange */
 .badge.approved { background: #e6f4c3; color: #4d7000; }     /* Pending payment — lime, nearing green */
+.badge.waitingtobepaid { background: #ede9fe; color: #6b21a8; } /* Waiting to be paid — violet */
 .badge.reimbursed { background: #c9edd4; color: #15803d; }   /* Paid — green */
 .badge.rejected { background: #fee2e2; color: #b91c1c; }     /* Denied — off the happy path */
 

@@ -45,6 +45,7 @@ const EVENTS = {
   KICKED_BACK: 'Kicked back',
   RESUBMITTED: 'Resubmitted',
   EDITED: 'Edited',
+  QUEUED_FOR_PAYMENT: 'Queued for payment',
   PAID: 'Paid',
   AFFIDAVIT_SIGNED: 'Missing-receipt affidavit signed',
   AFFIDAVIT_APPROVED: 'Missing-receipt affidavit approved',
@@ -56,6 +57,9 @@ const STATUS = {
   DRAFT: 'Draft',
   SUBMITTED: 'Submitted',
   APPROVED: 'Approved',
+  // After CedarStone exports the approved batch to pay it, expenses sit here until
+  // the money actually goes out. (Auto-created in Airtable on first use via typecast.)
+  WAITING_TO_PAY: 'Waiting to be paid',
   REJECTED: 'Rejected',
   REIMBURSED: 'Reimbursed',
 };

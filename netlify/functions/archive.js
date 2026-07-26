@@ -1,9 +1,10 @@
 'use strict';
 
 // The paid archive. Approver / Finance only.
-//   ready — expenses that are Approved and waiting for Finance to reimburse
-//           (Finance only; empty for other approvers).
-//   paid  — expenses already Reimbursed, newest first (the archive).
+//   ready   — Approved, not yet exported (Finance exports these to start paying).
+//   waiting — "Waiting to be paid": exported and awaiting the actual payment,
+//             where Finance bulk-marks them paid (Finance only).
+//   paid    — expenses already Reimbursed, newest first (the archive).
 // Finance sees everyone; an approver sees only the people who report to them.
 
 const { ok, error, methodGuard } = require('./lib/http');
@@ -27,7 +28,7 @@ exports.handler = async (event) => {
 
     const [records, maps] = await Promise.all([
       airtable.listRecords(TABLES.EXPENSES, {
-        filterByFormula: `OR({Status} = '${STATUS.APPROVED}', {Status} = '${STATUS.REIMBURSED}')`,
+        filterByFormula: `OR({Status} = '${STATUS.APPROVED}', {Status} = '${STATUS.WAITING_TO_PAY}', {Status} = '${STATUS.REIMBURSED}')`,
       }),
       displayMaps(),
     ]);
@@ -43,13 +44,14 @@ exports.handler = async (event) => {
       });
     }
 
-    // Ready to pay is a Finance action, so only Finance gets that list.
+    // Exporting and marking-paid are Finance actions, so only Finance gets those.
     const ready = isFinance ? items.filter((e) => e.status === STATUS.APPROVED) : [];
+    const waiting = isFinance ? items.filter((e) => e.status === STATUS.WAITING_TO_PAY) : [];
     const paid = items
       .filter((e) => e.status === STATUS.REIMBURSED)
       .sort((a, b) => String(b.paidOn || '').localeCompare(String(a.paidOn || '')));
 
-    return ok({ ready, paid, role });
+    return ok({ ready, waiting, paid, role });
   } catch (err) {
     return error(err);
   }

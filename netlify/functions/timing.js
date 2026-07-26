@@ -69,8 +69,8 @@ function summarize(expenses, now = new Date()) {
       (payByMonth[k] = payByMonth[k] || []).push(days);
     }
 
-    // approved but not yet paid — still owed to someone
-    if (e.status === STATUS.APPROVED) {
+    // approved (or queued) but not yet paid — still owed to someone
+    if (e.status === STATUS.APPROVED || e.status === STATUS.WAITING_TO_PAY) {
       awaiting.count += 1;
       awaiting.usd += usd;
       if (dec) awaiting.oldestDays = Math.max(awaiting.oldestDays, Math.floor((now - dec) / DAY));
@@ -193,7 +193,7 @@ exports.handler = async (event) => {
     const sinceYear = now.getUTCFullYear() - 1;
     const [records, reportRecords, activityRecords, maps] = await Promise.all([
       airtable.listRecords(TABLES.EXPENSES, {
-        filterByFormula: `OR({Status} = '${STATUS.APPROVED}', {Status} = '${STATUS.REIMBURSED}')`,
+        filterByFormula: `OR({Status} = '${STATUS.APPROVED}', {Status} = '${STATUS.WAITING_TO_PAY}', {Status} = '${STATUS.REIMBURSED}')`,
       }),
       airtable.listRecords(TABLES.REPORTS, {}),
       airtable.listRecords(TABLES.ACTIVITY, {

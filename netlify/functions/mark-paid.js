@@ -1,8 +1,8 @@
 'use strict';
 
-// Mark a batch of approved expenses as reimbursed (paid). Finance only.
-// Moves Approved → Reimbursed and stamps "Paid On". Anything not currently
-// Approved is skipped, so this is safe to click twice.
+// Mark a batch of expenses as reimbursed (paid). Finance only. Moves Approved or
+// "Waiting to be paid" → Reimbursed and stamps "Paid On". Anything not awaiting
+// payment is skipped, so this is safe to click twice.
 
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
@@ -41,8 +41,9 @@ exports.handler = async (event) => {
       const rec = await airtable.findFirst(TABLES.EXPENSES, {
         filterByFormula: `RECORD_ID() = '${id.replace(/'/g, "\\'")}'`,
       });
-      if (!rec || (rec.fields && rec.fields.Status) !== STATUS.APPROVED) {
-        skipped.push(id); // not approved (yet), or gone — leave it alone
+      const st = rec && rec.fields && rec.fields.Status;
+      if (!rec || (st !== STATUS.APPROVED && st !== STATUS.WAITING_TO_PAY)) {
+        skipped.push(id); // not awaiting payment, or gone — leave it alone
         continue;
       }
       await airtable.updateRecord(TABLES.EXPENSES, id, {

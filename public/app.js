@@ -46,6 +46,8 @@
     dashboard: $('#view-dashboard'),
     archiveReadyWrap: $('#archive-ready-wrap'),
     archiveReady: $('#archive-ready'),
+    archiveWaitingWrap: $('#archive-waiting-wrap'),
+    archiveWaiting: $('#archive-waiting'),
     archivePaid: $('#archive-paid'),
     importFile: $('#import-file'),
     importName: $('#import-name'),
@@ -1445,12 +1447,13 @@
     draft: 'Unsubmitted',
     submitted: 'Pending approval',
     approved: 'Pending payment',
+    waitingtobepaid: 'Waiting to be paid',
     rejected: 'Denied',
     reimbursed: 'Paid',
   };
   function statusKey(status) {
     const key = String(status || '').toLowerCase().replace(/[^a-z]/g, '');
-    return ['draft', 'submitted', 'approved', 'rejected', 'reimbursed'].includes(key) ? key : 'submitted';
+    return ['draft', 'submitted', 'approved', 'waitingtobepaid', 'rejected', 'reimbursed'].includes(key) ? key : 'submitted';
   }
   function statusLabel(status) {
     return STATUS_LABELS[statusKey(status)];
@@ -1961,13 +1964,14 @@
   // (the least-advanced meaningful stage, so "still needs submitting" wins).
   function reportRollup(reportId) {
     const items = (state.mineExpenses || []).filter((e) => e.reportId === reportId);
-    const counts = { unsubmitted: 0, pending: 0, approved: 0, paid: 0 };
+    const counts = { unsubmitted: 0, pending: 0, approved: 0, waiting: 0, paid: 0 };
     let total = 0;
     items.forEach((e) => {
       total += Number(e.amountUsd) || 0;
       if (e.status === 'Draft' || e.status === 'Rejected') counts.unsubmitted += 1;
       else if (e.status === 'Submitted') counts.pending += 1;
       else if (e.status === 'Approved') counts.approved += 1;
+      else if (e.status === 'Waiting to be paid') counts.waiting += 1;
       else if (e.status === 'Reimbursed') counts.paid += 1;
     });
     let status = 'Empty';
@@ -1975,6 +1979,7 @@
       if (counts.unsubmitted) status = 'Draft';
       else if (counts.pending) status = 'Submitted';
       else if (counts.approved) status = 'Approved';
+      else if (counts.waiting) status = 'Waiting to be paid';
       else status = 'Reimbursed';
     }
     return { items, counts, total, status };
@@ -3026,68 +3031,107 @@
       </article>`;
   }
 
-  function renderArchive(data) {
-    const ready = data.ready || [];
-    const paid = data.paid || [];
+  // One report's expense card, optionally with the "kick back" control.
+  function payExpenseArticle(e, kickback) {
+    return `<article class="expense" data-id="${escapeHtml(e.id)}">
+      <div class="expense-top">
+        <div class="expense-main">
+          <div class="expense-desc">${cardTitle(e)}</div>
+          <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
+        </div>
+        ${amountBlock(e)}
+      </div>
+      <div class="expense-actions">
+        ${receiptLink(e)}
+        ${historyBtn(e.id)}
+        ${kickback ? '<button class="btn ghost small" data-act="kickback-toggle">Kick back</button>' : ''}
+      </div>
+      ${kickback ? `<div class="sendback-row"><input type="text" placeholder="What needs fixing?" data-role="note" maxlength="200" /><button class="btn primary small" data-act="kickback-confirm">Send back</button></div>` : ''}
+    </article>`;
+  }
 
-    // "Waiting to be paid" — approved reports grouped by person. Finance exports
-    // the CSV (their hand-off), then bulk-selects (or all) and marks them paid.
+  // Stage 1: Approved reports waiting to be exported. Finance exports the batch
+  // (which moves them into "Waiting to be paid").
+  function renderReadyToExport(ready) {
+    state.archiveReady = ready; // stash for the CSV export
+    if (!ready.length) {
+      el.archiveReadyWrap.hidden = true;
+      el.archiveReady.innerHTML = '';
+      return;
+    }
+    el.archiveReadyWrap.hidden = false;
+    const groups = groupBySubmitter(ready);
+    const totalUsd = ready.reduce((s, e) => s + (Number(e.amountUsd) || 0), 0);
+    const toolbar = `
+      <div class="pay-toolbar">
+        <span class="pay-count">${groups.length} report${groups.length === 1 ? '' : 's'} · ${escapeHtml(money(totalUsd, 'USD'))} approved</span>
+        <span class="grow"></span>
+        <button class="btn primary small" data-act="export-csv">⤓ Export CSV &amp; move to waiting</button>
+      </div>`;
+    el.archiveReady.innerHTML = toolbar + groups.map((g) => `
+      <div class="report" data-group="${escapeHtml(g.key)}">
+        <div class="report-head">
+          <div class="report-who">
+            <div class="report-name">${escapeHtml(g.name)}</div>
+            <div class="report-sub">${g.items.length} expense${g.items.length === 1 ? '' : 's'} · ${escapeHtml(money(g.total, 'USD'))}</div>
+          </div>
+        </div>
+        <div class="report-items">${g.items.map((e) => payExpenseArticle(e, true)).join('')}</div>
+      </div>`).join('');
+  }
+
+  // Stage 2: "Waiting to be paid" — exported, awaiting the actual payment. Finance
+  // bulk-selects (or all) and marks them paid, which updates everyone's app.
+  function renderWaitingToPay(waiting) {
+    if (!el.archiveWaitingWrap) return;
+    if (!waiting.length) {
+      el.archiveWaitingWrap.hidden = true;
+      el.archiveWaiting.innerHTML = '';
+      return;
+    }
+    el.archiveWaitingWrap.hidden = false;
+    const groups = groupBySubmitter(waiting);
+    const totalUsd = waiting.reduce((s, e) => s + (Number(e.amountUsd) || 0), 0);
+    const toolbar = `
+      <div class="pay-toolbar">
+        <label class="pay-selall"><input type="checkbox" data-act="select-all" /> Select all</label>
+        <span class="pay-count">${groups.length} report${groups.length === 1 ? '' : 's'} · ${escapeHtml(money(totalUsd, 'USD'))} waiting</span>
+        <span class="grow"></span>
+        <button class="btn primary small" data-act="mark-selected" disabled>Mark selected paid</button>
+      </div>`;
+    el.archiveWaiting.innerHTML = toolbar + groups.map((g) => `
+      <div class="report" data-group="${escapeHtml(g.key)}" data-total="${g.total}" data-count="${g.items.length}">
+        <div class="report-head">
+          <label class="pay-check"><input type="checkbox" data-act="select-group" aria-label="Select ${escapeHtml(g.name)}" /></label>
+          <div class="report-who">
+            <div class="report-name">${escapeHtml(g.name)}</div>
+            <div class="report-sub">${g.items.length} expense${g.items.length === 1 ? '' : 's'} · ${escapeHtml(money(g.total, 'USD'))}</div>
+          </div>
+          <button class="btn primary small" data-act="mark-paid">Mark paid</button>
+        </div>
+        <div class="report-items">${g.items.map((e) => payExpenseArticle(e, false)).join('')}</div>
+      </div>`).join('');
+  }
+
+  function renderArchive(data) {
+    const paid = data.paid || [];
     if (data.role === 'Finance') {
-      el.archiveReadyWrap.hidden = false;
-      state.archiveReady = ready; // stash for the CSV export
-      if (!ready.length) {
-        el.archiveReady.innerHTML = `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
-      } else {
-        const groups = groupBySubmitter(ready);
-        const totalUsd = ready.reduce((s, e) => s + (Number(e.amountUsd) || 0), 0);
-        const toolbar = `
-          <div class="pay-toolbar">
-            <label class="pay-selall"><input type="checkbox" data-act="select-all" /> Select all</label>
-            <span class="pay-count">${groups.length} report${groups.length === 1 ? '' : 's'} · ${escapeHtml(money(totalUsd, 'USD'))} waiting</span>
-            <span class="grow"></span>
-            <button class="btn ghost small" data-act="export-csv">⤓ Export CSV</button>
-            <button class="btn primary small" data-act="mark-selected" disabled>Mark selected paid</button>
-          </div>`;
-        el.archiveReady.innerHTML = toolbar + groups.map((g) => `
-          <div class="report" data-group="${escapeHtml(g.key)}" data-total="${g.total}" data-count="${g.items.length}">
-            <div class="report-head">
-              <label class="pay-check"><input type="checkbox" data-act="select-group" aria-label="Select ${escapeHtml(g.name)}" /></label>
-              <div class="report-who">
-                <div class="report-name">${escapeHtml(g.name)}</div>
-                <div class="report-sub">${g.items.length} expense${g.items.length === 1 ? '' : 's'} · ${escapeHtml(money(g.total, 'USD'))}</div>
-              </div>
-              <button class="btn primary small" data-act="mark-paid">Mark paid</button>
-            </div>
-            <div class="report-items">
-              ${g.items.map((e) => `
-                <article class="expense" data-id="${escapeHtml(e.id)}">
-                  <div class="expense-top">
-                    <div class="expense-main">
-                      <div class="expense-desc">${cardTitle(e)}</div>
-                      <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
-                    </div>
-                    ${amountBlock(e)}
-                  </div>
-                  <div class="expense-actions">
-                    ${receiptLink(e)}
-                    ${historyBtn(e.id)}
-                    <button class="btn ghost small" data-act="kickback-toggle">Kick back</button>
-                  </div>
-                  <div class="sendback-row">
-                    <input type="text" placeholder="What needs fixing?" data-role="note" maxlength="200" />
-                    <button class="btn primary small" data-act="kickback-confirm">Send back</button>
-                  </div>
-                </article>`).join('')}
-            </div>
-          </div>`).join('');
-      }
+      renderReadyToExport(data.ready || []);
+      renderWaitingToPay(data.waiting || []);
     } else {
       el.archiveReadyWrap.hidden = true;
+      if (el.archiveWaitingWrap) el.archiveWaitingWrap.hidden = true;
     }
-
     el.archivePaid.innerHTML = paid.length
       ? paid.map(paidCard).join('')
       : `<div class="state"><span class="emoji">🗂️</span>No paid expenses yet.</div>`;
+  }
+
+  function afterPaidChange() {
+    state.loaded.dashboard = false; // status counts changed
+    state.loaded.timing = false; // approved→paid clock changed
+    state.loaded.mine = false; // submitters now see "Paid"
+    loadArchive(); // refresh both stages + paid history
   }
 
   async function markPaid(group) {
@@ -3096,25 +3140,15 @@
     buttons.forEach((b) => (b.disabled = true));
     try {
       const res = await api('mark-paid', { method: 'POST', body: { ids } });
-      group.style.transition = 'opacity .25s';
-      group.style.opacity = '0';
-      setTimeout(() => {
-        group.remove();
-        if (!$$('.report', el.archiveReady).length) {
-          el.archiveReady.innerHTML = `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
-        }
-      }, 240);
-      state.loaded.dashboard = false; // status counts changed
-      state.loaded.archive = false; // paid history changed
-      state.loaded.timing = false; // approved→paid clock changed
       toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid 💸`, 'good');
+      afterPaidChange();
     } catch (e) {
       buttons.forEach((b) => (b.disabled = false));
       toast(e.message, 'bad');
     }
   }
 
-  // ---- "Waiting to be paid" queue: CSV export + bulk mark-paid ----
+  // ---- Payment stages: CSV export (→ waiting) + bulk mark-paid ----
 
   // Quote a CSV cell only when it needs it (comma, quote, or newline).
   function csvCell(v) {
@@ -3122,10 +3156,9 @@
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   }
 
-  // Download every approved (waiting-to-be-paid) expense as a CSV — CedarStone's
-  // hand-off into their own payment process. Exports all of them, not just the
-  // selected ones, so it's the full batch.
-  function exportApprovedCsv() {
+  // Download the approved batch as a CSV (CedarStone's hand-off into its own
+  // payment process) and move those reports into "Waiting to be paid".
+  async function exportApprovedCsv() {
     const rows = state.archiveReady || [];
     if (!rows.length) return toast('Nothing approved to export.', 'bad');
     const headers = ['Report', 'Person', 'Email', 'Date', 'Description', 'Merchant',
@@ -3149,57 +3182,53 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast(`Exported ${rows.length} approved expense${rows.length === 1 ? '' : 's'} ⤓`, 'good');
+    // Then move the exported batch into "Waiting to be paid".
+    try {
+      const res = await api('queue-payments', { method: 'POST', body: { ids: rows.map((e) => e.id) } });
+      toast(`Exported ${rows.length} · ${res.queued} moved to waiting-to-be-paid ⤓`, 'good');
+      state.loaded.dashboard = false;
+      state.loaded.timing = false;
+      loadArchive();
+    } catch (e) {
+      toast(`Exported, but couldn't move them to waiting: ${e.message}`, 'bad');
+    }
   }
 
-  // Reflect the current checkbox selection in the toolbar (count, total, button).
+  // Reflect the current checkbox selection in the waiting toolbar.
   function updatePaySelection() {
-    const groups = $$('.report', el.archiveReady);
+    const groups = $$('.report', el.archiveWaiting);
     const checked = groups.filter((g) => {
       const c = $('input[data-act="select-group"]', g);
       return c && c.checked;
     });
     const count = checked.reduce((s, g) => s + (parseInt(g.dataset.count, 10) || 0), 0);
     const total = checked.reduce((s, g) => s + (parseFloat(g.dataset.total) || 0), 0);
-    const btn = $('button[data-act="mark-selected"]', el.archiveReady);
+    const btn = $('button[data-act="mark-selected"]', el.archiveWaiting);
     if (btn) {
       btn.disabled = checked.length === 0;
       btn.textContent = checked.length ? `Mark ${count} paid · ${money(total, 'USD')}` : 'Mark selected paid';
     }
-    const all = $('input[data-act="select-all"]', el.archiveReady);
+    const all = $('input[data-act="select-all"]', el.archiveWaiting);
     if (all) {
       all.checked = groups.length > 0 && checked.length === groups.length;
       all.indeterminate = checked.length > 0 && checked.length < groups.length;
     }
   }
 
-  // Mark every expense in the selected reports paid, in one call.
+  // Mark every expense in the selected waiting reports paid, in one call.
   async function markSelectedPaid() {
-    const groups = $$('.report', el.archiveReady).filter((g) => {
+    const groups = $$('.report', el.archiveWaiting).filter((g) => {
       const c = $('input[data-act="select-group"]', g);
       return c && c.checked;
     });
     if (!groups.length) return;
     const ids = groups.flatMap((g) => $$('.expense', g).map((c) => c.dataset.id));
-    const btn = $('button[data-act="mark-selected"]', el.archiveReady);
+    const btn = $('button[data-act="mark-selected"]', el.archiveWaiting);
     if (btn) btn.disabled = true;
     try {
       const res = await api('mark-paid', { method: 'POST', body: { ids } });
-      groups.forEach((g) => {
-        g.style.transition = 'opacity .25s';
-        g.style.opacity = '0';
-        setTimeout(() => g.remove(), 240);
-      });
-      setTimeout(() => {
-        if (!$$('.report', el.archiveReady).length) {
-          el.archiveReady.innerHTML = `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
-        }
-        updatePaySelection();
-      }, 260);
-      state.loaded.dashboard = false;
-      state.loaded.archive = false;
-      state.loaded.timing = false;
       toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid 💸`, 'good');
+      afterPaidChange();
     } catch (e) {
       if (btn) btn.disabled = false;
       toast(e.message, 'bad');
@@ -3211,7 +3240,7 @@
     const t = event.target;
     if (t.matches('input[data-act="select-all"]')) {
       const on = t.checked;
-      $$('.report input[data-act="select-group"]', el.archiveReady).forEach((c) => { c.checked = on; });
+      $$('.report input[data-act="select-group"]', el.archiveWaiting).forEach((c) => { c.checked = on; });
       updatePaySelection();
     } else if (t.matches('input[data-act="select-group"]')) {
       updatePaySelection();
@@ -3276,6 +3305,7 @@
 
   async function loadArchive() {
     el.archiveReadyWrap.hidden = true;
+    if (el.archiveWaitingWrap) el.archiveWaitingWrap.hidden = true;
     el.archivePaid.innerHTML = `<div class="state">Loading…</div>`;
     try {
       const data = await api('archive');
@@ -3830,7 +3860,7 @@
 
   const EVENT_ICON = {
     Imported: '📥', Submitted: '📝', Approved: '✅', 'Sent back': '↩︎', 'Kicked back': '↩︎',
-    Resubmitted: '🔁', Edited: '✏️', Paid: '💸',
+    Resubmitted: '🔁', Edited: '✏️', 'Queued for payment': '📤', Paid: '💸',
   };
 
   function fmtDateTime(value) {
@@ -4003,7 +4033,10 @@
     if (reviewBody) reviewBody.addEventListener('click', onReviewClick);
     el.auditList.addEventListener('click', onAuditClick);
     el.archiveReady.addEventListener('click', onArchiveClick);
-    el.archiveReady.addEventListener('change', onArchiveChange);
+    if (el.archiveWaiting) {
+      el.archiveWaiting.addEventListener('click', onArchiveClick);
+      el.archiveWaiting.addEventListener('change', onArchiveChange);
+    }
     // One delegated listener covers "History" toggles on every card, everywhere.
     el.app.addEventListener('click', onHistoryClick);
     const refreshers = {
