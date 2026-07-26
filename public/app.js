@@ -2588,6 +2588,31 @@
     }).join('')}</div>`;
   }
 
+  // A count bar chart (reports per month) — like timingBars but whole numbers.
+  function volumeBars(trend) {
+    if (!trend || !trend.some((t) => t.c > 0)) {
+      return `<div class="state">No reports submitted in this window yet.</div>`;
+    }
+    const max = Math.max(...trend.map((t) => t.c)) * 1.15 || 1;
+    return `<div class="timing-bars vol">${trend.map((t, i) => {
+      const now = i === trend.length - 1;
+      const h = t.c === 0 ? 0 : Math.max(4, Math.round((t.c / max) * 100));
+      return `<div class="timing-bar ${now ? 'now' : ''}" title="${escapeHtml(t.m)}: ${t.c} report${t.c === 1 ? '' : 's'}">
+        <span class="tb-val">${t.c}</span>
+        <div class="tb-col" style="height:${h}%"></div>
+        <span class="tb-lab">${escapeHtml(t.m)}</span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  // Volume delta ("3 more than last month") — neutral, since more isn't good or bad.
+  function volumeDelta(now, prev) {
+    if (prev == null) return `<div class="metric-delta muted">First month with data</div>`;
+    const diff = now - prev;
+    if (diff === 0) return `<div class="metric-delta muted">Same as last month</div>`;
+    return `<div class="metric-delta vol">${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)} ${diff > 0 ? 'more' : 'fewer'} than last month</div>`;
+  }
+
   // The delta line under a metric ("0.8 day faster than last month").
   function timingDelta(thisAvg, prevAvg, lowerIsBetter = true) {
     if (thisAvg == null || prevAvg == null) return `<div class="metric-delta muted">Not enough history yet to compare</div>`;
@@ -2602,7 +2627,7 @@
   function renderTiming(d) {
     const body = $('#timing-body');
     if (!body) return;
-    const a = d.approve || {}, p = d.pay || {}, w = d.awaiting || {};
+    const a = d.approve || {}, p = d.pay || {}, w = d.awaiting || {}, v = d.volume || {};
 
     const payMetric = d.paidTrackedInApp
       ? `<div class="metric-big tnum">${days1(p.avgDays)}<span> days avg</span></div>
@@ -2629,9 +2654,18 @@
           ${payMetric}
           <div class="metric-foot">${p.count} report${p.count === 1 ? '' : 's'} measured</div>
         </div>
+        <div class="metric-card vol">
+          <span class="metric-rail"></span>
+          <div class="metric-cap">Reports came in</div>
+          <div class="metric-stage">submitted this month</div>
+          <div class="metric-big tnum">${v.thisMonth == null ? '—' : v.thisMonth}</div>
+          ${volumeDelta(v.thisMonth, v.prevMonth)}
+          <div class="metric-foot">${v.total6mo || 0} in the last 6 months</div>
+        </div>
       </div>
 
       <div class="timing-strip">
+        <div class="ts"><span class="ts-k">Came in this month</span><span class="ts-v tnum">${v.thisMonth == null ? '—' : v.thisMonth}</span></div>
         <div class="ts"><span class="ts-k">Approved this month</span><span class="ts-v tnum">${d.approvedThisMonth}</span></div>
         <div class="ts-div"></div>
         <div class="ts"><span class="ts-k">Awaiting payment</span><span class="ts-v tnum">${w.count}</span></div>
@@ -2648,6 +2682,10 @@
         <div class="timing-chart">
           <div class="tc-head"><h3>Approved → paid</h3><span class="tc-sub">avg days · last 6 months</span></div>
           ${timingBars(d.trend.pay, 'pay')}
+        </div>
+        <div class="timing-chart">
+          <div class="tc-head"><h3>Reports came in</h3><span class="tc-sub">count · last 6 months</span></div>
+          ${volumeBars((v.trend) || [])}
         </div>
       </div>
 

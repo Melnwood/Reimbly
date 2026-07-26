@@ -106,6 +106,29 @@ function summarize(expenses, now = new Date()) {
   };
 }
 
+/**
+ * How many reports "came in" (were submitted) each month — the volume alongside
+ * the speed. Counts Reports by their `Submitted On` month.
+ */
+function reportVolume(reportRecords, now = new Date()) {
+  const byMonth = {};
+  for (const r of reportRecords) {
+    const sub = asDate(r.fields && r.fields['Submitted On']);
+    if (!sub) continue; // unsubmitted drafts haven't "come in"
+    const k = monthKey(sub);
+    byMonth[k] = (byMonth[k] || 0) + 1;
+  }
+  const thisKey = monthKey(now);
+  const prevKey = monthKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)));
+  const trend = lastMonths(now, 6).map((m) => ({ m: m.label, c: byMonth[m.key] || 0 }));
+  return {
+    thisMonth: byMonth[thisKey] || 0,
+    prevMonth: byMonth[prevKey] || 0,
+    total6mo: trend.reduce((s, t) => s + t.c, 0),
+    trend,
+  };
+}
+
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
   if (guard) return guard;
@@ -119,18 +142,21 @@ exports.handler = async (event) => {
       throw err;
     }
 
-    const [records, maps] = await Promise.all([
+    const now = new Date();
+    const [records, reportRecords, maps] = await Promise.all([
       airtable.listRecords(TABLES.EXPENSES, {
         filterByFormula: `OR({Status} = '${STATUS.APPROVED}', {Status} = '${STATUS.REIMBURSED}')`,
       }),
+      airtable.listRecords(TABLES.REPORTS, {}),
       displayMaps(),
     ]);
     const expenses = records.map((r) => shapeExpense(r, maps));
 
-    return ok({ role, ...summarize(expenses, new Date()) });
+    return ok({ role, ...summarize(expenses, now), volume: reportVolume(reportRecords, now) });
   } catch (err) {
     return error(err);
   }
 };
 
 module.exports.summarize = summarize; // exported for a quick sanity check / future test
+module.exports.reportVolume = reportVolume;
