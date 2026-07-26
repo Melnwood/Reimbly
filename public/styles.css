@@ -769,3 +769,19 @@ body.modal-open { overflow: hidden; }
   border: 1px dashed var(--line); background: var(--bg-soft); color: var(--ink-soft); font-size: 0.86rem;
 }
 .timing-note strong { color: var(--ink); }
+
+/* ---------- "Waiting to be paid" queue (Paid screen) ---------- */
+.pay-toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 11px 14px; margin-bottom: 12px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow);
+}
+.pay-selall { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.9rem; cursor: pointer; }
+.pay-selall input { width: 17px; height: 17px; }
+.pay-count { color: var(--ink-soft); font-size: 0.86rem; font-weight: 700; }
+.pay-toolbar .grow { flex: 1 1 auto; }
+.pay-check { display: inline-flex; align-items: center; flex: none; }
+.pay-check input { width: 18px; height: 18px; cursor: pointer; }
+/* keep the person's name next to its checkbox, button pinned right */
+.report-head .report-who { margin-right: auto; }

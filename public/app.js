@@ -2680,13 +2680,28 @@
     const ready = data.ready || [];
     const paid = data.paid || [];
 
-    // "Ready to pay" — grouped by person, Finance marks a whole report paid.
+    // "Waiting to be paid" — approved reports grouped by person. Finance exports
+    // the CSV (their hand-off), then bulk-selects (or all) and marks them paid.
     if (data.role === 'Finance') {
       el.archiveReadyWrap.hidden = false;
-      el.archiveReady.innerHTML = ready.length
-        ? groupBySubmitter(ready).map((g) => `
-          <div class="report" data-group="${escapeHtml(g.key)}">
+      state.archiveReady = ready; // stash for the CSV export
+      if (!ready.length) {
+        el.archiveReady.innerHTML = `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
+      } else {
+        const groups = groupBySubmitter(ready);
+        const totalUsd = ready.reduce((s, e) => s + (Number(e.amountUsd) || 0), 0);
+        const toolbar = `
+          <div class="pay-toolbar">
+            <label class="pay-selall"><input type="checkbox" data-act="select-all" /> Select all</label>
+            <span class="pay-count">${groups.length} report${groups.length === 1 ? '' : 's'} · ${escapeHtml(money(totalUsd, 'USD'))} waiting</span>
+            <span class="grow"></span>
+            <button class="btn ghost small" data-act="export-csv">⤓ Export CSV</button>
+            <button class="btn primary small" data-act="mark-selected" disabled>Mark selected paid</button>
+          </div>`;
+        el.archiveReady.innerHTML = toolbar + groups.map((g) => `
+          <div class="report" data-group="${escapeHtml(g.key)}" data-total="${g.total}" data-count="${g.items.length}">
             <div class="report-head">
+              <label class="pay-check"><input type="checkbox" data-act="select-group" aria-label="Select ${escapeHtml(g.name)}" /></label>
               <div class="report-who">
                 <div class="report-name">${escapeHtml(g.name)}</div>
                 <div class="report-sub">${g.items.length} expense${g.items.length === 1 ? '' : 's'} · ${escapeHtml(money(g.total, 'USD'))}</div>
@@ -2714,8 +2729,8 @@
                   </div>
                 </article>`).join('')}
             </div>
-          </div>`).join('')
-        : `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
+          </div>`).join('');
+      }
     } else {
       el.archiveReadyWrap.hidden = true;
     }
@@ -2741,10 +2756,115 @@
       }, 240);
       state.loaded.dashboard = false; // status counts changed
       state.loaded.archive = false; // paid history changed
+      state.loaded.timing = false; // approved→paid clock changed
       toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid 💸`, 'good');
     } catch (e) {
       buttons.forEach((b) => (b.disabled = false));
       toast(e.message, 'bad');
+    }
+  }
+
+  // ---- "Waiting to be paid" queue: CSV export + bulk mark-paid ----
+
+  // Quote a CSV cell only when it needs it (comma, quote, or newline).
+  function csvCell(v) {
+    const s = v == null ? '' : String(v);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  // Download every approved (waiting-to-be-paid) expense as a CSV — CedarStone's
+  // hand-off into their own payment process. Exports all of them, not just the
+  // selected ones, so it's the full batch.
+  function exportApprovedCsv() {
+    const rows = state.archiveReady || [];
+    if (!rows.length) return toast('Nothing approved to export.', 'bad');
+    const headers = ['Report', 'Person', 'Email', 'Date', 'Description', 'Merchant',
+      'Category', 'Account', 'GL code', 'Amount', 'Currency', 'Amount (USD)', 'Approved on'];
+    const lines = [headers.join(',')];
+    for (const e of rows) {
+      lines.push([
+        e.reportName || '', e.submitterName || '', e.submitterEmail || '', e.date || '',
+        e.description || '', e.merchant || '', e.category || '', e.account || '', e.accountCode || '',
+        e.amount != null ? e.amount : '', e.currency || '', e.amountUsd != null ? e.amountUsd : '',
+        e.decidedOn || '',
+      ].map(csvCell).join(','));
+    }
+    // Prepend a BOM so Excel opens UTF-8 (Czech/Polish names) correctly.
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `approved-expenses-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`Exported ${rows.length} approved expense${rows.length === 1 ? '' : 's'} ⤓`, 'good');
+  }
+
+  // Reflect the current checkbox selection in the toolbar (count, total, button).
+  function updatePaySelection() {
+    const groups = $$('.report', el.archiveReady);
+    const checked = groups.filter((g) => {
+      const c = $('input[data-act="select-group"]', g);
+      return c && c.checked;
+    });
+    const count = checked.reduce((s, g) => s + (parseInt(g.dataset.count, 10) || 0), 0);
+    const total = checked.reduce((s, g) => s + (parseFloat(g.dataset.total) || 0), 0);
+    const btn = $('button[data-act="mark-selected"]', el.archiveReady);
+    if (btn) {
+      btn.disabled = checked.length === 0;
+      btn.textContent = checked.length ? `Mark ${count} paid · ${money(total, 'USD')}` : 'Mark selected paid';
+    }
+    const all = $('input[data-act="select-all"]', el.archiveReady);
+    if (all) {
+      all.checked = groups.length > 0 && checked.length === groups.length;
+      all.indeterminate = checked.length > 0 && checked.length < groups.length;
+    }
+  }
+
+  // Mark every expense in the selected reports paid, in one call.
+  async function markSelectedPaid() {
+    const groups = $$('.report', el.archiveReady).filter((g) => {
+      const c = $('input[data-act="select-group"]', g);
+      return c && c.checked;
+    });
+    if (!groups.length) return;
+    const ids = groups.flatMap((g) => $$('.expense', g).map((c) => c.dataset.id));
+    const btn = $('button[data-act="mark-selected"]', el.archiveReady);
+    if (btn) btn.disabled = true;
+    try {
+      const res = await api('mark-paid', { method: 'POST', body: { ids } });
+      groups.forEach((g) => {
+        g.style.transition = 'opacity .25s';
+        g.style.opacity = '0';
+        setTimeout(() => g.remove(), 240);
+      });
+      setTimeout(() => {
+        if (!$$('.report', el.archiveReady).length) {
+          el.archiveReady.innerHTML = `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
+        }
+        updatePaySelection();
+      }, 260);
+      state.loaded.dashboard = false;
+      state.loaded.archive = false;
+      state.loaded.timing = false;
+      toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid 💸`, 'good');
+    } catch (e) {
+      if (btn) btn.disabled = false;
+      toast(e.message, 'bad');
+    }
+  }
+
+  // Checkbox changes in the waiting-to-be-paid queue (select-all / per-report).
+  function onArchiveChange(event) {
+    const t = event.target;
+    if (t.matches('input[data-act="select-all"]')) {
+      const on = t.checked;
+      $$('.report input[data-act="select-group"]', el.archiveReady).forEach((c) => { c.checked = on; });
+      updatePaySelection();
+    } else if (t.matches('input[data-act="select-group"]')) {
+      updatePaySelection();
     }
   }
 
@@ -2781,6 +2901,9 @@
     const btn = event.target.closest('button[data-act]');
     if (!btn) return;
     const act = btn.dataset.act;
+
+    if (act === 'export-csv') { exportApprovedCsv(); return; }
+    if (act === 'mark-selected') { markSelectedPaid(); return; }
 
     if (act === 'mark-paid') {
       const group = event.target.closest('.report');
@@ -3528,6 +3651,7 @@
     el.approvalsList.addEventListener('click', onApprovalsClick);
     el.auditList.addEventListener('click', onAuditClick);
     el.archiveReady.addEventListener('click', onArchiveClick);
+    el.archiveReady.addEventListener('change', onArchiveChange);
     // One delegated listener covers "History" toggles on every card, everywhere.
     el.app.addEventListener('click', onHistoryClick);
     const refreshers = {
