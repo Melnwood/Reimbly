@@ -1919,14 +1919,31 @@
   }
 
   function dupGroupHtml(g) {
+    const ids = g.items.map((e) => e.id).join(',');
     return `
-      <div class="dup-group">
+      <div class="dup-group" data-ids="${escapeHtml(ids)}">
         <div class="dup-reason">💡 Why flagged: ${escapeHtml(g.reason)}</div>
         ${g.items.map(dupItemHtml).join('')}
+        <div class="dup-actions">
+          <button type="button" class="btn ghost small" data-act="dup-keep">✓ Not a duplicate — keep both</button>
+        </div>
       </div>`;
   }
 
-  function onDuplicatesClick(event) {
+  async function onDuplicatesClick(event) {
+    const keep = event.target.closest('button[data-act="dup-keep"]');
+    if (keep) {
+      const group = keep.closest('.dup-group');
+      const ids = (group && group.dataset.ids ? group.dataset.ids.split(',') : []).filter(Boolean);
+      if (ids.length < 2) return;
+      keep.disabled = true;
+      try {
+        await api('dismiss-duplicate', { method: 'POST', body: { ids } });
+        toast('Got it — kept both. Won’t flag these again.', 'good');
+        loadDuplicates();
+      } catch (e) { toast(e.message, 'bad'); keep.disabled = false; }
+      return;
+    }
     const btn = event.target.closest('button[data-act="dup-delete"]');
     if (!btn) return;
     const id = btn.dataset.id;

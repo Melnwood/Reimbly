@@ -68,8 +68,14 @@ function amountsNear(a, b) {
   return Math.abs(x - y) <= 0.02 * Math.max(x, y); // within 2%
 }
 
+// Has the person already confirmed these two are NOT the same charge?
+function cleared(a, b) {
+  return (a.clearedWith || []).includes(b.id) || (b.clearedWith || []).includes(a.id);
+}
+
 // Same-cost pass: two expenses of the identical amount look like one charge?
 function sameCostSame(a, b) {
+  if (cleared(a, b)) return false;       // person said these are separate
   if (timesConflict(a, b)) return false; // different times on the receipts → not a double
   const d = daysApart(a.date, b.date);
   const diffSrc = a.source && b.source && a.source !== b.source;
@@ -158,7 +164,7 @@ function findDuplicateGroups(items) {
   for (const e of rest) (byDate.get(e.date) || byDate.set(e.date, []).get(e.date)).push(e);
   for (const dayList of byDate.values()) {
     if (dayList.length < 2) continue;
-    for (const g of cluster(dayList, (a, b) => merchantsRelated(nameOf(a), nameOf(b)) && amountsNear(a, b) && !timesConflict(a, b))) {
+    for (const g of cluster(dayList, (a, b) => !cleared(a, b) && merchantsRelated(nameOf(a), nameOf(b)) && amountsNear(a, b) && !timesConflict(a, b))) {
       const gItems = g.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0));
       gItems.forEach((e) => grouped.add(e.id));
       groups.push({ reason: reasonFor(gItems, false), amount: round2(gItems[0].amount || 0), items: gItems });
