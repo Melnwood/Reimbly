@@ -46,6 +46,8 @@ const EVENTS = {
   RESUBMITTED: 'Resubmitted',
   EDITED: 'Edited',
   PAID: 'Paid',
+  AFFIDAVIT_SIGNED: 'Missing-receipt affidavit signed',
+  AFFIDAVIT_APPROVED: 'Missing-receipt affidavit approved',
 };
 
 // Status options that actually exist in the base's Expenses.Status field:
@@ -555,6 +557,12 @@ function shapeExpense(record, maps = {}) {
     // so the browser can show "zł400 · $98.50 · rate 0.2463".
     originalAmount: f['Original Amount'] != null ? Number(f['Original Amount']) : null,
     originalCurrency: f['Original Currency'] || '',
+    // Missing-receipt affidavit: a signed declaration used in place of a receipt.
+    missingReceipt: !!f['Missing Receipt'],
+    affidavitReason: f['Affidavit Reason'] || '',
+    affidavitSignedBy: f['Affidavit Signed By'] || '',
+    affidavitSignedOn: f['Affidavit Signed On'] || null,
+    affidavitStatus: (f['Affidavit Status'] && (f['Affidavit Status'].name || f['Affidavit Status'])) || '',
     category: (maps.category && categoryId && maps.category[categoryId]) || '',
     account: account.name || '',
     accountCode: account.code || '',

@@ -608,6 +608,49 @@
     }
   }
 
+  // ----- Missing-receipt affidavit window -----
+  function openAffidavitModal(id) {
+    const e = (state.mineExpenses || []).find((x) => x.id === id);
+    if (!e) { toast('Open the expense, then try again.', 'bad'); return; }
+    state.affidavitFor = id;
+    const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
+    $('#aff-summary').innerHTML = [
+      ['What', e.merchant || e.description || '(no description)'],
+      ['Amount', amt],
+      ['Date', fmtDate(e.date) || '—'],
+      ['Account', e.account || '—'],
+    ].map(([k, v]) => `<div class="aff-sum-row"><span>${k}</span><strong>${escapeHtml(v)}</strong></div>`).join('');
+    $('#aff-reason').value = e.affidavitReason || '';
+    const name = (state.me && state.me.name) || 'me';
+    $('#aff-statement').innerHTML = `This will be signed by <strong>${escapeHtml(name)}</strong> on <strong>${escapeHtml(fmtDate(new Date().toISOString().slice(0, 10)))}</strong>.`;
+    $('#aff-agree').checked = false;
+    $('#affidavit-modal').hidden = false;
+    document.body.classList.add('modal-open');
+  }
+  function closeAffidavitModal() {
+    const w = $('#affidavit-modal');
+    if (w && !w.hidden) { w.hidden = true; document.body.classList.remove('modal-open'); }
+  }
+  async function submitAffidavit() {
+    const id = state.affidavitFor;
+    if (!id) return;
+    const reason = $('#aff-reason').value.trim();
+    if (!reason) { toast('Please say why there’s no receipt.', 'bad'); return; }
+    if (!$('#aff-agree').checked) { toast('Please check the box to sign.', 'bad'); return; }
+    const btn = $('#aff-submit');
+    btn.disabled = true;
+    try {
+      await api('missing-receipt', { method: 'POST', body: { id, reason, agree: true } });
+      toast('Declaration signed — your approver will sign off on it.', 'good');
+      closeAffidavitModal();
+      await refreshExpenseViews();
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // ---------- Receipt inbox (held email receipts) ----------
 
   async function loadInbox() {
@@ -1172,6 +1215,10 @@
       requestDelete(btn, btn.dataset.id, () => refreshExpenseViews());
       return true;
     }
+    if (act === 'ie-missing') {
+      openAffidavitModal(btn.dataset.id);
+      return true;
+    }
     return false;
   }
 
@@ -1487,6 +1534,24 @@
     return `1 ${fx.currency.toUpperCase()} = $${fx.rate.toFixed(digits)}`;
   }
 
+  // Missing-receipt affidavit: the signed declaration shown read-only in the editor.
+  function affidavitStatusMeta(status) {
+    const s = String(status || 'Pending');
+    if (s === 'Approved') return ['ok', 'Approved'];
+    if (s === 'Denied') return ['bad', 'Denied — please add a receipt'];
+    return ['pending', 'Pending approval'];
+  }
+  function affidavitLine(e) {
+    const [cls, label] = affidavitStatusMeta(e.affidavitStatus);
+    const signed = e.affidavitSignedBy
+      ? `Signed by ${escapeHtml(e.affidavitSignedBy)}${e.affidavitSignedOn ? ` on ${escapeHtml(fmtDate(e.affidavitSignedOn))}` : ''}. `
+      : '';
+    return `<div class="ie-affidavit aff-${cls}">
+      <span class="aff-title">🖊️ No-receipt declaration · ${escapeHtml(label)}</span>
+      <span class="aff-body">${signed}${e.affidavitReason ? `“${escapeHtml(e.affidavitReason)}”` : ''}</span>
+    </div>`;
+  }
+
   // One collapsed expense row that opens into the inline editor. Shared by the
   // Add-expense list and the expenses inside each report card. Expenses over $50
   // are highlighted (those are the ones that need a receipt); if one over $50 is
@@ -1495,7 +1560,7 @@
     const who = e.merchant || e.description || '(no description)';
     const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
     const over = usdAmount(e) >= RECEIPT_THRESHOLD;
-    const needsReceipt = over && !e.receipt;
+    const needsReceipt = over && !e.receipt && !e.missingReceipt;
     const cls = `expense mini${over ? ' over50' : ''}${needsReceipt ? ' needs-receipt' : ''}`;
     // For a foreign expense, stack the bank USD over the original amount + rate.
     const fx = fxInfo(e);
@@ -1510,6 +1575,7 @@
           ${submitterTag(e)}
           ${amtCell}
           ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
+          ${e.missingReceipt ? `<span class="mini-clip" title="No-receipt declaration (${escapeHtml(e.affidavitStatus || 'Pending')})">🖊️</span>` : ''}
           ${needsReceipt ? '<span class="mini-need" title="Over $50 and no receipt yet">needs receipt</span>' : ''}
           ${sourceDot(e.source)}
           <span class="mini-caret" aria-hidden="true">▾</span>
@@ -1580,14 +1646,15 @@
     if (!box) return;
     const over = list.filter((e) => usdAmount(e) >= RECEIPT_THRESHOLD);
     if (!over.length) { box.hidden = true; box.innerHTML = ''; return; }
-    const withR = over.filter((e) => e.receipt).length;
+    // "Covered" means it has a receipt OR a signed no-receipt declaration.
+    const withR = over.filter((e) => e.receipt || e.missingReceipt).length;
     const without = over.length - withR;
     box.hidden = false;
     box.classList.toggle('all-done', without === 0);
     if (without === 0) {
-      box.innerHTML = `<span class="rs-icon">🎉</span><span>All <strong>${over.length}</strong> expense${over.length === 1 ? '' : 's'} over $${RECEIPT_THRESHOLD} have a receipt.</span>`;
+      box.innerHTML = `<span class="rs-icon">🎉</span><span>All <strong>${over.length}</strong> expense${over.length === 1 ? '' : 's'} over $${RECEIPT_THRESHOLD} are covered.</span>`;
     } else {
-      box.innerHTML = `<span class="rs-icon">🧾</span><span>Over $${RECEIPT_THRESHOLD}: <strong class="rs-have">${withR}</strong> ${withR === 1 ? 'has' : 'have'} a receipt · <strong class="rs-need">${without}</strong> still ${without === 1 ? 'needs' : 'need'} one.</span>`;
+      box.innerHTML = `<span class="rs-icon">🧾</span><span>Over $${RECEIPT_THRESHOLD}: <strong class="rs-have">${withR}</strong> covered · <strong class="rs-need">${without}</strong> still ${without === 1 ? 'needs a receipt' : 'need a receipt'}.</span>`;
     }
   }
 
@@ -1645,12 +1712,14 @@
           <div class="ie-receipt">
             ${e.receipt && e.receipt.url
               ? `<a class="receipt-link" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">📎 View receipt</a>`
-              : '<span class="ie-noreceipt">No receipt yet</span>'}
+              : (e.missingReceipt ? '' : '<span class="ie-noreceipt">No receipt yet</span>')}
             <button type="button" class="btn ghost small" data-act="ie-receipt-camera">📷 Take a picture</button>
             <button type="button" class="btn ghost small" data-act="ie-receipt-choose">📎 Add a receipt</button>
+            ${!e.receipt ? `<button type="button" class="btn ghost small" data-act="ie-missing" data-id="${escapeHtml(e.id)}">🖊️ ${e.missingReceipt ? 'Re-sign declaration' : 'No receipt? Declare it'}</button>` : ''}
             <input type="file" class="ie-receipt-input" accept="image/*,application/pdf" hidden />
             <span class="ie-receipt-name file-hint"></span>
           </div>
+          ${e.missingReceipt ? affidavitLine(e) : ''}
         </div>
         <div class="expense-actions">
           <button class="btn primary small" data-act="ie-save" data-id="${escapeHtml(e.id)}">Save</button>
@@ -1968,6 +2037,7 @@
                 </div>
                 ${amountBlock(e)}
               </div>
+              ${e.missingReceipt ? affidavitLine(e) : ''}
               <div class="expense-actions">
                 ${sourceBadge(e.source)}
                 ${receiptLink(e)}
@@ -2996,8 +3066,8 @@
   const PEOPLE_TEMPLATE =
     'Name,Email,Role,Upline,Accounts,Household\n' +
     'Dana Director,director@josiahventure.com,Finance,,,\n' +
-    'Mel Ellenwood,mel@josiahventure.com,Approver,director@josiahventure.com,"9100000, 9200000",Ellenwood\n' +
-    'Amy Ellenwood,amy@josiahventure.com,Staff,director@josiahventure.com,,Ellenwood\n' +
+    'Mel Ellenwood,mel@josiahventure.com,Approver,director@josiahventure.com,"9100000, 9200000",Mel & Amy Ellenwood\n' +
+    'Amy Ellenwood,amy@josiahventure.com,Staff,director@josiahventure.com,,Mel & Amy Ellenwood\n' +
     'Jana Novak,jana@josiahventure.com,Staff,mel@josiahventure.com,,\n';
 
   const PEOPLE_INSTRUCTIONS = [
@@ -3010,7 +3080,7 @@
     '- Role: one of Staff, Approver, or Finance.',
     '- Upline: the email of the person who approves their expenses (leave blank for top-level people).',
     '- Accounts: only for people who may use restricted general-fund accounts — the GL codes separated by commas (e.g. "9100000, 9200000"). Leave blank for everyone else.',
-    '- Household: a shared name (e.g. a surname) for people whose expenses are pooled and reimbursed together, like a married couple. Give both people the SAME word. Leave blank for everyone who is on their own.',
+    '- Household: a shared label for people whose expenses are pooled and reimbursed together, like a married couple. Give both people the SAME text. Make it UNIQUE to that couple — not just a surname if other families share it (e.g. "Mel & Amy Ellenwood", not "Ellenwood"). Leave blank for everyone who is on their own.',
     '',
     'One person per row. Output plain CSV.',
   ].join('\n');
@@ -3237,6 +3307,11 @@
     $('#rescan-close').addEventListener('click', closeRescanModal);
     $('#rescan-modal').addEventListener('click', (e) => { if (e.target.id === 'rescan-modal') closeRescanModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeRescanModal(); });
+    $('#aff-close').addEventListener('click', closeAffidavitModal);
+    $('#aff-cancel').addEventListener('click', closeAffidavitModal);
+    $('#aff-submit').addEventListener('click', submitAffidavit);
+    $('#affidavit-modal').addEventListener('click', (e) => { if (e.target.id === 'affidavit-modal') closeAffidavitModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAffidavitModal(); });
     $('#add-sort').addEventListener('click', onSortClick);
     updateSortHeader();
     $('#new-report-btn').addEventListener('click', createReportPrompt);

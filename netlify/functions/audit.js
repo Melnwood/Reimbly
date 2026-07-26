@@ -19,7 +19,11 @@ function auditExpense(e) {
   if (e.amountUsd == null) issues.push('USD not calculated');
   if (!e.date) issues.push('Missing date');
   if (!e.account) issues.push('Missing account');
-  if (!e.receipt) issues.push('Missing receipt');
+  if (!e.receipt) {
+    // A signed & approved no-receipt affidavit stands in for the receipt.
+    if (!e.missingReceipt) issues.push('Missing receipt');
+    else if (e.affidavitStatus !== 'Approved') issues.push('No-receipt affidavit pending approval');
+  }
   return issues;
 }
 

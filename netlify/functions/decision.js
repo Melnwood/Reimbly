@@ -62,6 +62,15 @@ exports.handler = async (event) => {
     };
     if (note) fields['Approver Note'] = note;
 
+    // If this expense rode in on a missing-receipt affidavit, the approver is
+    // also signing off on that: approving approves it; sending back denies it.
+    const affStatus = current.fields && current.fields['Affidavit Status'];
+    const affStatusName = affStatus && (affStatus.name || affStatus);
+    const hasPendingAffidavit = current.fields && current.fields['Missing Receipt'] && affStatusName !== 'Approved';
+    if (hasPendingAffidavit) {
+      fields['Affidavit Status'] = decision === 'approve' ? 'Approved' : 'Denied';
+    }
+
     const [updated, maps] = await Promise.all([
       airtable.updateRecord(TABLES.EXPENSES, id, fields),
       displayMaps(),
@@ -72,6 +81,9 @@ exports.handler = async (event) => {
       user,
       note,
     });
+    if (decision === 'approve' && hasPendingAffidavit) {
+      await logActivity({ expenseId: id, event: EVENTS.AFFIDAVIT_APPROVED, user });
+    }
 
     const shaped = shapeExpense(updated, maps);
     try {

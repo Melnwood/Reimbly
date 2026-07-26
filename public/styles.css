@@ -466,15 +466,35 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 }
 .ie-fx-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #1e4fa3; }
 .ie-fx-body { font-size: 0.88rem; color: var(--ink); }
+
+/* Missing-receipt affidavit — read-out in the editor + the sign window */
+.ie-affidavit { border-radius: var(--radius-sm); padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+.ie-affidavit.aff-pending { background: #fff6ea; border: 1px solid #f5d9a8; }
+.ie-affidavit.aff-ok { background: #eefaf0; border: 1px solid #bfe6c8; }
+.ie-affidavit.aff-bad { background: #fdecec; border: 1px solid #f3c2c2; }
+.aff-title { font-size: 0.74rem; font-weight: 800; }
+.aff-pending .aff-title { color: #9a5300; }
+.aff-ok .aff-title { color: #15803d; }
+.aff-bad .aff-title { color: #b91c1c; }
+.aff-body { font-size: 0.86rem; color: var(--ink); }
+.aff-summary { background: var(--bg-soft); border-radius: var(--radius-sm); padding: 10px 12px; margin: 4px 0 12px; display: flex; flex-direction: column; gap: 4px; }
+.aff-sum-row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.9rem; }
+.aff-sum-row span { color: var(--ink-soft); }
+.aff-statement { font-size: 0.85rem; color: var(--ink-soft); margin: 10px 0; }
+#affidavit-modal .check-row { display: flex; gap: 9px; align-items: flex-start; font-size: 0.9rem; margin: 4px 0 4px; }
+#affidavit-modal textarea { font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fffdfa; width: 100%; resize: vertical; }
 .ie-row { display: flex; gap: 10px; }
 .ie-f { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
 .ie-f > span { font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
 .ie-cur { flex: 0 0 96px; }
 .ie-f input, .ie-f select { font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fffdfa; width: 100%; }
 .ie-hint { font-size: 0.78rem; color: var(--ink-soft); }
-.ie-receipt { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+/* Stack the receipt options vertically so "No receipt yet" sits above the
+   three buttons (Take a picture / Add a receipt / Declare) — cleaner on a phone. */
+.ie-receipt { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.ie-receipt .btn { width: 100%; }
 .ie-noreceipt { font-size: 0.88rem; color: var(--ink-soft); }
-.ie-receipt-name { flex-basis: 100%; }
+.ie-receipt-name { font-size: 0.82rem; }
 .mini-clip { font-size: 0.85rem; }
 
 /* Per-expense report picker on the Add-expense list */
