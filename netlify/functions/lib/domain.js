@@ -227,24 +227,6 @@ async function resolveCategoryId(name) {
   );
 }
 
-// Resolve a GL expense code (e.g. "7412101") to its Categories record id, creating
-// the record the first time a code is actually used. Keyed on the GL Code — not
-// the name — because different codes share names (e.g. "Credit Card Fees" is both
-// 7111200 and 8220000), so matching by name would merge them.
-async function resolveOrCreateCategory({ code, name }) {
-  const c = String(code || '').trim();
-  if (!c) return null;
-  const existing = await airtable.findFirst(TABLES.CATEGORIES, {
-    // `& ''` coerces the field to text so the match works whether GL Code is a
-    // text or a number field in the base.
-    filterByFormula: `({GL Code} & '') = '${esc(c)}'`,
-  });
-  if (existing) return existing.id;
-  const label = name ? `${c} – ${String(name).trim()}` : c;
-  const created = await airtable.createRecord(TABLES.CATEGORIES, { Category: label, 'GL Code': c });
-  return created.id;
-}
-
 // Resolve a GL account code (e.g. "8394000") to its record id.
 async function resolveAccountId(code) {
   if (!code) return null;
@@ -713,7 +695,6 @@ module.exports = {
   isApprover,
   resolveCurrencyId,
   resolveCategoryId,
-  resolveOrCreateCategory,
   resolveAccountId,
   listAccounts,
   staffMap,

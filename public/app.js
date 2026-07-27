@@ -476,59 +476,11 @@
       const data = await api('options');
       state.accounts = (data && data.accounts) || [];
       state.mileageRates = (data && data.mileageRates) || [];
-      state.categorySets = (data && data.categorySets) || { general: [], standard: [] };
-      state.generalFundCode = (data && data.generalFundCode) || '010000';
       populateAccounts();
       populateRates();
-      populateCategoryPicker();
     } catch (e) {
       $('#f-account').innerHTML = '<option value="">Couldn’t load accounts — refresh</option>';
     }
-  }
-
-  // The GL category set for an account code: General Fund → 7-series, else 8-series.
-  function categoriesForAccountCode(code) {
-    const sets = state.categorySets || {};
-    const key = String(code || '').trim() === String(state.generalFundCode || '010000') ? 'general' : 'standard';
-    return sets[key] || [];
-  }
-
-  // Fill the category type-to-search box with the set for the chosen account.
-  // Until an account is picked there's nothing to choose from, so it stays off.
-  function populateCategoryPicker() {
-    const input = $('#f-category');
-    const list = $('#cat-list');
-    const hint = $('#cat-hint');
-    if (!input || !list) return;
-    const accountCode = ($('#f-account') && $('#f-account').value) || '';
-    const cats = accountCode ? categoriesForAccountCode(accountCode) : [];
-    if (!accountCode) {
-      list.innerHTML = '';
-      input.value = '';
-      input.disabled = true;
-      input.placeholder = 'Choose the account first…';
-      if (hint) hint.textContent = '';
-      return;
-    }
-    list.innerHTML = cats.map((c) => `<option value="${escapeHtml(c.code + ' – ' + c.name)}"></option>`).join('');
-    input.disabled = false;
-    input.placeholder = 'Type a code or name, e.g. “lodging” or “7412”';
-    if (hint) hint.textContent = `${cats.length} codes for this account`;
-  }
-
-  // Turn what's typed in the category box into a valid GL code, or '' if it isn't
-  // one of this account's codes. Accepts "7412101 – Name", a bare code, or a name.
-  function selectedCategoryCode() {
-    const input = $('#f-category');
-    if (!input) return '';
-    const raw = (input.value || '').trim();
-    if (!raw) return '';
-    const cats = categoriesForAccountCode(($('#f-account') && $('#f-account').value) || '');
-    const codePart = (raw.split(/[–-]/)[0] || '').trim();
-    const hit = cats.find((c) => c.code === codePart)
-      || cats.find((c) => `${c.code} – ${c.name}` === raw)
-      || cats.find((c) => c.name.toLowerCase() === raw.toLowerCase());
-    return hit ? hit.code : null; // null = typed something that isn't a valid code
   }
 
   // ---------- Expense type: receipt vs mileage ----------
@@ -909,7 +861,7 @@
     if (s.amount != null) $('#f-amount').value = s.amount;
     if (s.currency && hasOption('#f-currency', s.currency)) $('#f-currency').value = s.currency;
     if (s.date) $('#f-date').value = s.date; // receipt date beats today's default
-    if (s.account && hasOption('#f-account', s.account)) { $('#f-account').value = s.account; populateCategoryPicker(); }
+    if (s.account && hasOption('#f-account', s.account)) $('#f-account').value = s.account;
     if (s.merchant) $('#f-business').value = s.merchant;
     if (s.description || s.merchant) $('#f-description').value = s.description || s.merchant;
     state.scanTime = s.time || ''; // carried through to save, for repeat-charge matching
@@ -1081,12 +1033,6 @@
       body = { amount, currency, account, date, description, merchant };
     }
 
-    // GL expense category (optional). null means they typed something that isn't
-    // one of this account's codes — stop so it isn't silently dropped.
-    const catCode = selectedCategoryCode();
-    if (catCode === null) return toast('Pick an expense category from the list, or clear the box.', 'bad');
-    if (catCode) body.categoryCode = catCode;
-
     // A brand-new expense can go straight into a report (then it waits there,
     // Unsubmitted, until the report is submitted).
     const reportId = !editing ? ($('#f-report') && $('#f-report').value) : '';
@@ -1207,11 +1153,6 @@
     $('#f-amount').value = e.amount != null ? e.amount : '';
     if (e.currency && hasOption('#f-currency', e.currency)) $('#f-currency').value = e.currency;
     if (e.accountCode && hasOption('#f-account', e.accountCode)) $('#f-account').value = e.accountCode;
-    // Category set follows the account; prefill only if the existing category is a
-    // valid code for it (old free-text categories just start blank).
-    populateCategoryPicker();
-    $('#f-category').value = e.category || '';
-    if (selectedCategoryCode() === null) $('#f-category').value = '';
     $('#f-date').value = e.date || '';
     $('#f-business').value = e.merchant || '';
     $('#f-description').value = e.description || '';
@@ -1231,7 +1172,6 @@
     state.scanTime = '';
     el.form.reset();
     $('#f-date').value = new Date().toISOString().slice(0, 10);
-    populateCategoryPicker(); // account is cleared → reset the category box
     el.receiptName.textContent = '';
     $('#submit-title').textContent = 'New expense';
     el.submitBtn.textContent = 'Submit expense';
@@ -4170,7 +4110,6 @@
     updateSortHeader();
     $('#new-report-btn').addEventListener('click', createReportPrompt);
     $('#f-report').addEventListener('change', onFormReportChange);
-    $('#f-account').addEventListener('change', populateCategoryPicker);
     $('#import-choose').addEventListener('click', () => el.importFile.click());
     $('#import-template').addEventListener('click', downloadTemplate);
     $('#import-copy').addEventListener('click', copyImportInstructions);

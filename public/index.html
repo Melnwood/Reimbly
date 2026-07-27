@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Rembly" />
-    <link rel="stylesheet" href="styles.css?v=20260727b" />
+    <link rel="stylesheet" href="styles.css?v=20260727" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -184,16 +184,6 @@
                   <input id="f-date" name="date" type="date" required />
                 </label>
               </div>
-
-              <label class="field">
-                <span class="field-label-row">
-                  <span>Expense category <em class="opt">(the GL code)</em></span>
-                  <span id="cat-hint" class="opt cat-hint"></span>
-                </span>
-                <input id="f-category" name="category" list="cat-list" autocomplete="off"
-                       placeholder="Choose the account first…" disabled />
-                <datalist id="cat-list"></datalist>
-              </label>
 
               <label class="field mode-receipt">
                 <span>Business <em class="opt">(where you spent)</em></span>
@@ -573,6 +563,6 @@
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260727b"></script>
+    <script src="app.js?v=20260727"></script>
   </body>
 </html>

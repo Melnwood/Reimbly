@@ -24,9 +24,7 @@ const {
   getReportById,
   reportOwnedBy,
   householdScope,
-  resolveOrCreateCategory,
 } = require('./lib/domain');
-const { isValidCategoryCode, categoryName } = require('./lib/categories');
 const notify = require('./lib/notify');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024; // ~8 MB decoded
@@ -98,18 +96,6 @@ exports.handler = async (event) => {
     }
     const accountId = acct.id;
 
-    // Optional GL expense category. It must belong to the chosen account's set
-    // (General Fund → 7-series, otherwise 8-series); the record is created the
-    // first time a code is used.
-    let categoryId = null;
-    const categoryCode = String(body.categoryCode || '').trim();
-    if (categoryCode) {
-      if (!isValidCategoryCode(account, categoryCode)) {
-        throw badRequest('That expense category isn’t valid for this account.');
-      }
-      categoryId = await resolveOrCreateCategory({ code: categoryCode, name: categoryName(categoryCode) });
-    }
-
     // Optional: drop this new expense straight into one of the person's reports.
     // A brand-new expense that's going into a report starts Unsubmitted (Draft)
     // so it waits for the report to be submitted; a stand-alone expense goes
@@ -139,7 +125,6 @@ exports.handler = async (event) => {
       ...mileageFields,
     };
     if (reportLink) fields.Report = [reportLink];
-    if (categoryId) fields.Category = [categoryId];
     if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
     // Time read off the photo (HH:MM) — helps tell apart repeat charges like tolls.
