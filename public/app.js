@@ -1385,9 +1385,35 @@
       return;
     }
     const id = btn.dataset.id;
-    if (act === 'report-submit') submitReport(id, btn);
+    if (act === 'jump-fix') jumpToFix(id);
+    else if (act === 'report-submit') submitReport(id, btn);
     else if (act === 'report-rename') renameReportUi(id);
     else if (act === 'report-delete') deleteReportUi(id);
+  }
+
+  // From the "sent back" banner: open the right report, open the exact expense
+  // into its editable fields, scroll to it and flash it — so the fix is one tap.
+  function jumpToFix(id) {
+    const e = (state.mineExpenses || []).find((x) => x.id === id);
+    if (!e || !el.reportsList) return;
+    if (e.reportId) {
+      const card = el.reportsList.querySelector(`.report-card[data-report="${e.reportId}"]`);
+      const body = card && $('.rc-body', card);
+      if (body && body.hasAttribute('hidden')) { body.removeAttribute('hidden'); card.classList.add('open'); }
+    }
+    const exp = el.reportsList.querySelector(`.expense[data-id="${id}"]`);
+    if (!exp) return;
+    const details = $('.mini-details', exp);
+    const row = $('.mini-row', exp);
+    if (details && details.hasAttribute('hidden')) {
+      buildInlineEdit(details, id); // open straight into the editable fields
+      details.removeAttribute('hidden');
+      if (row) row.setAttribute('aria-expanded', 'true');
+      exp.classList.add('open');
+    }
+    exp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    exp.classList.add('flash');
+    setTimeout(() => exp.classList.remove('flash'), 1600);
   }
 
   async function submitReport(id, btn) {
@@ -1630,7 +1656,8 @@
     const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
     const over = usdAmount(e) >= RECEIPT_THRESHOLD;
     const needsReceipt = over && !e.receipt && !e.missingReceipt;
-    const cls = `expense mini${over ? ' over50' : ''}${needsReceipt ? ' needs-receipt' : ''}`;
+    const sentBack = e.status === 'Rejected';
+    const cls = `expense mini${over ? ' over50' : ''}${needsReceipt ? ' needs-receipt' : ''}${sentBack ? ' sent-back' : ''}`;
     // For a foreign expense, stack the bank USD over the original amount + rate.
     const fx = fxInfo(e);
     const amtCell = fx
@@ -1646,9 +1673,11 @@
           ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
           ${e.missingReceipt ? `<span class="mini-clip" title="No-receipt declaration (${escapeHtml(e.affidavitStatus || 'Pending')})">🖊️</span>` : ''}
           ${needsReceipt ? '<span class="mini-need" title="Over $50 and no receipt yet">needs receipt</span>' : ''}
+          ${sentBack ? '<span class="mini-sentback">↩︎ sent back</span>' : ''}
           ${sourceDot(e.source)}
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
+        ${sentBack && e.notes ? `<div class="mini-fixnote">“${escapeHtml(e.notes)}” <span class="mini-fixcta">— tap to fix</span></div>` : ''}
         <div class="mini-details" hidden></div>
       </article>`;
   }
@@ -2001,18 +2030,24 @@
     const { items, total, counts, status } = reportRollup(r.id);
     const badge = status === 'Empty' ? '<span class="badge empty">Empty</span>' : statusBadge(status);
     const canSubmit = counts.unsubmitted > 0;
+    // A report with sent-back items opens automatically, and those items float to
+    // the very top of the report so they're the first thing you see and fix.
+    const hasFix = items.some((e) => e.status === 'Rejected');
+    const ordered = hasFix
+      ? [...items.filter((e) => e.status === 'Rejected'), ...sortExpenses(items.filter((e) => e.status !== 'Rejected'))]
+      : sortExpenses(items);
     return `
-      <div class="report-card" data-report="${escapeHtml(r.id)}">
+      <div class="report-card${hasFix ? ' has-fix open' : ''}" data-report="${escapeHtml(r.id)}">
         <button type="button" class="rc-head" data-act="report-toggle">
           <div class="rc-main">
-            <div class="rc-name">${escapeHtml(r.name)}${r.ownerName && firstNameOf(r.ownerName).toLowerCase() !== firstNameOf((state.me && state.me.name) || '').toLowerCase() ? `<span class="mini-who-tag">${escapeHtml(firstNameOf(r.ownerName))}</span>` : ''}</div>
+            <div class="rc-name">${escapeHtml(r.name)}${r.ownerName && firstNameOf(r.ownerName).toLowerCase() !== firstNameOf((state.me && state.me.name) || '').toLowerCase() ? `<span class="mini-who-tag">${escapeHtml(firstNameOf(r.ownerName))}</span>` : ''}${hasFix ? '<span class="rc-fixtag">↩︎ needs your fix</span>' : ''}</div>
             <div class="rc-sub">${items.length} expense${items.length === 1 ? '' : 's'} · ${escapeHtml(money(total, 'USD'))}</div>
           </div>
           ${badge}
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
-        <div class="rc-body" hidden>
-          ${items.length ? sortExpenses(items).map(expenseRowHtml).join('') : '<div class="state small">No expenses yet — add some on the “Add expense” tab, then pick this report.</div>'}
+        <div class="rc-body"${hasFix ? '' : ' hidden'}>
+          ${items.length ? ordered.map(expenseRowHtml).join('') : '<div class="state small">No expenses yet — add some on the “Add expense” tab, then pick this report.</div>'}
           <div class="rc-actions">
             ${canSubmit ? `<button class="btn primary small" data-act="report-submit" data-id="${escapeHtml(r.id)}">Submit report for approval</button>` : ''}
             <button class="link-btn" data-act="report-rename" data-id="${escapeHtml(r.id)}">Rename</button>
@@ -2050,8 +2085,13 @@
     if (sentBack.length) {
       html += `<div class="fix-banner">
         <div class="fix-head">↩︎ ${sentBack.length} expense${sentBack.length === 1 ? '' : 's'} sent back — needs your fix</div>
-        ${sentBack.map((e) => `<div class="fix-item"><span class="fix-who">${escapeHtml(e.merchant || e.description || '(no description)')}</span>${e.notes ? `<span class="fix-note">“${escapeHtml(e.notes)}”</span>` : ''}</div>`).join('')}
-        <div class="fix-tip">Open the report below, fix ${sentBack.length === 1 ? 'it' : 'them'}, then hit <b>Submit report for approval</b> again.</div>
+        ${sentBack.map((e) => `<button type="button" class="fix-item" data-act="jump-fix" data-id="${escapeHtml(e.id)}">
+          <span class="fix-who">${escapeHtml(e.merchant || e.description || '(no description)')}</span>
+          ${e.reportName ? `<span class="fix-in">in ${escapeHtml(e.reportName)}</span>` : ''}
+          ${e.notes ? `<span class="fix-note">“${escapeHtml(e.notes)}”</span>` : ''}
+          <span class="fix-go">Fix →</span>
+        </button>`).join('')}
+        <div class="fix-tip">Tap one to jump straight to it. Fix ${sentBack.length === 1 ? 'it' : 'them'}, then hit <b>Submit report for approval</b> again.</div>
       </div>`;
     }
     if (!reports.length) {

@@ -946,8 +946,24 @@ body.modal-open { overflow: hidden; }
   border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
 }
 .fix-head { font-weight: 800; color: var(--warn); font-size: 0.98rem; margin-bottom: 8px; }
-.fix-item { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 5px 0; border-top: 1px dashed color-mix(in srgb, var(--warn) 24%, var(--line)); }
+.fix-item { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; width: 100%; text-align: left; padding: 8px 6px; margin: 0 -6px; border: 0; border-top: 1px dashed color-mix(in srgb, var(--warn) 24%, var(--line)); border-radius: 8px; background: none; font: inherit; color: inherit; cursor: pointer; }
+.fix-item:hover { background: color-mix(in srgb, var(--warn) 12%, var(--card)); }
 .fix-who { font-weight: 700; font-size: 0.9rem; }
+.fix-in { color: var(--ink-soft); font-size: 0.82rem; }
 .fix-note { color: var(--ink-soft); font-size: 0.85rem; font-style: italic; }
+.fix-go { margin-left: auto; font-weight: 800; font-size: 0.85rem; color: var(--warn); white-space: nowrap; }
 .fix-tip { margin-top: 9px; font-size: 0.84rem; color: var(--ink-soft); }
 .fix-tip b { color: var(--ink); }
+
+/* A report with sent-back items: header tag + the items marked and pulled to top. */
+.rc-fixtag { display: inline-block; margin-left: 8px; font-size: 0.72rem; font-weight: 800; color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--card)); padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
+.report-card.has-fix { border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+.expense.mini.sent-back { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 8%, var(--card)); }
+.mini-sentback { font-size: 0.72rem; font-weight: 800; color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, var(--card)); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.mini-fixnote { padding: 2px 16px 10px; color: var(--warn); font-size: 0.85rem; font-style: italic; }
+.mini-fixcta { color: var(--ink-soft); font-style: normal; font-weight: 700; }
+.expense.flash { animation: fix-flash 1.6s ease-out; }
+@keyframes fix-flash {
+  0%, 30% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 55%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
