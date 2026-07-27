@@ -161,16 +161,7 @@ const STANDARD = [
   { code: "8542000", name: "Tuition" },
   { code: "8580000", name: "Office Furnishings/Equipment" },];
 
-// A placeholder so an expense can always be coded even when the exact GL code
-// isn't known or hasn't been loaded yet — Finance/CedarStone assigns the real one
-// later. Mirrors the accounting system's own "Expense Code Needed" option. It's
-// valid for every account, and sorts to the top of each list.
-const NEEDS_CODE = { code: '0000000', name: 'Expense Code Needed' };
-
-const CATEGORY_SETS = {
-  general: [NEEDS_CODE, ...GENERAL],
-  standard: [NEEDS_CODE, ...STANDARD],
-};
+const CATEGORY_SETS = { general: GENERAL, standard: STANDARD };
 
 // Which set an account uses. General Fund → 7-series; everything else → 8-series.
 function categorySetKey(accountCode) {

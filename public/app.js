@@ -510,14 +510,10 @@
       if (hint) hint.textContent = '';
       return;
     }
-    // The "Expense Code Needed" placeholder shows by name only (no 0000000 prefix).
-    list.innerHTML = cats.map((c) => {
-      const label = c.code === '0000000' ? c.name : `${c.code} – ${c.name}`;
-      return `<option value="${escapeHtml(label)}"></option>`;
-    }).join('');
+    list.innerHTML = cats.map((c) => `<option value="${escapeHtml(c.code + ' – ' + c.name)}"></option>`).join('');
     input.disabled = false;
     input.placeholder = 'Type a code or name, e.g. “lodging” or “7412”';
-    if (hint) hint.textContent = `${cats.length - 1} codes · or “Expense Code Needed”`;
+    if (hint) hint.textContent = `${cats.length} codes for this account`;
   }
 
   // Turn what's typed in the category box into a valid GL code, or '' if it isn't
@@ -1085,11 +1081,11 @@
       body = { amount, currency, account, date, description, merchant };
     }
 
-    // GL expense category — required. '' = nothing chosen; null = typed something
-    // that isn't one of this account's codes. Either way, stop and ask.
+    // GL expense category (optional). null means they typed something that isn't
+    // one of this account's codes — stop so it isn't silently dropped.
     const catCode = selectedCategoryCode();
-    if (!catCode) return toast(catCode === null ? 'Pick an expense category from the list.' : 'Choose an expense category (use “Expense Code Needed” if you’re not sure).', 'bad');
-    body.categoryCode = catCode;
+    if (catCode === null) return toast('Pick an expense category from the list, or clear the box.', 'bad');
+    if (catCode) body.categoryCode = catCode;
 
     // A brand-new expense can go straight into a report (then it waits there,
     // Unsubmitted, until the report is submitted).

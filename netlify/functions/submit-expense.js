@@ -98,15 +98,17 @@ exports.handler = async (event) => {
     }
     const accountId = acct.id;
 
-    // GL expense category — required. It must belong to the chosen account's set
+    // Optional GL expense category. It must belong to the chosen account's set
     // (General Fund → 7-series, otherwise 8-series); the record is created the
-    // first time a code is used. "Expense Code Needed" is always a valid choice.
+    // first time a code is used.
+    let categoryId = null;
     const categoryCode = String(body.categoryCode || '').trim();
-    if (!categoryCode) throw badRequest('Please choose an expense category.');
-    if (!isValidCategoryCode(account, categoryCode)) {
-      throw badRequest('That expense category isn’t valid for this account.');
+    if (categoryCode) {
+      if (!isValidCategoryCode(account, categoryCode)) {
+        throw badRequest('That expense category isn’t valid for this account.');
+      }
+      categoryId = await resolveOrCreateCategory({ code: categoryCode, name: categoryName(categoryCode) });
     }
-    const categoryId = await resolveOrCreateCategory({ code: categoryCode, name: categoryName(categoryCode) });
 
     // Optional: drop this new expense straight into one of the person's reports.
     // A brand-new expense that's going into a report starts Unsubmitted (Draft)

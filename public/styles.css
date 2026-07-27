@@ -916,9 +916,6 @@ body.modal-open { overflow: hidden; }
 .rv-rc-open:hover { text-decoration: underline; }
 @media (max-width: 900px) { .rv-split { grid-template-columns: 1fr; } .rv-preview { position: static; } }
 
-.req { color: var(--danger); font-weight: 800; }
-.cat-hint { font-size: 0.78rem; }
-
 .rv-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 .rv-sendback { display: flex; gap: 8px; margin-top: 12px; }
 .rv-sendback input { flex: 1; padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.9rem; }
