@@ -23,7 +23,9 @@ const {
   getReportById,
   reportOwnedBy,
   householdScope,
+  resolveOrCreateCategory,
 } = require('./lib/domain');
+const { isValidCategoryCode, categoryName } = require('./lib/categories');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -111,6 +113,21 @@ exports.handler = async (event) => {
       Currency: [currencyId],
       Account: [accountId],
     };
+
+    // GL expense category — when supplied, it must be valid for the account's set;
+    // an explicit empty value clears it.
+    if (Object.prototype.hasOwnProperty.call(body, 'categoryCode')) {
+      const categoryCode = String(body.categoryCode || '').trim();
+      if (!categoryCode) {
+        fields.Category = [];
+      } else {
+        if (!isValidCategoryCode(account, categoryCode)) {
+          throw badRequest('That expense category isn’t valid for this account.');
+        }
+        const categoryId = await resolveOrCreateCategory({ code: categoryCode, name: categoryName(categoryCode) });
+        if (categoryId) fields.Category = [categoryId];
+      }
+    }
 
     // Optionally move the expense into (or out of) a report in the same save, so
     // filing it happens together with the edits — no separate step.
