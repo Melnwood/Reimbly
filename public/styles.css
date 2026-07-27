@@ -184,12 +184,15 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
   padding: 10px 14px; margin-bottom: 18px; font-weight: 600; font-size: 0.9rem;
 }
 
-.content { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px) 64px; }
+/* Fill the whole screen on desktop. On a big monitor the old centered column
+   left huge empty margins; the data screens (dashboard, timing, review,
+   waiting-to-be-paid) all read better using the full width. Only the side
+   padding keeps content off the very edges. */
+.content { flex: 1; width: 100%; max-width: none; margin: 0 auto; padding: clamp(20px, 4vw, 36px) clamp(16px, 3vw, 48px) 64px; }
 
-/* The New Expense / Import form reads best at a comfortable width, not stretched
-   across a big monitor — so cap just that entry panel while the data screens
-   (dashboard, timing, review, waiting-to-be-paid) spread to fill the laptop. */
-.add-panel { max-width: 760px; }
+/* The New Expense / Import form is the exception: long text fields are hard to
+   read stretched across a wide monitor, so cap just that entry panel. */
+.add-panel { max-width: 820px; }
 
 /* ---------- Panels & forms ---------- */
 .panel {
@@ -888,6 +891,31 @@ body.modal-open { overflow: hidden; }
 .rv-ytd { margin-top: 14px; padding: 11px 14px; border-radius: var(--radius-sm); border: 1px dashed var(--line); background: color-mix(in srgb, var(--bg-soft) 50%, var(--card)); color: var(--ink-soft); font-size: 0.84rem; }
 .rv-ytd b { color: var(--ink); }
 .rv-ytd.hot { border-style: solid; border-color: color-mix(in srgb, var(--warn) 38%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, var(--card)); }
+/* Report detail: clickable expense list on the left, receipt preview on the right. */
+.rv-split { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; margin-top: 12px; align-items: start; }
+.rv-exp-col { display: flex; flex-direction: column; }
+.rv-exp { cursor: pointer; width: 100%; text-align: left; font: inherit; color: inherit; }
+.rv-exp:hover { border-color: color-mix(in srgb, var(--brand) 30%, var(--line)); }
+.rv-exp.on { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); background: color-mix(in srgb, var(--brand-soft) 45%, var(--card)); }
+.rv-exp.flagged.on { box-shadow: inset 0 0 0 1px var(--warn); border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--card)); }
+
+.rv-preview { position: sticky; top: 78px; background: color-mix(in srgb, var(--bg-soft) 40%, var(--card)); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 15px 16px; }
+.rv-pv-empty { color: var(--ink-soft); text-align: center; padding: 44px 12px; }
+.rv-pv-head h4 { margin: 0; font-size: 1.05rem; }
+.rv-pv-meta { color: var(--ink-soft); font-size: 0.82rem; margin-top: 3px; }
+.rv-pv-amt { font-weight: 800; font-size: 1.25rem; margin: 10px 0 12px; }
+.rv-pv-orig { color: var(--ink-soft); font-weight: 600; font-size: 0.85rem; }
+.rv-pv-flag { border-radius: var(--radius-sm); padding: 11px 13px; font-size: 0.86rem; }
+.rv-pv-flag.warn { background: color-mix(in srgb, var(--warn) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--warn) 32%, var(--line)); color: var(--warn); }
+.rv-pv-flag .rv-q { color: var(--ink-soft); font-style: italic; margin-top: 5px; }
+.rv-pv-ok { color: #0a7a6d; font-weight: 700; font-size: 0.9rem; padding: 6px 0; }
+.rv-rc { margin-top: 4px; }
+.rv-rc-img { width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--line); background: #fff; display: block; }
+.rv-rc-frame { width: 100%; height: 480px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; }
+.rv-rc-open { display: inline-block; margin-top: 9px; font-weight: 700; color: var(--brand-ink); font-size: 0.85rem; text-decoration: none; }
+.rv-rc-open:hover { text-decoration: underline; }
+@media (max-width: 900px) { .rv-split { grid-template-columns: 1fr; } .rv-preview { position: static; } }
+
 .rv-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 .rv-sendback { display: flex; gap: 8px; margin-top: 12px; }
 .rv-sendback input { flex: 1; padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.9rem; }

@@ -2590,6 +2590,7 @@
 
   let reviewReports = [];
   let reviewSel = null;
+  let reviewExpSel = null; // the expense whose receipt/detail is open in the preview
 
   const isMileage = (e) => e.distance != null || e.mileageRate != null;
   // The one signal that makes a line "need a look": a missing-receipt affidavit,
@@ -2639,28 +2640,63 @@
 
   const daysAgo = (n) => (n === 0 ? 'today' : n === 1 ? '1 day ago' : `${n} days ago`);
 
+  // A compact, clickable expense row. Clicking opens its receipt + full detail in
+  // the preview panel on the right — no second click to see the receipt.
   function reviewExpRow(e) {
     const flag = expenseFlag(e);
-    let orig = '';
-    if (e.originalAmount != null && e.originalCurrency) orig = ` <span class="rv-orig">${escapeHtml(e.originalAmount.toLocaleString())} ${escapeHtml(e.originalCurrency)}</span>`;
-    else if (e.currency && e.currency !== 'USD' && e.amount != null) orig = ` <span class="rv-orig">${escapeHtml(e.amount.toLocaleString())} ${escapeHtml(e.currency)}</span>`;
     const title = e.description || e.merchant || e.category || 'Expense';
     const meta = [e.category, e.account, fmtDateShort(e.date)].filter(Boolean).map(escapeHtml).join(' · ');
-    let note = '', tag = '';
+    let tag;
+    if (flag && flag.kind === 'affidavit') tag = '<span class="rv-chip flag">missing receipt</span>';
+    else if (flag && flag.kind === 'noreceipt') tag = '<span class="rv-chip flag">no receipt</span>';
+    else if (isMileage(e)) tag = '<span class="rv-ok">✓ mileage</span>';
+    else tag = e.receipt ? '<span class="rv-ok">✓ receipt</span>' : '';
+    const on = reviewExpSel === e.id ? ' on' : '';
+    return `<button class="rv-exp${flag ? ' flagged' : ''}${on}" data-rv-exp="${escapeHtml(e.id)}">
+      <div class="rv-exp-main"><div class="rv-desc">${escapeHtml(title)}</div><div class="rv-sub">${meta}</div></div>
+      <div class="rv-exp-right"><span class="rv-amt tnum">${escapeHtml(money(e.amountUsd, 'USD'))}</span>${tag}</div>
+    </button>`;
+  }
+
+  // The receipt itself, shown inline (image, or an embedded viewer for PDFs).
+  function receiptViewer(e) {
+    if (!e.receipt) return '';
+    const isPdf = /\.pdf$/i.test(e.receipt.filename || '');
+    const media = isPdf
+      ? `<iframe class="rv-rc-frame" src="${escapeHtml(e.receipt.url)}" title="Receipt"></iframe>`
+      : `<img class="rv-rc-img" src="${escapeHtml(e.receipt.url)}" alt="Receipt for ${escapeHtml(e.description || e.merchant || 'expense')}" loading="lazy" />`;
+    return `<div class="rv-rc">${media}<a class="rv-rc-open" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">Open full size ↗</a></div>`;
+  }
+
+  // The right-hand preview: the selected expense's details with its receipt open.
+  function reviewPreviewHTML(e) {
+    if (!e) return '<div class="rv-pv-empty">Pick an expense on the left to see its receipt and details here.</div>';
+    const flag = expenseFlag(e);
+    const title = e.description || e.merchant || e.category || 'Expense';
+    const meta = [e.category, e.account, e.date ? fmtDate(e.date) : ''].filter(Boolean).map(escapeHtml).join(' · ');
+    let orig = '';
+    if (e.originalAmount != null && e.originalCurrency) orig = ` · ${escapeHtml(e.originalAmount.toLocaleString())} ${escapeHtml(e.originalCurrency)}`;
+    else if (e.currency && e.currency !== 'USD' && e.amount != null) orig = ` · ${escapeHtml(e.amount.toLocaleString())} ${escapeHtml(e.currency)}`;
+
+    let body;
     if (flag && flag.kind === 'affidavit') {
       const who = e.affidavitSignedBy || e.person || '';
       const when = e.affidavitSignedOn ? ` on ${escapeHtml(fmtDate(e.affidavitSignedOn))}` : '';
-      note = `<div class="rv-note"><span class="rv-chip flag">Missing receipt</span><div class="rv-note-body"><b>Signed affidavit${who ? ` by ${escapeHtml(who)}` : ''}${when}.</b> ${e.affidavitReason ? `<span class="rv-q">“${escapeHtml(e.affidavitReason)}”</span>` : '<span class="rv-q">No reason given.</span>'}</div></div>`;
+      body = `<div class="rv-pv-flag warn"><b>Missing receipt — signed affidavit${who ? ` by ${escapeHtml(who)}` : ''}${when}.</b>${e.affidavitReason ? `<div class="rv-q">“${escapeHtml(e.affidavitReason)}”</div>` : '<div class="rv-q">No reason given.</div>'}</div>`;
     } else if (flag && flag.kind === 'noreceipt') {
-      note = `<div class="rv-note"><span class="rv-chip flag">No receipt</span><div class="rv-note-body">No receipt attached and no affidavit signed.</div></div>`;
+      body = '<div class="rv-pv-flag warn"><b>No receipt attached and no affidavit signed.</b><div>This one needs a receipt or a signed missing-receipt declaration before it can be approved.</div></div>';
+    } else if (isMileage(e)) {
+      const unit = escapeHtml(e.distanceUnit || 'mi');
+      const dist = e.distance != null ? `${e.distance.toLocaleString()} ${unit}` : '';
+      const rate = e.mileageRate != null ? ` × ${e.mileageRate}/${unit}` : '';
+      body = `<div class="rv-pv-ok">✓ Mileage claim${dist ? ` — ${dist}${rate}` : ''}. No receipt needed.</div>`;
     } else {
-      tag = isMileage(e) ? '<span class="rv-ok">✓ mileage</span>' : (e.receipt ? '<span class="rv-ok">✓ receipt attached</span>' : '');
+      body = receiptViewer(e) || '<div class="rv-pv-ok">✓ Receipt attached.</div>';
     }
-    return `<div class="rv-exp ${flag ? 'flagged' : ''}">
-      <div class="rv-exp-main"><div class="rv-desc">${escapeHtml(title)}</div><div class="rv-sub">${meta}</div></div>
-      <div class="rv-exp-right"><span class="rv-amt tnum">${escapeHtml(money(e.amountUsd, 'USD'))}${orig}</span>${tag}</div>
-      ${note}
-    </div>`;
+    return `
+      <div class="rv-pv-head"><h4>${escapeHtml(title)}</h4><div class="rv-pv-meta">${meta}</div></div>
+      <div class="rv-pv-amt tnum">${escapeHtml(money(e.amountUsd, 'USD'))}<span class="rv-pv-orig">${orig}</span></div>
+      ${body}`;
   }
 
   function reviewDetailHTML(r) {
@@ -2670,6 +2706,10 @@
     const banner = r.clear
       ? `<div class="rv-banner clear"><span class="rv-bic">✓</span><div><h4>All ${r.count} item${r.count === 1 ? '' : 's'} in order.</h4><p>Every expense has a receipt or a signed affidavit. You're good to approve.</p></div></div>`
       : `<div class="rv-banner flag"><span class="rv-bic">!</span><div><h4>${verified} of ${r.count} in order · ${flagged.length} need${flagged.length > 1 ? '' : 's'} a look.</h4><p>Everything else is fine — you only weigh in on the highlighted ${flagged.length > 1 ? 'ones' : 'one'}.</p></div></div>`;
+    // Default the open expense to the first one that needs a look (so the receipt
+    // they most need to see is already showing), else the first expense.
+    if (!r.expenses.some((e) => e.id === reviewExpSel)) reviewExpSel = ((flagged[0] || r.expenses[0]) || {}).id || null;
+    const selected = r.expenses.find((e) => e.id === reviewExpSel) || null;
     const flaggedHtml = flagged.length ? `<div class="rv-group">Needs your attention</div>${flagged.map(reviewExpRow).join('')}` : '';
     const cleanHtml = clean.length ? `<div class="rv-group">In order — ${clean.length}</div>${clean.map(reviewExpRow).join('')}` : '';
     const ytd = r.ytd >= 5
@@ -2677,7 +2717,12 @@
       : (r.ytd ? `<div class="rv-ytd">${escapeHtml(r.person)} has signed <b>${r.ytd} missing-receipt affidavit${r.ytd > 1 ? 's' : ''}</b> this year — within normal.</div>` : '');
     return `
       <div class="rv-detail-head"><h3>${escapeHtml(r.name)}</h3><div class="rv-detail-sub">${escapeHtml(r.person)} · ${r.count} item${r.count === 1 ? '' : 's'} · ${escapeHtml(money(r.total, 'USD'))} · submitted ${daysAgo(r.days)}</div></div>
-      ${banner}${flaggedHtml}${cleanHtml}${ytd}
+      ${banner}
+      <div class="rv-split">
+        <div class="rv-exp-col">${flaggedHtml}${cleanHtml}</div>
+        <div class="rv-preview" id="rv-preview">${reviewPreviewHTML(selected)}</div>
+      </div>
+      ${ytd}
       <div class="rv-actions">
         <button class="btn ghost" data-act="sendback-toggle" data-key="${escapeHtml(r.key)}">Send back</button>
         <button class="btn ${r.clear ? 'good' : 'primary'}" data-act="approve-report" data-key="${escapeHtml(r.key)}">Approve report</button>
@@ -2800,8 +2845,21 @@
       }
       return;
     }
+    // Clicking an expense opens its receipt + detail in the preview panel.
+    const exp = event.target.closest('[data-rv-exp]');
+    if (exp) {
+      reviewExpSel = exp.getAttribute('data-rv-exp');
+      const rep = reviewReports.find((x) => x.key === reviewSel);
+      const e = rep && rep.expenses.find((x) => x.id === reviewExpSel);
+      const pv = document.getElementById('rv-preview');
+      if (pv && e) pv.innerHTML = reviewPreviewHTML(e);
+      $$('[data-rv-exp]').forEach((b) => b.classList.toggle('on', b.getAttribute('data-rv-exp') === reviewExpSel));
+      return;
+    }
     const item = event.target.closest('[data-review-sel]');
-    if (item) { reviewSel = item.getAttribute('data-review-sel'); renderReview(); }
+    // A new report resets which expense is open, so it defaults to that report's
+    // first flag.
+    if (item) { reviewSel = item.getAttribute('data-review-sel'); reviewExpSel = null; renderReview(); }
   }
 
   // ---------- Timing / turnaround ----------
