@@ -9,12 +9,22 @@ const {
   CATEGORY_SETS, categorySetKey, categoriesForAccount, isValidCategoryCode, categoryName,
 } = require('../netlify/functions/lib/categories');
 
+const real = (cats) => cats.filter((c) => c.code !== '0000000'); // drop the placeholder
+
 test('General Fund (010000) uses the 7-series; every other account the 8-series', () => {
   assert.equal(categorySetKey('010000'), 'general');
   assert.equal(categorySetKey('002060'), 'standard');
   assert.equal(categorySetKey(''), 'standard');
-  assert.ok(categoriesForAccount('010000').every((c) => c.code.startsWith('7')));
-  assert.ok(categoriesForAccount('002060').every((c) => c.code.startsWith('8')));
+  assert.ok(real(categoriesForAccount('010000')).every((c) => c.code.startsWith('7')));
+  assert.ok(real(categoriesForAccount('002060')).every((c) => c.code.startsWith('8')));
+});
+
+test('"Expense Code Needed" is a valid choice for every account', () => {
+  assert.equal(isValidCategoryCode('010000', '0000000'), true);
+  assert.equal(isValidCategoryCode('002060', '0000000'), true);
+  assert.equal(categoryName('0000000'), 'Expense Code Needed');
+  // It sorts to the top of each list.
+  assert.equal(categoriesForAccount('010000')[0].code, '0000000');
 });
 
 test('isValidCategoryCode enforces the account\'s own set', () => {
