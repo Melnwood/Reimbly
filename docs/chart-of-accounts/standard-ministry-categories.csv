@@ -1,0 +1,52 @@
+code,name
+8147000,Business Meals
+8210000,Exchange Fees / Bank Charges
+8220000,Credit Card Fees
+8241000,Medical Premiums
+8243000,Children's Education
+8244000,Language Education
+8331000,Office - General
+8332000,Office - Equipment
+8333000,Office - Supplies
+8334000,Printing & Publication
+8335100,Computer Equipment
+8335200,Computer Programs
+8335300,Computer Support / Repairs
+8336000,Film & Development
+8337000,Books/Literature/Subscription
+8338000,Camp Supplies
+8341000,Telephone Home
+8342000,Telephone Cell
+8343000,Telephone Internet
+8344000,Telephone Other
+8350000,Postage & Shipping
+8370000,Equipment
+8391000,Travel Airfare
+8392000,Travel Automobile
+8393000,Travel Hotel
+8394000,Travel Meals
+8395000,Travel Public Transportation
+8396000,Travel Other
+8397000,Travel Visa
+8398000,Travel Train
+8399000,Travel rental vehicle
+8400000,Conferences
+8410000,JV Women's Retreat
+8410610,Concentric Travel
+8410611,Concentric Summit Travel
+8410650,Other Concentric Expenses
+8410660,Concentric Contractor Payments
+8430000,Miscellaneous
+8440000,Summer Interns
+8450000,Supporter Gifts
+8460000,Hospitality
+8470000,Startup Costs
+8480000,Communications
+8490000,Camps General
+8500000,Believers Aid
+8510000,Ministry Supplies
+8520000,Prayer Letter
+8530000,Relief Aid
+8540000,Training
+8542000,Tuition
+8580000,Office Furnishings/Equipment
