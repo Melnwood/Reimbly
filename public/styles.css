@@ -962,8 +962,10 @@ body.modal-open { overflow: hidden; }
 .mini-sentback { font-size: 0.72rem; font-weight: 800; color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, var(--card)); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .mini-fixnote { padding: 2px 16px 10px; color: var(--warn); font-size: 0.85rem; font-style: italic; }
 .mini-fixcta { color: var(--ink-soft); font-style: normal; font-weight: 700; }
+/* A background pulse (not box-shadow — the report card clips overflow, which would
+   hide an outer glow). Clearly visible when you jump to a sent-back item. */
 .expense.flash { animation: fix-flash 1.6s ease-out; }
 @keyframes fix-flash {
-  0%, 30% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 55%, transparent); }
-  100% { box-shadow: 0 0 0 0 transparent; }
+  0%, 25% { background: color-mix(in srgb, var(--warn) 34%, var(--card)); }
+  100% { background: color-mix(in srgb, var(--warn) 8%, var(--card)); }
 }

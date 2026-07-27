@@ -1402,7 +1402,12 @@
       if (body && body.hasAttribute('hidden')) { body.removeAttribute('hidden'); card.classList.add('open'); }
     }
     const exp = el.reportsList.querySelector(`.expense[data-id="${id}"]`);
-    if (!exp) return;
+    if (!exp) {
+      // Shouldn't happen (the item lives in its report), but never leave the tap
+      // feeling dead — point them at the report instead.
+      toast('Open the report below and look for the item marked “sent back”.', 'bad');
+      return;
+    }
     const details = $('.mini-details', exp);
     const row = $('.mini-row', exp);
     if (details && details.hasAttribute('hidden')) {
@@ -1412,6 +1417,8 @@
       exp.classList.add('open');
     }
     exp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    exp.classList.remove('flash');
+    void exp.offsetWidth; // restart the animation even on a repeat tap
     exp.classList.add('flash');
     setTimeout(() => exp.classList.remove('flash'), 1600);
   }
