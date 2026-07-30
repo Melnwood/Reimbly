@@ -945,14 +945,18 @@ body.modal-open { overflow: hidden; }
   border: 1px solid color-mix(in srgb, var(--warn) 34%, var(--line));
   border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
 }
-.fix-head { font-weight: 800; color: var(--warn); font-size: 0.98rem; margin-bottom: 8px; }
-.fix-item { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; width: 100%; text-align: left; padding: 8px 6px; margin: 0 -6px; border: 0; border-top: 1px dashed color-mix(in srgb, var(--warn) 24%, var(--line)); border-radius: 8px; background: none; font: inherit; color: inherit; cursor: pointer; }
-.fix-item:hover { background: color-mix(in srgb, var(--warn) 12%, var(--card)); }
+.fix-head { font-weight: 800; color: var(--warn); font-size: 0.98rem; margin-bottom: 10px; }
+/* Each sent-back item is its own card that opens the editor inline when tapped. */
+.fix-list { display: flex; flex-direction: column; gap: 8px; }
+.fix-row { background: color-mix(in srgb, var(--warn) 8%, var(--card)); }
+.fix-item { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; width: 100%; text-align: left; padding: 11px 13px; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+.fix-item:hover { background: color-mix(in srgb, var(--warn) 10%, transparent); }
 .fix-who { font-weight: 700; font-size: 0.9rem; }
 .fix-in { color: var(--ink-soft); font-size: 0.82rem; }
 .fix-note { color: var(--ink-soft); font-size: 0.85rem; font-style: italic; }
 .fix-go { margin-left: auto; font-weight: 800; font-size: 0.85rem; color: var(--warn); white-space: nowrap; }
-.fix-tip { margin-top: 9px; font-size: 0.84rem; color: var(--ink-soft); }
+.fix-row .mini-caret { color: var(--warn); transition: transform 0.15s; }
+.fix-tip { margin-top: 11px; font-size: 0.84rem; color: var(--ink-soft); }
 .fix-tip b { color: var(--ink); }
 
 /* A report with sent-back items: header tag + the items marked and pulled to top. */

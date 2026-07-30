@@ -1385,42 +1385,9 @@
       return;
     }
     const id = btn.dataset.id;
-    if (act === 'jump-fix') jumpToFix(id);
-    else if (act === 'report-submit') submitReport(id, btn);
+    if (act === 'report-submit') submitReport(id, btn);
     else if (act === 'report-rename') renameReportUi(id);
     else if (act === 'report-delete') deleteReportUi(id);
-  }
-
-  // From the "sent back" banner: open the right report, open the exact expense
-  // into its editable fields, scroll to it and flash it — so the fix is one tap.
-  function jumpToFix(id) {
-    const e = (state.mineExpenses || []).find((x) => x.id === id);
-    if (!e || !el.reportsList) return;
-    if (e.reportId) {
-      const card = el.reportsList.querySelector(`.report-card[data-report="${e.reportId}"]`);
-      const body = card && $('.rc-body', card);
-      if (body && body.hasAttribute('hidden')) { body.removeAttribute('hidden'); card.classList.add('open'); }
-    }
-    const exp = el.reportsList.querySelector(`.expense[data-id="${id}"]`);
-    if (!exp) {
-      // Shouldn't happen (the item lives in its report), but never leave the tap
-      // feeling dead — point them at the report instead.
-      toast('Open the report below and look for the item marked “sent back”.', 'bad');
-      return;
-    }
-    const details = $('.mini-details', exp);
-    const row = $('.mini-row', exp);
-    if (details && details.hasAttribute('hidden')) {
-      buildInlineEdit(details, id); // open straight into the editable fields
-      details.removeAttribute('hidden');
-      if (row) row.setAttribute('aria-expanded', 'true');
-      exp.classList.add('open');
-    }
-    exp.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    exp.classList.remove('flash');
-    void exp.offsetWidth; // restart the animation even on a repeat tap
-    exp.classList.add('flash');
-    setTimeout(() => exp.classList.remove('flash'), 1600);
   }
 
   async function submitReport(id, btn) {
@@ -2092,13 +2059,18 @@
     if (sentBack.length) {
       html += `<div class="fix-banner">
         <div class="fix-head">↩︎ ${sentBack.length} expense${sentBack.length === 1 ? '' : 's'} sent back — needs your fix</div>
-        ${sentBack.map((e) => `<button type="button" class="fix-item" data-act="jump-fix" data-id="${escapeHtml(e.id)}">
-          <span class="fix-who">${escapeHtml(e.merchant || e.description || '(no description)')}</span>
-          ${e.reportName ? `<span class="fix-in">in ${escapeHtml(e.reportName)}</span>` : ''}
-          ${e.notes ? `<span class="fix-note">“${escapeHtml(e.notes)}”</span>` : ''}
-          <span class="fix-go">Fix →</span>
-        </button>`).join('')}
-        <div class="fix-tip">Tap one to jump straight to it. Fix ${sentBack.length === 1 ? 'it' : 'them'}, then hit <b>Submit report for approval</b> again.</div>
+        <div class="fix-list">
+        ${sentBack.map((e) => `<article class="expense mini sent-back fix-row" data-id="${escapeHtml(e.id)}">
+          <button type="button" class="fix-item" data-act="toggle" aria-expanded="false">
+            <span class="fix-who">${escapeHtml(e.merchant || e.description || '(no description)')}</span>
+            ${e.reportName ? `<span class="fix-in">in ${escapeHtml(e.reportName)}</span>` : ''}
+            ${e.notes ? `<span class="fix-note">“${escapeHtml(e.notes)}”</span>` : ''}
+            <span class="fix-go">Fix</span><span class="mini-caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="mini-details" hidden></div>
+        </article>`).join('')}
+        </div>
+        <div class="fix-tip">Tap one to open it right here, fix it, and hit <b>Save</b> — it goes straight back for approval.</div>
       </div>`;
     }
     if (!reports.length) {
