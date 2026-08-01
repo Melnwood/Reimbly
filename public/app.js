@@ -145,7 +145,7 @@
     try {
       state.config = await api('config', { auth: false });
     } catch (e) {
-      el.boot.innerHTML = `<p>Rembly isn't configured yet.<br /><small>${escapeHtml(e.message)}</small></p>`;
+      el.boot.innerHTML = `<p>Reimbly isn't configured yet.<br /><small>${escapeHtml(e.message)}</small></p>`;
       return;
     }
     initGoogle();
@@ -253,7 +253,7 @@
     try {
       const cred = await navigator.credentials.create({ publicKey: {
         challenge: rand(16),
-        rp: { name: 'Rembly', id: location.hostname },
+        rp: { name: 'Reimbly', id: location.hostname },
         user: { id: new TextEncoder().encode(state.me.email), name: state.me.email, displayName: state.me.name || state.me.email },
         pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
         authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
@@ -285,7 +285,7 @@
   }
 
   // ---------- Push notifications (iPhone / browser alerts) ----------
-  // Works on Android/desktop browsers and on iOS 16.4+ once Rembly is added to
+  // Works on Android/desktop browsers and on iOS 16.4+ once Reimbly is added to
   // the Home Screen. Feature-flagged by the server's VAPID public key.
 
   let swReg = null;
@@ -1680,7 +1680,7 @@
     return `<span class="dot ${cls}" title="${escapeHtml(statusLabel(status))}"></span>`;
   }
 
-  // How the expense got into Rembly. The colored dot on each row means *source*
+  // How the expense got into Reimbly. The colored dot on each row means *source*
   // (where it came from) — that's what Mel reads at a glance. [emoji, words, colorKey]
   const SOURCE_META = {
     YNAB: ['📊', 'Imported from YNAB', 'ynab'],
@@ -2828,7 +2828,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `rembly-spending-${dash.mode === 'month' ? dash.ym : dash.mode === 'year' ? dash.year : 'range'}.csv`;
+    a.download = `reimbly-spending-${dash.mode === 'month' ? dash.ym : dash.mode === 'year' ? dash.year : 'range'}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -2937,7 +2937,7 @@
     return `<span class="rc-mark ${cls}" style="left:${pct(x)};top:${pct(y)};width:${pct(w)};height:${pct(h)}"><span class="rc-mark-lbl">${escapeHtml(label)}</span></span>`;
   }
 
-  // What Rembly read off the receipt — shown under it so a reviewer can eyeball
+  // What Reimbly read off the receipt — shown under it so a reviewer can eyeball
   // it against the printed figures even when a highlight box is missing.
   function receiptReadLine(e) {
     const amt = (e.originalAmount != null && e.originalCurrency)
@@ -2947,7 +2947,7 @@
     if (amt) parts.push(`<b>${escapeHtml(amt)}</b>`);
     if (e.date) parts.push(escapeHtml(fmtDate(e.date)));
     if (!parts.length) return '';
-    return `<div class="rv-rc-read">Rembly read ${parts.join(' · ')} — check it matches the receipt.</div>`;
+    return `<div class="rv-rc-read">Reimbly read ${parts.join(' · ')} — check it matches the receipt.</div>`;
   }
 
   // The receipt itself, shown inline (image, or an embedded viewer for PDFs), with
@@ -3054,7 +3054,7 @@
     const s = reviewSummary();
     const clearSum = reviewReports.filter((r) => r.clear).reduce((a, r) => a + r.total, 0);
     const banner = s.allClear
-      ? `<div class="rv-clearbanner"><span class="rv-cbic">✓</span><div class="rv-cbtext"><b>${s.allClear} report${s.allClear > 1 ? 's are' : ' is'} all clear — ${escapeHtml(money(clearSum, 'USD'))}</b><span>Rembly checked every receipt. Clear these first, then tackle the ${s.needLook} that need a look.</span></div><button class="btn good" data-act="approve-clear">✓ Approve all ${s.allClear}</button></div>`
+      ? `<div class="rv-clearbanner"><span class="rv-cbic">✓</span><div class="rv-cbtext"><b>${s.allClear} report${s.allClear > 1 ? 's are' : ' is'} all clear — ${escapeHtml(money(clearSum, 'USD'))}</b><span>Reimbly checked every receipt. Clear these first, then tackle the ${s.needLook} that need a look.</span></div><button class="btn good" data-act="approve-clear">✓ Approve all ${s.allClear}</button></div>`
       : '';
     const pane = reviewSel
       ? reviewDetailHTML(reviewReports.find((r) => r.key === reviewSel))
@@ -3286,7 +3286,7 @@
       ? `<div class="metric-big tnum">${days1(p.avgDays)}<span> days avg</span></div>
          ${timingDelta(p.thisMonthAvg, p.prevMonthAvg)}`
       : `<div class="metric-big muted">Not tracked yet</div>
-         <div class="metric-delta muted">No reimbursements have been marked paid in Rembly</div>`;
+         <div class="metric-delta muted">No reimbursements have been marked paid in Reimbly</div>`;
 
     const oldestWarn = w.oldestDays >= 14;
 
@@ -3364,7 +3364,7 @@
         </div>
       </div>
 
-      ${d.paidTrackedInApp ? '' : `<div class="timing-note">To see the <strong>approved → paid</strong> clock, reimbursements need to be marked paid in Rembly — Finance can do that on the <strong>Paid</strong> screen (it also emails the person they've been reimbursed). Until then, that half stays blank.</div>`}`;
+      ${d.paidTrackedInApp ? '' : `<div class="timing-note">To see the <strong>approved → paid</strong> clock, reimbursements need to be marked paid in Reimbly — Finance can do that on the <strong>Paid</strong> screen (it also emails the person they've been reimbursed). Until then, that half stays blank.</div>`}`;
   }
 
   // ---------- Paid / archive ----------
@@ -3532,7 +3532,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = res.filename || 'rembly-intacct-je.xlsx';
+      a.download = res.filename || 'reimbly-intacct-je.xlsx';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -3738,7 +3738,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'rembly-import-template.csv';
+    a.download = 'reimbly-import-template.csv';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -3882,8 +3882,8 @@
   }
 
   const IMPORT_HINTS = {
-    add: 'Upload your budget export (YNAB works — Date, Payee, Outflow, Memo). Rembly turns each row into an Unsubmitted expense and automatically attaches the matching receipt from your email. It flags duplicates and lets you review before anything is added. Nothing goes to your approver until you review them under “My expenses” and hit Submit.',
-    reconcile: 'Upload the list of reimbursable expenses from your budget app. Rembly checks each one against what you’ve already submitted and shows you exactly what’s still missing for the period.',
+    add: 'Upload your budget export (YNAB works — Date, Payee, Outflow, Memo). Reimbly turns each row into an Unsubmitted expense and automatically attaches the matching receipt from your email. It flags duplicates and lets you review before anything is added. Nothing goes to your approver until you review them under “My expenses” and hit Submit.',
+    reconcile: 'Upload the list of reimbursable expenses from your budget app. Reimbly checks each one against what you’ve already submitted and shows you exactly what’s still missing for the period.',
   };
 
   function setImportMode(mode) {
@@ -3927,13 +3927,13 @@
     el.importSummary.innerHTML = `
       <div class="recon-summary ${cls}">
         ${s.missing === 0
-          ? `✓ All ${s.total} expense${s.total === 1 ? '' : 's'} from your budget file are already in Rembly${period}.`
-          : `⚠ ${s.missing} of ${s.total} not in Rembly yet · ${s.matched} already captured${period}.`}
+          ? `✓ All ${s.total} expense${s.total === 1 ? '' : 's'} from your budget file are already in Reimbly${period}.`
+          : `⚠ ${s.missing} of ${s.total} not in Reimbly yet · ${s.matched} already captured${period}.`}
       </div>`;
 
     let html = '';
     if (missing.length) {
-      html += `<h3 class="dash-h">Missing — not in Rembly yet (${missing.length})</h3>`;
+      html += `<h3 class="dash-h">Missing — not in Reimbly yet (${missing.length})</h3>`;
       html += `<p class="import-note">Tick the ones to add. They come in <strong>Unsubmitted</strong> — review them under “My expenses,” then hit Submit to send them for approval.</p>`;
       html += missing.map(importRowHtml).join('');
     }
@@ -3943,7 +3943,7 @@
       }</details>`;
     }
     if (extra.length) {
-      html += `<details class="import-help"><summary>In Rembly but not on your budget list (${extra.length})</summary>${
+      html += `<details class="import-help"><summary>In Reimbly but not on your budget list (${extra.length})</summary>${
         extra.map((x) => reconcileLine(x, escapeHtml(statusLabel(x.status || 'submitted').toLowerCase()))).join('')
       }</details>`;
     }
@@ -4466,7 +4466,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'rembly-people-template.csv';
+    a.download = 'reimbly-people-template.csv';
     document.body.appendChild(a);
     a.click();
     a.remove();

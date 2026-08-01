@@ -7,7 +7,7 @@
 //
 // Env:
 //   RESEND_API_KEY      turn email on (https://resend.com)
-//   NOTIFY_FROM         e.g. "Rembly <rembly@josiahventure.com>" (verified sender)
+//   NOTIFY_FROM         e.g. "Reimbly <rembly@josiahventure.com>" (verified sender)
 //   APP_URL             link back to the app (default the Netlify site)
 //   VAPID_PUBLIC_KEY    turn push on (generate with: npx web-push generate-vapid-keys)
 //   VAPID_PRIVATE_KEY   the matching private key (secret)
@@ -15,7 +15,7 @@
 
 const domain = require('./domain');
 
-const APP_NAME = 'Rembly';
+const APP_NAME = 'Reimbly';
 const appUrl = () => process.env.APP_URL || 'https://reimbly.netlify.app';
 
 const pushOn = () => !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
@@ -45,7 +45,7 @@ function shell({ heading, intro, rows = [], cta, ctaLabel }) {
     ? `<a href="${esc(cta)}" style="display:inline-block;margin-top:8px;background:#e11d74;color:#fff;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:999px">${esc(ctaLabel || 'Open ' + APP_NAME)}</a>`
     : '';
   const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:8px">
-    <div style="font-weight:800;font-size:18px;color:#16203a;letter-spacing:-.02em;margin-bottom:14px">rembly</div>
+    <div style="font-weight:800;font-size:18px;color:#16203a;letter-spacing:-.02em;margin-bottom:14px">reimbly</div>
     <div style="background:#fff;border:1px solid #e4e7f1;border-radius:14px;padding:22px 24px">
       <h1 style="margin:0 0 8px;font-size:19px;color:#16203a">${esc(heading)}</h1>
       <p style="margin:0;color:#59617a;font-size:15px;line-height:1.5">${intro}</p>
@@ -61,7 +61,7 @@ function shell({ heading, intro, rows = [], cta, ctaLabel }) {
 async function sendEmail({ to, subject, html, text }) {
   const key = process.env.RESEND_API_KEY;
   if (!key || !to) return false; // notifications off, or no recipient
-  const from = process.env.NOTIFY_FROM || 'Rembly <onboarding@resend.dev>';
+  const from = process.env.NOTIFY_FROM || 'Reimbly <onboarding@resend.dev>';
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -69,12 +69,12 @@ async function sendEmail({ to, subject, html, text }) {
       body: JSON.stringify({ from, to, subject, html, text }),
     });
     if (!res.ok) {
-      console.error('[rembly] email failed', res.status, await res.text().catch(() => ''));
+      console.error('[reimbly] email failed', res.status, await res.text().catch(() => ''));
       return false;
     }
     return true;
   } catch (e) {
-    console.error('[rembly] email error', e && e.message);
+    console.error('[reimbly] email error', e && e.message);
     return false;
   }
 }
@@ -105,7 +105,7 @@ async function sendPush({ to, title, body, url }) {
     } catch (e) {
       const code = e && e.statusCode;
       if (code === 404 || code === 410) dead.push(sub.endpoint); // gone for good
-      else console.error('[rembly] push failed', code || (e && e.message));
+      else console.error('[reimbly] push failed', code || (e && e.message));
     }
   }));
   if (dead.length) {
@@ -165,7 +165,7 @@ async function submitterApproved({ submitter, expense, count = 1, totalUsd }) {
       : `Good news — your expense was approved.`,
     rows: many ? [] : [['What', labelOf(expense)], ['Amount', amountOf(expense)]].filter((r) => r[1]),
     cta: `${appUrl()}/#mine`,
-    ctaLabel: 'View in Rembly',
+    ctaLabel: 'View in Reimbly',
   });
   await Promise.all([
     sendEmail({ to: submitter.email, subject: many ? `${count} expenses approved` : 'Your expense was approved', html, text }),
