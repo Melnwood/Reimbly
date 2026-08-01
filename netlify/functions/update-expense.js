@@ -24,6 +24,7 @@ const {
   reportOwnedBy,
   householdScope,
 } = require('./lib/domain');
+const { isValidCategory, accountName } = require('./lib/coding');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -83,13 +84,19 @@ exports.handler = async (event) => {
     const merchant = String(body.merchant || '').trim();
     const amount = Number(body.amount);
     const currency = String(body.currency || 'USD').trim().toUpperCase();
-    const account = String(body.account || '').trim();
+    const account = String(body.account || '').trim();       // the GL category code
+    const expenseAccount = String(body.expenseAccount || '').trim(); // optional (main form only)
     const date = String(body.date || '').trim();
 
     if (!description) throw badRequest('Please add a short description.');
     if (!isFinite(amount) || amount <= 0) throw badRequest('Amount must be greater than zero.');
     if (!date) throw badRequest('Please pick the date of the expense.');
-    if (!account) throw badRequest('Please choose the account to charge this to.');
+    if (!account) throw badRequest('Please choose an expense category.');
+    // When the account came along (main form), enforce the fund → category rule.
+    if (expenseAccount) {
+      if (!accountName(expenseAccount)) throw badRequest('That account isn’t recognised.');
+      if (!isValidCategory(expenseAccount, account)) throw badRequest('That category isn’t valid for this account.');
+    }
 
     const currencyId = await resolveCurrencyId(currency);
     if (!currencyId) throw badRequest(`Currency "${currency}" isn't set up in the base yet.`);
@@ -111,6 +118,7 @@ exports.handler = async (event) => {
       Currency: [currencyId],
       Account: [accountId],
     };
+    if (expenseAccount) fields['Expense Account'] = `${expenseAccount} – ${accountName(expenseAccount)}`;
 
     // Optionally move the expense into (or out of) a report in the same save, so
     // filing it happens together with the edits — no separate step.

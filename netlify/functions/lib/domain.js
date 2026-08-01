@@ -572,6 +572,8 @@ function shapeExpense(record, maps = {}) {
     category: (maps.category && categoryId && maps.category[categoryId]) || '',
     account: account.name || '',
     accountCode: account.code || '',
+    // The ExpenseWire Expense Account (fund) the person chose, e.g. "002060 – …".
+    expenseAccount: f['Expense Account'] || '',
     date: f['Expense Date'] || null,
     distance: f.Distance != null ? Number(f.Distance) : null,
     distanceUnit: f['Distance Unit'] || '',

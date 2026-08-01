@@ -25,6 +25,7 @@ const {
   reportOwnedBy,
   householdScope,
 } = require('./lib/domain');
+const { isValidCategory, accountName } = require('./lib/coding');
 const notify = require('./lib/notify');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024; // ~8 MB decoded
@@ -49,7 +50,8 @@ exports.handler = async (event) => {
 
     let description = String(body.description || '').trim();
     const merchant = String(body.merchant || '').trim();
-    const account = String(body.account || '').trim();
+    const account = String(body.account || '').trim();       // the GL category code
+    const expenseAccount = String(body.expenseAccount || '').trim(); // the fund/account
     const date = String(body.date || '').trim();
     const purpose = String(body.purpose || '').trim();
     const mileage = body.mileage && typeof body.mileage === 'object' ? body.mileage : null;
@@ -82,7 +84,10 @@ exports.handler = async (event) => {
 
     if (!description) throw badRequest('Please add a short description.');
     if (!date) throw badRequest('Please pick the date of the expense.');
-    if (!account) throw badRequest('Please choose the account to charge this to.');
+    if (!expenseAccount) throw badRequest('Please choose the account to charge this to.');
+    if (!accountName(expenseAccount)) throw badRequest('That account isn’t recognised.');
+    if (!account) throw badRequest('Please choose an expense category.');
+    if (!isValidCategory(expenseAccount, account)) throw badRequest('That category isn’t valid for this account.');
 
     const receipt = validateReceipt(body.receipt);
 
@@ -125,6 +130,7 @@ exports.handler = async (event) => {
       ...mileageFields,
     };
     if (reportLink) fields.Report = [reportLink];
+    fields['Expense Account'] = `${expenseAccount} – ${accountName(expenseAccount)}`;
     if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
     // Time read off the photo (HH:MM) — helps tell apart repeat charges like tolls.

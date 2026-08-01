@@ -441,21 +441,54 @@
     } catch { /* private mode — no history, that's fine */ }
   }
 
-  function populateAccounts() {
-    const sel = $('#f-account');
-    if (!state.accounts.length) return;
+  // ---- Two-level coding: Account (Expense Type) → Category (GL code) ----
+
+  // The Account box is a type-to-search datalist of every Expense Account,
+  // the person's most-used ones floated to the top.
+  function populateExpenseAccounts() {
+    const list = $('#ea-list');
+    if (!list || !state.expenseAccounts) return;
     const usage = accountUsage();
-    const opt = (a) => `<option value="${escapeHtml(a.code)}">${escapeHtml(a.code)} – ${escapeHtml(a.name)}</option>`;
+    const sorted = state.expenseAccounts.slice()
+      .sort((a, b) => (usage[b.code] || 0) - (usage[a.code] || 0) || a.code.localeCompare(b.code));
+    list.innerHTML = sorted.map((a) => `<option value="${escapeHtml(a.code + ' – ' + a.name)}"></option>`).join('');
+  }
 
-    const frequent = state.accounts
-      .filter((a) => usage[a.code] > 0)
-      .sort((a, b) => usage[b.code] - usage[a.code] || a.code.localeCompare(b.code))
-      .slice(0, 6);
+  // Turn what's typed in the Account box into a real account code, or '' if empty,
+  // or null if it's not one of the accounts.
+  function selectedAccountCode() {
+    const input = $('#f-expense-account');
+    if (!input) return '';
+    const raw = (input.value || '').trim();
+    if (!raw) return '';
+    const list = state.expenseAccounts || [];
+    const codePart = (raw.split(/[–-]/)[0] || '').trim();
+    const hit = list.find((a) => a.code === codePart)
+      || list.find((a) => `${a.code} – ${a.name}` === raw)
+      || list.find((a) => a.name.toLowerCase() === raw.toLowerCase());
+    return hit ? hit.code : null;
+  }
 
-    let html = '<option value="">Choose an account…</option>';
-    if (frequent.length) html += `<optgroup label="Your accounts">${frequent.map(opt).join('')}</optgroup>`;
-    html += `<optgroup label="All accounts">${state.accounts.map(opt).join('')}</optgroup>`;
-    sel.innerHTML = html;
+  // Fill the Category dropdown with the set for the chosen account — General Fund
+  // gets the 7-series, every other account the 8-series. Off until an account is set.
+  function populateCategories() {
+    const sel = $('#f-account'); const hint = $('#ea-hint');
+    if (!sel) return;
+    const code = selectedAccountCode();
+    if (!code) {
+      sel.innerHTML = '<option value="">Choose the account first…</option>';
+      sel.disabled = true;
+      if (hint) hint.textContent = '';
+      return;
+    }
+    const cats = String(code) === String(state.generalFundCode || '010000')
+      ? (state.categories7 || []) : (state.categories8 || []);
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Choose a category…</option>'
+      + cats.map((c) => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.code + ' – ' + c.name)}</option>`).join('');
+    sel.disabled = false;
+    if (cats.some((c) => c.code === cur)) sel.value = cur;
+    if (hint) hint.textContent = `${cats.length} categories`;
   }
 
   function populateRates() {
@@ -476,10 +509,15 @@
       const data = await api('options');
       state.accounts = (data && data.accounts) || [];
       state.mileageRates = (data && data.mileageRates) || [];
-      populateAccounts();
+      state.expenseAccounts = (data && data.expenseAccounts) || [];
+      state.categories7 = (data && data.categories7) || [];
+      state.categories8 = (data && data.categories8) || [];
+      state.generalFundCode = (data && data.generalFundCode) || '010000';
+      populateExpenseAccounts();
+      populateCategories();
       populateRates();
     } catch (e) {
-      $('#f-account').innerHTML = '<option value="">Couldn’t load accounts — refresh</option>';
+      $('#f-account').innerHTML = '<option value="">Couldn’t load — refresh</option>';
     }
   }
 
@@ -861,7 +899,7 @@
     if (s.amount != null) $('#f-amount').value = s.amount;
     if (s.currency && hasOption('#f-currency', s.currency)) $('#f-currency').value = s.currency;
     if (s.date) $('#f-date').value = s.date; // receipt date beats today's default
-    if (s.account && hasOption('#f-account', s.account)) $('#f-account').value = s.account;
+    // The account & category are chosen by hand (the scan can't know the fund).
     if (s.merchant) $('#f-business').value = s.merchant;
     if (s.description || s.merchant) $('#f-description').value = s.description || s.merchant;
     state.scanTime = s.time || ''; // carried through to save, for repeat-charge matching
@@ -1008,11 +1046,16 @@
 
     const editing = !!state.editingId;
     const mileageMode = !editing && state.expenseType === 'mileage';
-    const account = $('#f-account').value;
+    const expenseAccount = selectedAccountCode(); // the fund / expense type
+    const category = $('#f-account').value;       // the GL category, sent as `account`
     const date = $('#f-date').value;
     const description = $('#f-description').value.trim();
     const merchant = $('#f-business').value.trim();
     const file = currentReceipt();
+
+    // Account + category are both required and picked in that order.
+    if (!expenseAccount) return toast(expenseAccount === null ? 'Pick an account from the list.' : 'Choose the account to charge this to.', 'bad');
+    if (!category) return toast('Choose an expense category.', 'bad');
 
     let body;
     if (mileageMode) {
@@ -1021,16 +1064,14 @@
       if (!rate) return toast('Pick a mileage rate.', 'bad');
       if (!(distance > 0)) return toast('Enter the distance you drove.', 'bad');
       if (!date) return toast('Pick the date.', 'bad');
-      if (!account) return toast('Choose the account to charge this to.', 'bad');
-      body = { mileage: { distance, rateId: rate.id }, account, date, description, merchant };
+      body = { mileage: { distance, rateId: rate.id }, account: category, expenseAccount, date, description, merchant };
     } else {
       const amount = parseFloat($('#f-amount').value);
       const currency = $('#f-currency').value;
       if (!description) return toast('Add a short description.', 'bad');
       if (!(amount > 0)) return toast('Amount must be greater than zero.', 'bad');
       if (!date) return toast('Pick the date of the expense.', 'bad');
-      if (!account) return toast('Choose the account to charge this to.', 'bad');
-      body = { amount, currency, account, date, description, merchant };
+      body = { amount, currency, account: category, expenseAccount, date, description, merchant };
     }
 
     // A brand-new expense can go straight into a report (then it waits there,
@@ -1050,9 +1091,9 @@
 
       const result = await api(editing ? 'update-expense' : 'submit-expense', { method: 'POST', body });
 
-      bumpAccountUsage(account); // learn this person's go-to accounts
+      bumpAccountUsage(expenseAccount); // learn this person's go-to accounts
       cancelEdit(); // resets form, date, labels, banner, editingId
-      populateAccounts(); // re-sort with the freshly used account near the top
+      populateExpenseAccounts(); // re-sort with the freshly used account near the top
 
       if (editing) {
         toast(result.resubmitted ? 'Saved and resubmitted for approval.' : 'Changes saved.', 'good');
@@ -1152,6 +1193,9 @@
     $('.type-toggle').hidden = true;
     $('#f-amount').value = e.amount != null ? e.amount : '';
     if (e.currency && hasOption('#f-currency', e.currency)) $('#f-currency').value = e.currency;
+    // Account first, then its category list, then the saved category.
+    $('#f-expense-account').value = e.expenseAccount || '';
+    populateCategories();
     if (e.accountCode && hasOption('#f-account', e.accountCode)) $('#f-account').value = e.accountCode;
     $('#f-date').value = e.date || '';
     $('#f-business').value = e.merchant || '';
@@ -1172,6 +1216,7 @@
     state.scanTime = '';
     el.form.reset();
     $('#f-date').value = new Date().toISOString().slice(0, 10);
+    populateCategories(); // account cleared → reset the category dropdown
     el.receiptName.textContent = '';
     $('#submit-title').textContent = 'New expense';
     el.submitBtn.textContent = 'Submit expense';
@@ -4082,6 +4127,7 @@
     updateSortHeader();
     $('#new-report-btn').addEventListener('click', createReportPrompt);
     $('#f-report').addEventListener('change', onFormReportChange);
+    $('#f-expense-account').addEventListener('input', populateCategories);
     $('#import-choose').addEventListener('click', () => el.importFile.click());
     $('#import-template').addEventListener('click', downloadTemplate);
     $('#import-copy').addEventListener('click', copyImportInstructions);

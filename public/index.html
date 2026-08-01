@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Rembly" />
-    <link rel="stylesheet" href="styles.css?v=20260730a" />
+    <link rel="stylesheet" href="styles.css?v=20260801a" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -172,11 +172,21 @@
                 <div id="mileage-calc" class="mileage-calc" hidden></div>
               </div>
 
+              <label class="field">
+                <span class="field-label-row">
+                  <span>Account <span class="req" aria-hidden="true">*</span> <em class="opt">(your fund / expense type)</em></span>
+                  <span id="ea-hint" class="opt cat-hint"></span>
+                </span>
+                <input id="f-expense-account" name="expenseAccount" list="ea-list" autocomplete="off" required
+                       placeholder="Type a name or code — e.g. “Ellenwood” or “002060”" />
+                <datalist id="ea-list"></datalist>
+              </label>
+
               <div class="row">
                 <label class="field">
-                  <span>Account</span>
+                  <span>Category <span class="req" aria-hidden="true">*</span> <em class="opt">(GL code)</em></span>
                   <select id="f-account" name="account" required>
-                    <option value="">Loading accounts…</option>
+                    <option value="">Choose the account first…</option>
                   </select>
                 </label>
                 <label class="field">
@@ -563,6 +573,6 @@
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260730a"></script>
+    <script src="app.js?v=20260801a"></script>
   </body>
 </html>
