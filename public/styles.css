@@ -442,7 +442,17 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .dup-item .btn { flex-shrink: 0; }
 
 /* Report cards (My reports) */
-.report-card { border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; margin-bottom: 12px; overflow: hidden; }
+.report-card { border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; margin-bottom: 12px; overflow: hidden; border-left: 4px solid var(--line); }
+/* Report health at a glance: green = all good, yellow = something unfinished,
+   red = something sent back to fix. */
+.report-card.rc-h-green { border-left-color: var(--accent); }
+.report-card.rc-h-yellow { border-left-color: var(--warn); }
+.report-card.rc-h-red { border-left-color: var(--danger); }
+.rc-health-pill { display: inline-block; margin-left: 8px; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
+.rc-health-pill.green { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card)); }
+.rc-health-pill.yellow { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, var(--card)); }
+/* An unfinished expense row inside a report. */
+.expense.mini.incomplete { border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); background: color-mix(in srgb, var(--warn) 6%, var(--card)); }
 .rc-head { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: 0; cursor: pointer; padding: 14px 16px; font: inherit; }
 .rc-head:hover { background: var(--bg-soft); }
 .rc-main { flex: 1; min-width: 0; }

@@ -1605,6 +1605,14 @@
     const roll = reportRollup(id);
     const n = roll.counts.unsubmitted;
     if (!n) return;
+    // Don't let a half-finished report go out. Point straight at what's not ready.
+    const notReady = roll.items.filter((e) => e.status === 'Draft' && expenseReadiness(e).length);
+    if (notReady.length) {
+      const first = expenseReadiness(notReady[0]);
+      toast(`Fix ${notReady.length} item${notReady.length === 1 ? '' : 's'} first — ${notReady.length === 1 ? `this one needs ${first.join(', ')}` : 'each is missing a receipt, account, or field'}.`, 'bad');
+      flashReportIssues(id, notReady.map((e) => e.id));
+      return;
+    }
     if (!window.confirm(`Submit this report — ${n} expense${n === 1 ? '' : 's'} — for approval?`)) return;
     if (btn) btn.disabled = true;
     try {
@@ -1618,6 +1626,24 @@
       if (btn) btn.disabled = false;
       toast(e.message, 'bad');
     }
+  }
+
+  // Open the report and flash the expenses that still need fixing, so it's obvious
+  // where the problem is.
+  function flashReportIssues(id, ids) {
+    const card = document.querySelector(`.report-card[data-report="${id}"]`);
+    if (!card) return;
+    const body = card.querySelector('.rc-body');
+    if (body) body.hidden = false;
+    card.classList.add('open');
+    let first = true;
+    (ids || []).forEach((eid) => {
+      const row = card.querySelector(`.expense.mini[data-id="${eid}"]`);
+      if (!row) return;
+      row.classList.add('flash');
+      setTimeout(() => row.classList.remove('flash'), 1800);
+      if (first) { row.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); first = false; }
+    });
   }
 
   async function renameReportUi(id) {
@@ -1842,7 +1868,10 @@
     const over = usdAmount(e) >= RECEIPT_THRESHOLD;
     const needsReceipt = over && !e.receipt && !e.missingReceipt;
     const sentBack = e.status === 'Rejected';
-    const cls = `expense mini${over ? ' over50' : ''}${needsReceipt ? ' needs-receipt' : ''}${sentBack ? ' sent-back' : ''}`;
+    // An unsubmitted expense that isn't finished yet — highlight what it needs.
+    const readiness = e.status === 'Draft' ? expenseReadiness(e) : [];
+    const incomplete = readiness.length > 0;
+    const cls = `expense mini${over ? ' over50' : ''}${needsReceipt ? ' needs-receipt' : ''}${incomplete ? ' incomplete' : ''}${sentBack ? ' sent-back' : ''}`;
     // For a foreign expense, stack the bank USD over the original amount + rate.
     const fx = fxInfo(e);
     const amtCell = fx
@@ -1857,7 +1886,7 @@
           ${amtCell}
           ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
           ${e.missingReceipt ? `<span class="mini-clip" title="No-receipt declaration (${escapeHtml(e.affidavitStatus || 'Pending')})">🖊️</span>` : ''}
-          ${needsReceipt ? '<span class="mini-need" title="Over $50 and no receipt yet">needs receipt</span>' : ''}
+          ${incomplete ? `<span class="mini-need" title="Not ready to submit yet">needs ${escapeHtml(readiness.join(', '))}</span>` : (needsReceipt ? '<span class="mini-need" title="Over $50 and no receipt yet">needs receipt</span>' : '')}
           ${sentBack ? '<span class="mini-sentback">↩︎ sent back</span>' : ''}
           ${sourceDot(e.source)}
           <span class="mini-caret" aria-hidden="true">▾</span>
@@ -2210,6 +2239,29 @@
 
   // Roll a report's member expenses into a count, total, and one overall status
   // (the least-advanced meaningful stage, so "still needs submitting" wins).
+  // What's still missing on an expense before it can go for approval (empty =
+  // ready). Kept in step with the server's expenseReadinessFields.
+  function expenseReadiness(e) {
+    const issues = [];
+    if (!e.description && !e.merchant) issues.push('description');
+    if (!(Number(e.amount) > 0) && !(Number(e.amountUsd) > 0)) issues.push('amount');
+    if (!e.date) issues.push('date');
+    if (!e.account && !e.accountCode) issues.push('account');
+    if (!isMileage(e) && !e.receipt && !e.missingReceipt) issues.push('receipt');
+    return issues;
+  }
+  // A report's health, for the card colour:
+  //   red    = something was sent back and needs your fix
+  //   yellow = something isn't finished yet (missing a receipt/account/field)
+  //   green  = everything in it is good
+  function reportHealth(items) {
+    if (!items.length) return 'empty';
+    if (items.some((e) => e.status === 'Rejected')) return 'red';
+    const active = items.filter((e) => e.status === 'Draft');
+    if (active.some((e) => expenseReadiness(e).length)) return 'yellow';
+    return 'green';
+  }
+
   function reportRollup(reportId) {
     const items = (state.mineExpenses || []).filter((e) => e.reportId === reportId);
     const counts = { unsubmitted: 0, pending: 0, approved: 0, waiting: 0, paid: 0 };
@@ -2249,6 +2301,13 @@
     const { items, total, counts, status } = reportRollup(r.id);
     const badge = status === 'Empty' ? '<span class="badge empty">Empty</span>' : statusBadge(status);
     const canSubmit = counts.unsubmitted > 0;
+    // Health colour (green / yellow / red) with a short "what to do" pill, shown
+    // while there's still something in the report to finish.
+    const health = reportHealth(items);
+    const notReady = items.filter((e) => e.status === 'Draft' && expenseReadiness(e).length).length;
+    let healthPill = '';
+    if (health === 'yellow') healthPill = `<span class="rc-health-pill yellow">${notReady} to finish</span>`;
+    else if (health === 'green' && counts.unsubmitted > 0) healthPill = '<span class="rc-health-pill green">✓ Ready to submit</span>';
     // A report with sent-back items opens automatically, and those items float to
     // the very top of the report so they're the first thing you see and fix.
     const hasFix = items.some((e) => e.status === 'Rejected');
@@ -2256,10 +2315,10 @@
       ? [...items.filter((e) => e.status === 'Rejected'), ...sortExpenses(items.filter((e) => e.status !== 'Rejected'))]
       : sortExpenses(items);
     return `
-      <div class="report-card${hasFix ? ' has-fix open' : ''}" data-report="${escapeHtml(r.id)}">
+      <div class="report-card rc-h-${health}${hasFix ? ' has-fix open' : ''}" data-report="${escapeHtml(r.id)}">
         <button type="button" class="rc-head" data-act="report-toggle">
           <div class="rc-main">
-            <div class="rc-name">${escapeHtml(r.name)}${r.ownerName && firstNameOf(r.ownerName).toLowerCase() !== firstNameOf((state.me && state.me.name) || '').toLowerCase() ? `<span class="mini-who-tag">${escapeHtml(firstNameOf(r.ownerName))}</span>` : ''}${hasFix ? '<span class="rc-fixtag">↩︎ needs your fix</span>' : ''}</div>
+            <div class="rc-name">${escapeHtml(r.name)}${r.ownerName && firstNameOf(r.ownerName).toLowerCase() !== firstNameOf((state.me && state.me.name) || '').toLowerCase() ? `<span class="mini-who-tag">${escapeHtml(firstNameOf(r.ownerName))}</span>` : ''}${hasFix ? '<span class="rc-fixtag">↩︎ needs your fix</span>' : ''}${healthPill}</div>
             <div class="rc-sub">${items.length} expense${items.length === 1 ? '' : 's'} · ${escapeHtml(money(total, 'USD'))}</div>
           </div>
           ${badge}

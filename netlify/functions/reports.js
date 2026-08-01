@@ -12,7 +12,7 @@ const {
   ensureStaff, staffById, logActivity,
   getReportById, listReportsOwnedByAny, createReport, setExpenseReport, reportOwnedBy,
   householdScope, submitterEmailFormula,
-  displayMaps, shapeExpense, isHeldEmailReceipt, receiptGatePasses,
+  displayMaps, shapeExpense, isHeldEmailReceipt, isExpenseReady,
 } = require('./lib/domain');
 const { pickBest } = require('./lib/matching');
 const notify = require('./lib/notify');
@@ -191,14 +191,15 @@ exports.handler = async (event) => {
 
       const members = await membersOf(id, householdEmails);
 
-      // Receipt gate: every draft about to be submitted must carry a receipt or a
-      // signed "no receipt" declaration (mileage is exempt). If any don't, block
-      // the whole submit so a bare expense never reaches the approver.
+      // Readiness gate: every draft about to be submitted must be complete — an
+      // account, a receipt (or a signed "no receipt" note), and the basics filled
+      // in. If any aren't ready, block the whole submit so nothing half-done
+      // reaches the approver. The app highlights the ones that need fixing.
       const drafts = members.filter((rec) => (rec.fields.Status || '') === STATUS.DRAFT);
-      const needProof = drafts.filter((rec) => !receiptGatePasses(rec.fields));
-      if (needProof.length) {
-        const n = needProof.length;
-        throw badRequest(`${n} expense${n === 1 ? '' : 's'} in this report still need a receipt or a “no receipt” declaration. Add those, then submit the report.`);
+      const notReady = drafts.filter((rec) => !isExpenseReady(rec.fields));
+      if (notReady.length) {
+        const n = notReady.length;
+        throw badRequest(`${n} expense${n === 1 ? '' : 's'} in this report ${n === 1 ? 'isn’t' : 'aren’t'} ready — each needs an account, a receipt (or a signed “no receipt” note), and the basics filled in. Fix the highlighted one${n === 1 ? '' : 's'}, then submit.`);
       }
 
       let submitted = 0;

@@ -551,6 +551,22 @@ function receiptGatePasses(fields) {
   return hasReceipt || declared;
 }
 
+// Everything an expense needs before it can go for approval. Returns the list of
+// what's still missing (empty = ready). Takes raw Airtable `fields`.
+function expenseReadinessFields(fields) {
+  const f = fields || {};
+  const issues = [];
+  if (!f.Description) issues.push('description');
+  if (!(Number(f.Amount) > 0)) issues.push('amount');
+  if (!f['Expense Date']) issues.push('date');
+  if (!(Array.isArray(f.Account) && f.Account.length)) issues.push('account');
+  if (!receiptGatePasses(f)) issues.push('receipt'); // covers mileage + "no receipt" note
+  return issues;
+}
+function isExpenseReady(fields) {
+  return expenseReadinessFields(fields).length === 0;
+}
+
 // The small maps needed to display expenses. Fetched once per request.
 async function displayMaps() {
   const [currency, category, staff, account, report] = await Promise.all([
@@ -868,6 +884,8 @@ module.exports = {
   getExpenseAccountByCode,
   receiptGatePasses,
   isMileageExpense,
+  expenseReadinessFields,
+  isExpenseReady,
   accountMap,
   staffMap,
   accountAccessFor,
