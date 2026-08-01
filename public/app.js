@@ -478,6 +478,30 @@
   function populateExpenseAccounts(preselect) {
     const sel = $('#f-expense-account');
     if (!sel || !state.expenseAccounts) return;
+
+    // If a person can only charge to one account, there's nothing to choose —
+    // pick it for them and show it as a plain line instead of a dropdown.
+    const single = $('#ea-single');
+    const btn = $('#set-default-account');
+    if (state.expenseAccounts.length === 0) {
+      sel.innerHTML = '<option value="">No account set up for you yet</option>';
+      sel.hidden = true;
+      if (btn) btn.hidden = true;
+      if (single) { single.hidden = false; single.textContent = 'No account is set up for you yet — ask CedarStone to give you one.'; }
+      return;
+    }
+    if (state.expenseAccounts.length === 1) {
+      const only = state.expenseAccounts[0];
+      sel.innerHTML = `<option value="${escapeHtml(only.code)}">${escapeHtml(only.code + ' – ' + only.name)}</option>`;
+      sel.value = only.code;
+      sel.hidden = true;
+      if (btn) btn.hidden = true;
+      if (single) { single.hidden = false; single.textContent = `${only.code} – ${only.name}`; }
+      return;
+    }
+    if (sel.hidden) sel.hidden = false;
+    if (single) single.hidden = true;
+
     const usage = accountUsage();
     const byCode = new Map(state.expenseAccounts.map((a) => [a.code, a]));
     const opt = (a) => `<option value="${escapeHtml(a.code)}">${escapeHtml(a.code + ' – ' + a.name)}</option>`;

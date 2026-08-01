@@ -977,6 +977,9 @@ body.modal-open { overflow: hidden; }
   100% { background: color-mix(in srgb, var(--warn) 8%, var(--card)); }
 }
 
+/* The read-only "your account" line shown when a person has only one account. */
+.ea-single { padding: 11px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-soft); color: var(--ink); font-weight: 600; }
+
 /* ---- Accounts & access (CedarStone back-office) ---- */
 .acct-add { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 4px 0 14px; }
 .acct-in { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink); font-size: 0.95rem; }
