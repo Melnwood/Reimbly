@@ -2920,11 +2920,21 @@
     </button>`;
   }
 
-  // A highlight box over the receipt image, positioned by its normalized 0–1 coords.
+  // A highlight zone over the receipt image, positioned by its normalized 0–1
+  // coords but grown around its centre so it marks the *area* — the reader only
+  // has to land near the number, not on it exactly.
   function receiptMarkBox(box, label, cls) {
     if (!box) return '';
-    const pct = (v) => `${(Math.max(0, Math.min(1, v)) * 100).toFixed(2)}%`;
-    return `<span class="rc-mark ${cls}" style="left:${pct(box.x)};top:${pct(box.y)};width:${pct(box.w)};height:${pct(box.h)}"><span class="rc-mark-lbl">${escapeHtml(label)}</span></span>`;
+    const GROW = 2.4;            // ~2.4× each side ≈ 5–6× the area
+    const MIN_W = 0.16; const MIN_H = 0.07; // never smaller than a comfortable zone
+    const cx = box.x + box.w / 2;
+    const cy = box.y + box.h / 2;
+    let w = Math.min(Math.max(box.w * GROW, MIN_W), 1);
+    let h = Math.min(Math.max(box.h * GROW, MIN_H), 1);
+    let x = Math.min(Math.max(cx - w / 2, 0), 1 - w);
+    let y = Math.min(Math.max(cy - h / 2, 0), 1 - h);
+    const pct = (v) => `${(v * 100).toFixed(2)}%`;
+    return `<span class="rc-mark ${cls}" style="left:${pct(x)};top:${pct(y)};width:${pct(w)};height:${pct(h)}"><span class="rc-mark-lbl">${escapeHtml(label)}</span></span>`;
   }
 
   // What Rembly read off the receipt — shown under it so a reviewer can eyeball
