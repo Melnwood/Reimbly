@@ -1223,8 +1223,11 @@
     // Receipt gate: a new expense that goes straight to approval (not into a
     // report) must have a receipt or a signed "no receipt" declaration. If there's
     // neither, ask them to declare it — then this submit resumes with it attached.
+    // Only expenses over $50 need proof. We can be sure of USD here; foreign
+    // amounts are checked on the server (which knows the exchange rate).
+    const overFifty = body.currency === 'USD' && Number(body.amount) > RECEIPT_THRESHOLD;
     const willSubmitNow = !editing && !mileageMode && !body.reportId;
-    if (willSubmitNow && !file && !state.pendingDeclaration) {
+    if (willSubmitNow && overFifty && !file && !state.pendingDeclaration) {
       openReceiptGate();
       return;
     }
@@ -1867,7 +1870,7 @@
   function expenseRowHtml(e) {
     const who = e.merchant || e.description || '(no description)';
     const amt = e.amountUsd != null ? money(e.amountUsd, 'USD') : money(e.amount, e.currency);
-    const over = usdAmount(e) >= RECEIPT_THRESHOLD;
+    const over = usdAmount(e) > RECEIPT_THRESHOLD;
     const needsReceipt = over && !e.receipt && !e.missingReceipt;
     const sentBack = e.status === 'Rejected';
     // An unsubmitted expense that isn't finished yet — highlight what it needs.
@@ -1961,7 +1964,7 @@
   function renderReceiptSummary(list) {
     const box = $('#over50-summary');
     if (!box) return;
-    const over = list.filter((e) => usdAmount(e) >= RECEIPT_THRESHOLD);
+    const over = list.filter((e) => usdAmount(e) > RECEIPT_THRESHOLD);
     if (!over.length) { box.hidden = true; box.innerHTML = ''; return; }
     // "Covered" means it has a receipt OR a signed no-receipt declaration.
     const withR = over.filter((e) => e.receipt || e.missingReceipt).length;
@@ -2252,7 +2255,7 @@
     if (!(Number(e.amount) > 0) && !(Number(e.amountUsd) > 0)) issues.push('amount');
     if (!e.date) issues.push('date');
     if (!e.account && !e.accountCode) issues.push('account');
-    if (!isMileage(e) && !e.receipt && !e.missingReceipt) issues.push('receipt');
+    if (!isMileage(e) && !e.receipt && !e.missingReceipt && usdAmount(e) > RECEIPT_THRESHOLD) issues.push('receipt');
     return issues;
   }
   // A report's health, for the card colour:
@@ -2998,7 +3001,7 @@
   // or a plain expense with no receipt and no affidavit. Everything else is in order.
   function expenseFlag(e) {
     if (e.missingReceipt) return { kind: 'affidavit' };
-    if (!e.receipt && !isMileage(e)) return { kind: 'noreceipt' };
+    if (!e.receipt && !isMileage(e) && usdAmount(e) > RECEIPT_THRESHOLD) return { kind: 'noreceipt' };
     return null;
   }
   function daysSince(dateStr) {

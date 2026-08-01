@@ -22,16 +22,29 @@ test('passes with a complete "no receipt" declaration', () => {
   }), true);
 });
 
-test('fails with a half-finished declaration (no reason)', () => {
+test('fails with a half-finished declaration (no reason) on an over-$50 expense', () => {
   assert.equal(receiptGatePasses({
+    'Amount (USD)': 80,
     'Missing Receipt': true,
     'Affidavit Signed By': 'Mel Ellenwood',
   }), false);
 });
 
-test('fails when there is neither a receipt nor a declaration', () => {
-  assert.equal(receiptGatePasses({ Description: 'Taxi', Amount: 20 }), false);
-  assert.equal(receiptGatePasses({ Receipt: [] }), false);
+test('fails when an over-$50 expense has neither a receipt nor a declaration', () => {
+  assert.equal(receiptGatePasses({ Description: 'Hotel', 'Amount (USD)': 120 }), false);
+  assert.equal(receiptGatePasses({ 'Amount (USD)': 80, Receipt: [] }), false);
+});
+
+// --- the $50 rule: small spends need no receipt at all ---
+
+test('an expense of $50 or less needs no receipt', () => {
+  assert.equal(receiptGatePasses({ Description: 'Coffee', 'Amount (USD)': 4.5 }), true);
+  assert.equal(receiptGatePasses({ 'Amount (USD)': 50 }), true); // exactly $50 is exempt
+  assert.equal(receiptGatePasses({ Amount: 20 }), true); // falls back to plain amount
+});
+
+test('just over $50 still needs a receipt', () => {
+  assert.equal(receiptGatePasses({ 'Amount (USD)': 50.01 }), false);
 });
 
 test('mileage passes with no receipt at all', () => {
@@ -64,14 +77,23 @@ test('a missing account blocks readiness (Mel’s case)', () => {
   assert.equal(isExpenseReady(noAcct), false);
 });
 
-test('readiness lists every missing piece', () => {
-  const bare = { Amount: 0 };
+test('readiness lists every missing piece (over $50, so a receipt too)', () => {
+  const bare = { 'Amount (USD)': 120 }; // over $50 but nothing else filled in
   const issues = expenseReadinessFields(bare);
   assert.ok(issues.includes('description'));
   assert.ok(issues.includes('amount'));
   assert.ok(issues.includes('date'));
   assert.ok(issues.includes('account'));
   assert.ok(issues.includes('receipt'));
+});
+
+test('a bare small expense still needs its fields, but not a receipt', () => {
+  const issues = expenseReadinessFields({ Amount: 0 });
+  assert.ok(issues.includes('description'));
+  assert.ok(issues.includes('amount'));
+  assert.ok(issues.includes('date'));
+  assert.ok(issues.includes('account'));
+  assert.ok(!issues.includes('receipt')); // $0 ≤ $50 → no receipt required
 });
 
 test('a mileage expense with an account is ready without a receipt', () => {

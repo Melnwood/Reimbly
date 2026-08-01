@@ -221,6 +221,19 @@ async function findIdByField(table, field, value) {
 
 const resolveCurrencyId = (code) => findIdByField(TABLES.CURRENCIES, 'Code', code);
 
+// A currency's value in USD (e.g. 1 EUR = 1.14). Used to size an expense in USD
+// before its record exists (the receipt gate's $50 line). USD is always 1.
+async function getCurrencyRate(code) {
+  const c = String(code || '').trim().toUpperCase();
+  if (!c) return null;
+  if (c === 'USD') return 1;
+  const rec = await airtable.findFirst(TABLES.CURRENCIES, {
+    filterByFormula: `{Code} = '${esc(c)}'`,
+  });
+  const r = rec && rec.fields ? Number(rec.fields['Rate to USD']) : null;
+  return isFinite(r) && r > 0 ? r : null;
+}
+
 // Resolve a category name to its record id, falling back to "Other".
 async function resolveCategoryId(name) {
   return (
@@ -535,15 +548,29 @@ async function accountMap() {
 // declaration. Mileage claims are computed from distance × rate, so they need
 // neither. Takes raw Airtable `fields`.
 
+// Expenses at or under this USD amount don't need a receipt or a declaration —
+// small out-of-pocket spends (coffee, tolls, SMS) are taken on trust.
+const RECEIPT_MIN_USD = 50;
+
 function isMileageExpense(fields) {
   const f = fields || {};
   return Number(f.Distance) > 0 || Number(f.Miles) > 0
     || (f['Mileage Rate'] != null && f['Mileage Rate'] !== '');
 }
 
+// Best-effort USD value from raw fields — the Airtable "Amount (USD)" formula
+// when it's there, else the plain amount as a fallback.
+function expenseUsd(fields) {
+  const f = fields || {};
+  const usd = f['Amount (USD)'];
+  if (usd != null && usd !== '') return Number(usd) || 0;
+  return Number(f.Amount) || 0;
+}
+
 function receiptGatePasses(fields) {
   const f = fields || {};
   if (isMileageExpense(f)) return true;
+  if (expenseUsd(f) <= RECEIPT_MIN_USD) return true; // $50 or less needs no receipt
   const hasReceipt = Array.isArray(f.Receipt) && f.Receipt.length > 0;
   const declared = f['Missing Receipt'] === true
     && String(f['Affidavit Reason'] || '').trim() !== ''
@@ -898,6 +925,8 @@ module.exports = {
   isMileageExpense,
   expenseReadinessFields,
   isExpenseReady,
+  RECEIPT_MIN_USD,
+  getCurrencyRate,
   accountMap,
   staffMap,
   accountAccessFor,
