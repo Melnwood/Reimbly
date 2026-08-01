@@ -753,6 +753,9 @@ function shapeExpense(record, maps = {}) {
     submittedOn: f['Submitted On'] || null,
     decidedOn: f['Decided On'] || null,
     paidOn: f['Paid On'] || null,
+    // The CedarStone download this went out in, and when it was downloaded.
+    paymentBatch: f['Payment Batch'] || null,
+    exportedOn: f['Exported On'] || null,
     notes: f['Approver Note'] || '',
     receipt: receipts[0]
       ? {
@@ -837,6 +840,15 @@ async function listActivity(expenseId) {
   });
 }
 
+// A human-readable id for one CedarStone download/batch, e.g.
+// "batch-2026-08-01-1432". All expenses exported together share it, so the
+// download can be marked paid in one click later.
+function makeBatchId(now) {
+  const d = now || new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `batch-${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}-${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}`;
+}
+
 module.exports = {
   TABLES,
   STATUS,
@@ -895,4 +907,5 @@ module.exports = {
   getMileageRate,
   displayMaps,
   shapeExpense,
+  makeBatchId,
 };

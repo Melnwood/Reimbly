@@ -3558,8 +3558,8 @@
       <div class="pay-toolbar">
         <span class="pay-count">${groups.length} report${groups.length === 1 ? '' : 's'} · ${escapeHtml(money(totalUsd, 'USD'))} approved</span>
         <span class="grow"></span>
-        <button class="btn ghost small" data-act="export-intacct">⤓ Export for Intacct (JE)</button>
-        <button class="btn primary small" data-act="export-csv">⤓ Export CSV &amp; move to waiting</button>
+        <button class="btn ghost small" data-act="export-csv">⤓ Plain CSV</button>
+        <button class="btn primary small" data-act="export-intacct">⤓ Download for Intacct &amp; start paying</button>
       </div>`;
     el.archiveReady.innerHTML = toolbar + groups.map((g) => `
       <div class="report" data-group="${escapeHtml(g.key)}">
@@ -3573,8 +3573,31 @@
       </div>`).join('');
   }
 
-  // Stage 2: "Waiting to be paid" — exported, awaiting the actual payment. Finance
-  // bulk-selects (or all) and marks them paid, which updates everyone's app.
+  // Stage 2: "Waiting to be paid" — the downloads CedarStone has taken to Intacct
+  // but not yet paid. Each download is kept as one batch showing when it was
+  // downloaded, with a single "Mark this download paid" button that reimburses
+  // everyone in it at once.
+  function groupByBatch(expenses) {
+    const groups = new Map();
+    for (const e of expenses) {
+      const key = e.paymentBatch || '__none__';
+      if (!groups.has(key)) {
+        groups.set(key, { key, exportedOn: e.exportedOn || null, items: [], total: 0 });
+      }
+      const g = groups.get(key);
+      g.items.push(e);
+      g.total += Number(e.amountUsd) || 0;
+      // Keep the latest download time we see for the batch.
+      if (e.exportedOn && (!g.exportedOn || e.exportedOn > g.exportedOn)) g.exportedOn = e.exportedOn;
+    }
+    // Newest download first; the un-tracked "earlier" bucket sinks to the bottom.
+    return [...groups.values()].sort((a, b) => {
+      if (a.key === '__none__') return 1;
+      if (b.key === '__none__') return -1;
+      return String(b.exportedOn || '').localeCompare(String(a.exportedOn || ''));
+    });
+  }
+
   function renderWaitingToPay(waiting) {
     if (!el.archiveWaitingWrap) return;
     if (!waiting.length) {
@@ -3583,27 +3606,39 @@
       return;
     }
     el.archiveWaitingWrap.hidden = false;
-    const groups = groupBySubmitter(waiting);
+    const batches = groupByBatch(waiting);
     const totalUsd = waiting.reduce((s, e) => s + (Number(e.amountUsd) || 0), 0);
-    const toolbar = `
-      <div class="pay-toolbar">
-        <label class="pay-selall"><input type="checkbox" data-act="select-all" /> Select all</label>
-        <span class="pay-count">${groups.length} report${groups.length === 1 ? '' : 's'} · ${escapeHtml(money(totalUsd, 'USD'))} waiting</span>
-        <span class="grow"></span>
-        <button class="btn primary small" data-act="mark-selected" disabled>Mark selected paid</button>
-      </div>`;
-    el.archiveWaiting.innerHTML = toolbar + groups.map((g) => `
-      <div class="report" data-group="${escapeHtml(g.key)}" data-total="${g.total}" data-count="${g.items.length}">
-        <div class="report-head">
-          <label class="pay-check"><input type="checkbox" data-act="select-group" aria-label="Select ${escapeHtml(g.name)}" /></label>
-          <div class="report-who">
-            <div class="report-name">${escapeHtml(g.name)}</div>
-            <div class="report-sub">${g.items.length} expense${g.items.length === 1 ? '' : 's'} · ${escapeHtml(money(g.total, 'USD'))}</div>
+    const intro = `<p class="pay-intro">${batches.length} download${batches.length === 1 ? '' : 's'} waiting · ${escapeHtml(money(totalUsd, 'USD'))}. Once CedarStone has paid a download in Intacct, hit <b>Mark this download paid</b> and everyone in it is marked reimbursed.</p>`;
+    el.archiveWaiting.innerHTML = intro + batches.map((b) => {
+      const people = groupBySubmitter(b.items);
+      const tracked = b.key !== '__none__';
+      const when = b.exportedOn ? fmtDateTime(b.exportedOn) : null;
+      const title = tracked
+        ? `Downloaded ${when ? escapeHtml(when) : escapeHtml(b.key)}`
+        : 'Earlier (before download tracking)';
+      const ids = b.items.map((e) => e.id).join(' ');
+      return `
+      <div class="pay-batch" data-batch="${escapeHtml(b.key)}" data-ids="${escapeHtml(ids)}">
+        <div class="pay-batch-head">
+          <div class="pay-batch-who">
+            <div class="pay-batch-title">⤓ ${title}</div>
+            <div class="pay-batch-sub">${people.length} report${people.length === 1 ? '' : 's'} · ${b.items.length} expense${b.items.length === 1 ? '' : 's'} · ${escapeHtml(money(b.total, 'USD'))}</div>
           </div>
-          <button class="btn primary small" data-act="mark-paid">Mark paid</button>
+          <button class="btn primary small" data-act="pay-batch">Mark this download paid</button>
         </div>
-        <div class="report-items">${g.items.map((e) => payExpenseArticle(e, false)).join('')}</div>
-      </div>`).join('');
+        <div class="pay-batch-body">${people.map((g) => `
+          <div class="report" data-group="${escapeHtml(g.key)}">
+            <div class="report-head">
+              <div class="report-who">
+                <div class="report-name">${escapeHtml(g.name)}</div>
+                <div class="report-sub">${g.items.length} expense${g.items.length === 1 ? '' : 's'} · ${escapeHtml(money(g.total, 'USD'))}</div>
+              </div>
+            </div>
+            <div class="report-items">${g.items.map((e) => payExpenseArticle(e, false)).join('')}</div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
   }
 
   function renderArchive(data) {
@@ -3641,6 +3676,28 @@
     }
   }
 
+  // "Mark this download paid" — reimburse everyone in one downloaded batch at
+  // once. Tracked batches go by their batch id (robust even if the list is
+  // stale); the legacy "earlier" bucket falls back to the expense ids on screen.
+  async function payBatch(box) {
+    const batchId = box.dataset.batch;
+    const buttons = $$('button', box);
+    const body = (batchId && batchId !== '__none__')
+      ? { batchId }
+      : { ids: (box.dataset.ids || '').split(' ').filter(Boolean) };
+    const count = (box.dataset.ids || '').split(' ').filter(Boolean).length;
+    if (!window.confirm(`Mark this whole download paid? That reimburses all ${count} expense${count === 1 ? '' : 's'} in it and tells each person.`)) return;
+    buttons.forEach((b) => (b.disabled = true));
+    try {
+      const res = await api('mark-paid', { method: 'POST', body });
+      toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid 💸`, 'good');
+      afterPaidChange();
+    } catch (e) {
+      buttons.forEach((b) => (b.disabled = false));
+      toast(e.message, 'bad');
+    }
+  }
+
   // ---- Payment stages: CSV export (→ waiting) + bulk mark-paid ----
 
   // Quote a CSV cell only when it needs it (comma, quote, or newline).
@@ -3657,7 +3714,7 @@
   async function exportIntacctJe(btn) {
     if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
     try {
-      const res = await api('export-intacct');
+      const res = await api('export-intacct', { method: 'POST' });
       if (!res.count) { toast('Nothing approved to export.', 'bad'); return; }
       const bin = atob(res.base64);
       const bytes = new Uint8Array(bin.length);
@@ -3673,18 +3730,25 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       const miss = (res.missing || []).length;
       if (miss) {
-        toast(`Exported ${res.count} line${res.count === 1 ? '' : 's'} — but ${miss} still need a fund/class before Intacct will accept them.`, 'bad');
+        toast(`Downloaded ${res.count} line${res.count === 1 ? '' : 's'} — but ${miss} still need a fund/class before Intacct will accept them.`, 'bad');
       } else {
-        toast(`Exported ${res.count} line${res.count === 1 ? '' : 's'} for Intacct.`, 'good');
+        toast(`Downloaded ${res.count} line${res.count === 1 ? '' : 's'} — this batch is now waiting to be paid.`, 'good');
       }
+      // These moved to "Waiting to be paid" — refresh so the new download shows.
+      state.loaded.dashboard = false;
+      state.loaded.timing = false;
+      state.loaded.mine = false;
+      loadArchive();
     } catch (e) {
       toast(e.message, 'bad');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '⤓ Export for Intacct (JE)'; }
+      if (btn) { btn.disabled = false; btn.textContent = '⤓ Download for Intacct & start paying'; }
     }
   }
 
-  // payment process) and move those reports into "Waiting to be paid".
+  // A plain CSV copy of the approved batch — a spreadsheet to look over. Unlike
+  // the Intacct download, this does NOT start a payment batch or move anything;
+  // it's just a peek. The real hand-off is "Download for Intacct & start paying".
   async function exportApprovedCsv() {
     const rows = state.archiveReady || [];
     if (!rows.length) return toast('Nothing approved to export.', 'bad');
@@ -3709,16 +3773,7 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    // Then move the exported batch into "Waiting to be paid".
-    try {
-      const res = await api('queue-payments', { method: 'POST', body: { ids: rows.map((e) => e.id) } });
-      toast(`Exported ${rows.length} · ${res.queued} moved to waiting-to-be-paid ⤓`, 'good');
-      state.loaded.dashboard = false;
-      state.loaded.timing = false;
-      loadArchive();
-    } catch (e) {
-      toast(`Exported, but couldn't move them to waiting: ${e.message}`, 'bad');
-    }
+    toast(`Downloaded a CSV of ${rows.length} approved expense${rows.length === 1 ? '' : 's'}.`, 'good');
   }
 
   // Reflect the current checkbox selection in the waiting toolbar.
@@ -3811,6 +3866,12 @@
     if (act === 'export-csv') { exportApprovedCsv(); return; }
     if (act === 'export-intacct') { exportIntacctJe(event.target.closest('button')); return; }
     if (act === 'mark-selected') { markSelectedPaid(); return; }
+
+    if (act === 'pay-batch') {
+      const box = event.target.closest('.pay-batch');
+      if (box) payBatch(box);
+      return;
+    }
 
     if (act === 'mark-paid') {
       const group = event.target.closest('.report');

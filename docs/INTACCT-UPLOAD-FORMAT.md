@@ -28,6 +28,16 @@ send a revised template. This is the master reference for building the export.
 > **Still to finish** (needs the two open questions below answered): (a) populate
 > Fund/Project/Class per expense so `DEPT_ID` and `GLENTRY_CLASSID` fill in for
 > every line, and (b) add the balancing **credit line(s)** so the JE nets to zero.
+>
+> **Download = one payment batch (v2).** Downloading the Intacct file is now the
+> hand-off, not just a read. It takes every **Approved** expense, stamps them with
+> a **Payment Batch** id + **Exported On** time (both fields on the Expenses table),
+> and moves them to **Waiting to be paid**. On the Paid screen each download shows
+> as its own card with the date/time it was downloaded and a single **"Mark this
+> download paid"** button that reimburses everyone in it at once (`mark-paid` with
+> a `batchId`). The person-facing "My reports" screen shows the same lifecycle:
+> On its way → (download) Reimbursing → (paid) Paid. The **Plain CSV** button is a
+> read-only peek and moves nothing.
 
 ## How Cedarstone loads it (Olivia's answers)
 

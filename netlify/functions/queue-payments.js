@@ -7,7 +7,7 @@
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, STATUS, EVENTS, ensureStaff, logActivity } = require('./lib/domain');
+const { TABLES, STATUS, EVENTS, ensureStaff, logActivity, makeBatchId } = require('./lib/domain');
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'POST');
@@ -30,6 +30,11 @@ exports.handler = async (event) => {
       throw err;
     }
 
+    // One batch id + download time for everything moved in this call, so the
+    // download can be marked paid together later.
+    const batchId = makeBatchId();
+    const exportedOn = new Date().toISOString();
+
     let queued = 0;
     const skipped = [];
     for (const id of ids) {
@@ -40,12 +45,16 @@ exports.handler = async (event) => {
         skipped.push(id); // not approved (yet), already queued, or gone
         continue;
       }
-      await airtable.updateRecord(TABLES.EXPENSES, id, { Status: STATUS.WAITING_TO_PAY });
-      await logActivity({ expenseId: id, event: EVENTS.QUEUED_FOR_PAYMENT, user });
+      await airtable.updateRecord(TABLES.EXPENSES, id, {
+        Status: STATUS.WAITING_TO_PAY,
+        'Payment Batch': batchId,
+        'Exported On': exportedOn,
+      });
+      await logActivity({ expenseId: id, event: EVENTS.QUEUED_FOR_PAYMENT, user, note: `Exported in ${batchId}` });
       queued += 1;
     }
 
-    return ok({ queued, skipped });
+    return ok({ queued, skipped, batchId, exportedOn });
   } catch (err) {
     return error(err);
   }

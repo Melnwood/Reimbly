@@ -27,7 +27,19 @@ exports.handler = async (event) => {
     }
 
     const body = parseBody(event);
-    const ids = Array.isArray(body.ids) ? body.ids.map((v) => String(v).trim()).filter(Boolean) : [];
+    let ids = Array.isArray(body.ids) ? body.ids.map((v) => String(v).trim()).filter(Boolean) : [];
+
+    // "Mark this whole download paid" — pay every waiting expense in the batch,
+    // straight from Airtable, so it works even if the on-screen list is stale.
+    const batchId = body.batchId ? String(body.batchId).trim() : '';
+    if (batchId) {
+      const esc = batchId.replace(/'/g, "\\'");
+      const inBatch = await airtable.listRecords(TABLES.EXPENSES, {
+        filterByFormula: `AND({Payment Batch} = '${esc}', {Status} = '${STATUS.WAITING_TO_PAY}')`,
+      });
+      ids = inBatch.map((r) => r.id);
+    }
+
     if (!ids.length) {
       const err = new Error('No expenses to mark as paid.');
       err.statusCode = 400;

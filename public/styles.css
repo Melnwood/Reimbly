@@ -863,6 +863,19 @@ body.modal-open { overflow: hidden; }
 .pay-toolbar .grow { flex: 1 1 auto; }
 .pay-check { display: inline-flex; align-items: center; flex: none; }
 .pay-check input { width: 18px; height: 18px; cursor: pointer; }
+
+/* A retained download/batch on the waiting-to-be-paid screen: when it was
+   downloaded + one button to mark the whole thing paid. */
+.pay-intro { color: var(--ink-soft); font-size: 0.9rem; margin: 0 2px 14px; line-height: 1.5; }
+.pay-batch { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; }
+.pay-batch-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 13px 16px; background: var(--bg-soft); border-bottom: 1px solid var(--line); }
+.pay-batch-who { flex: 1 1 auto; min-width: 0; }
+.pay-batch-title { font-weight: 800; font-size: 1rem; color: var(--ink); }
+.pay-batch-sub { font-size: 0.85rem; color: var(--ink-soft); margin-top: 2px; }
+.pay-batch-head .btn { flex: none; }
+.pay-batch-body { padding: 6px 12px 12px; }
+.pay-batch-body .report { box-shadow: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; margin: 0; }
+.pay-batch-body .report:last-child { border-bottom: 0; }
 /* keep the person's name next to its checkbox, button pinned right */
 .report-head .report-who { margin-right: auto; }
 
