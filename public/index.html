@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Reimbly" />
-    <link rel="stylesheet" href="styles.css?v=20260801o" />
+    <link rel="stylesheet" href="styles.css?v=20260801p" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -65,7 +65,9 @@
             <button type="button" class="tab" id="mgmt-btn" aria-haspopup="true" aria-expanded="false">Management ▾</button>
             <div class="tab-menu-list" id="mgmt-list" hidden>
               <button type="button" class="menu-item" data-view="review">Review</button>
-              <button type="button" class="menu-item" data-view="approvals">Approvals</button>
+              <!-- Approvals is hidden for now: Review does the same job (quick approve + receipts inline).
+                   The view and its code are kept intact — remove `hidden` to bring it back. -->
+              <button type="button" class="menu-item" data-view="approvals" hidden>Approvals</button>
               <button type="button" class="menu-item" data-view="audit">Audit</button>
               <button type="button" class="menu-item" data-view="archive">Paid</button>
               <button type="button" class="menu-item" data-view="timing">Timing</button>
@@ -452,7 +454,7 @@
               <h2>Review</h2>
               <button class="link-btn" data-refresh="review" title="Refresh">↻ Refresh</button>
             </div>
-            <p class="panel-sub">The same expenses that are waiting for approval — opened one at a time with the receipt on the right, so you can check each one carefully before approving. Want to approve a whole person's batch fast instead? Use <strong>Approvals</strong>.</p>
+            <p class="panel-sub">Everything people have submitted that's waiting for approval. Click an expense to see its receipt and details on the right, then <strong>approve</strong> it or <strong>send it back</strong> — work straight down the list, or approve a whole person's clear batch at once.</p>
             <div id="review-body"><div class="state">Loading…</div></div>
           </div>
         </section>
@@ -599,6 +601,6 @@
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260801o"></script>
+    <script src="app.js?v=20260801p"></script>
   </body>
 </html>
