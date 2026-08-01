@@ -441,32 +441,55 @@
     } catch { /* private mode — no history, that's fine */ }
   }
 
-  // ---- Two-level coding: Account (Expense Type) → Category (GL code) ----
-
-  // The Account box is a type-to-search datalist of every Expense Account,
-  // the person's most-used ones floated to the top.
-  function populateExpenseAccounts() {
-    const list = $('#ea-list');
-    if (!list || !state.expenseAccounts) return;
-    const usage = accountUsage();
-    const sorted = state.expenseAccounts.slice()
-      .sort((a, b) => (usage[b.code] || 0) - (usage[a.code] || 0) || a.code.localeCompare(b.code));
-    list.innerHTML = sorted.map((a) => `<option value="${escapeHtml(a.code + ' – ' + a.name)}"></option>`).join('');
+  // The account each person wants pre-selected on a new expense (their pick).
+  function defaultKey() { return `reimbly.default-acct.${(state.me && state.me.email) || 'anon'}`; }
+  function getDefaultAccount() { try { return localStorage.getItem(defaultKey()) || ''; } catch { return ''; } }
+  function setDefaultAccount(code) {
+    try { code ? localStorage.setItem(defaultKey(), code) : localStorage.removeItem(defaultKey()); } catch { /* ignore */ }
   }
 
-  // Turn what's typed in the Account box into a real account code, or '' if empty,
-  // or null if it's not one of the accounts.
+  // ---- Two-level coding: Account (Expense Type) → Category (GL code) ----
+
+  // The Account dropdown: your default first, then your frequently-used, then all.
+  // Open it and pick — no typing needed. `preselect` forces a value (used on edit).
+  function populateExpenseAccounts(preselect) {
+    const sel = $('#f-expense-account');
+    if (!sel || !state.expenseAccounts) return;
+    const usage = accountUsage();
+    const byCode = new Map(state.expenseAccounts.map((a) => [a.code, a]));
+    const opt = (a) => `<option value="${escapeHtml(a.code)}">${escapeHtml(a.code + ' – ' + a.name)}</option>`;
+    const frequent = state.expenseAccounts
+      .filter((a) => usage[a.code] > 0)
+      .sort((a, b) => usage[b.code] - usage[a.code] || a.code.localeCompare(b.code))
+      .slice(0, 8);
+    const def = getDefaultAccount();
+    const defAcct = def && byCode.get(def);
+    let html = '<option value="">Choose your account…</option>';
+    if (defAcct) html += `<optgroup label="★ Your default">${opt(defAcct)}</optgroup>`;
+    if (frequent.length) html += `<optgroup label="Frequently used">${frequent.map(opt).join('')}</optgroup>`;
+    html += `<optgroup label="All accounts">${state.expenseAccounts.map(opt).join('')}</optgroup>`;
+    sel.innerHTML = html;
+    // Preselect: an explicit value (edit), else the default (fresh form).
+    const want = preselect != null ? preselect : (sel.value || def || '');
+    if (want && byCode.has(want)) sel.value = want;
+    updateDefaultLink();
+  }
+
   function selectedAccountCode() {
-    const input = $('#f-expense-account');
-    if (!input) return '';
-    const raw = (input.value || '').trim();
-    if (!raw) return '';
-    const list = state.expenseAccounts || [];
-    const codePart = (raw.split(/[–-]/)[0] || '').trim();
-    const hit = list.find((a) => a.code === codePart)
-      || list.find((a) => `${a.code} – ${a.name}` === raw)
-      || list.find((a) => a.name.toLowerCase() === raw.toLowerCase());
-    return hit ? hit.code : null;
+    const sel = $('#f-expense-account');
+    return sel ? (sel.value || '') : '';
+  }
+
+  // The "★ Make this my default" link reflects the current selection.
+  function updateDefaultLink() {
+    const link = $('#set-default-account');
+    if (!link) return;
+    const code = selectedAccountCode();
+    if (!code) { link.hidden = true; return; }
+    link.hidden = false;
+    const isDefault = code === getDefaultAccount();
+    link.textContent = isDefault ? '★ Your default' : '★ Make this my default';
+    link.disabled = isDefault;
   }
 
   // Fill the Category dropdown with the set for the chosen account — General Fund
@@ -1193,8 +1216,9 @@
     $('.type-toggle').hidden = true;
     $('#f-amount').value = e.amount != null ? e.amount : '';
     if (e.currency && hasOption('#f-currency', e.currency)) $('#f-currency').value = e.currency;
-    // Account first, then its category list, then the saved category.
-    $('#f-expense-account').value = e.expenseAccount || '';
+    // Account first (by its code), then its category list, then the saved category.
+    const eaCode = (String(e.expenseAccount || '').match(/^(\S+)/) || [])[1] || '';
+    populateExpenseAccounts(eaCode);
     populateCategories();
     if (e.accountCode && hasOption('#f-account', e.accountCode)) $('#f-account').value = e.accountCode;
     $('#f-date').value = e.date || '';
@@ -1216,7 +1240,8 @@
     state.scanTime = '';
     el.form.reset();
     $('#f-date').value = new Date().toISOString().slice(0, 10);
-    populateCategories(); // account cleared → reset the category dropdown
+    populateExpenseAccounts(); // re-apply the default account…
+    populateCategories();      // …and its category list
     el.receiptName.textContent = '';
     $('#submit-title').textContent = 'New expense';
     el.submitBtn.textContent = 'Submit expense';
@@ -4127,7 +4152,15 @@
     updateSortHeader();
     $('#new-report-btn').addEventListener('click', createReportPrompt);
     $('#f-report').addEventListener('change', onFormReportChange);
-    $('#f-expense-account').addEventListener('input', populateCategories);
+    $('#f-expense-account').addEventListener('change', () => { populateCategories(); updateDefaultLink(); });
+    $('#set-default-account').addEventListener('click', () => {
+      const code = selectedAccountCode();
+      if (!code) return;
+      setDefaultAccount(code);
+      updateDefaultLink();
+      const a = (state.expenseAccounts || []).find((x) => x.code === code);
+      toast(`★ ${a ? a.name : code} is now your default account.`, 'good');
+    });
     $('#import-choose').addEventListener('click', () => el.importFile.click());
     $('#import-template').addEventListener('click', downloadTemplate);
     $('#import-copy').addEventListener('click', copyImportInstructions);

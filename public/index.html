@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Rembly" />
-    <link rel="stylesheet" href="styles.css?v=20260801a" />
+    <link rel="stylesheet" href="styles.css?v=20260801b" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -175,11 +175,11 @@
               <label class="field">
                 <span class="field-label-row">
                   <span>Account <span class="req" aria-hidden="true">*</span> <em class="opt">(your fund / expense type)</em></span>
-                  <span id="ea-hint" class="opt cat-hint"></span>
+                  <button type="button" id="set-default-account" class="link-btn" hidden>★ Make this my default</button>
                 </span>
-                <input id="f-expense-account" name="expenseAccount" list="ea-list" autocomplete="off" required
-                       placeholder="Type a name or code — e.g. “Ellenwood” or “002060”" />
-                <datalist id="ea-list"></datalist>
+                <select id="f-expense-account" name="expenseAccount" required>
+                  <option value="">Choose your account…</option>
+                </select>
               </label>
 
               <div class="row">
@@ -573,6 +573,6 @@
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260801a"></script>
+    <script src="app.js?v=20260801b"></script>
   </body>
 </html>
