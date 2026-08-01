@@ -17,6 +17,7 @@ const {
   accountAccessFor,
   getExpenseAccountByCode,
   accountVisibleTo,
+  isCategoryAllowedForAccount,
   getMileageRate,
   round2,
   displayMaps,
@@ -96,6 +97,7 @@ exports.handler = async (event) => {
     }
     if (!account) throw badRequest('Please choose an expense category.');
     if (!isValidCategoryForSeries(expAcct.series, account)) throw badRequest('That category isn’t valid for this account.');
+    if (!isCategoryAllowedForAccount(expAcct, account)) throw badRequest('That category isn’t one of the ones set up for this account.');
 
     const receipt = validateReceipt(body.receipt);
 

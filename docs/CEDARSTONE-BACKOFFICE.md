@@ -29,14 +29,18 @@ Three connected pieces: (1) **role-based accounts** on the submit side, (2) a
 >   and nobody is blocked until CedarStone assigns them. Enforced server-side in
 >   `options.js` (the picker only shows permitted accounts) and again in
 >   `submit-expense.js` / `update-expense.js`.
+> - **Per-account categories:** each account may be limited to a **subset** of its
+>   series' categories (`Category Codes` on the table; empty = every category for
+>   the series). Set by ticking categories on the account in the same screen;
+>   enforced in `submit-expense.js` / `update-expense.js` and reflected in the
+>   Category picker. So a fund can be pinned to just the codes it should ever use.
 > - **Screen:** Management → **Accounts & access** (Finance only). Add / rename /
->   retire accounts, search, and tick who may use each one. Backed by
->   `netlify/functions/expense-accounts.js`.
+>   retire accounts, search, tick who may use each one, and tick which categories
+>   it offers. Backed by `netlify/functions/expense-accounts.js`.
 >
-> Not yet done: per-account **category** lists (still one standard list per series);
-> and the "hide the account step entirely for people with only their own account"
-> nicety — today everyone picks an account, but they only see the ones they're
-> allowed. The rest of this section is the original design.
+> Not yet done: the "hide the account step entirely for people with only their own
+> account" nicety — today everyone picks an account, but they only see the ones
+> they're allowed. The rest of this section is the original design.
 
 Some people manage extra **accounts** beyond their own personal ministry account.
 Example: Mel is an executive and can log expenses for **Selah** (and possibly one

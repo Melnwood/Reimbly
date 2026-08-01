@@ -6,8 +6,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { accountVisibleTo, visibleExpenseAccounts } = require('../netlify/functions/lib/domain');
-const { isValidCategoryForSeries } = require('../netlify/functions/lib/coding');
+const {
+  accountVisibleTo, visibleExpenseAccounts,
+  categoriesForExpenseAccount, isCategoryAllowedForAccount,
+} = require('../netlify/functions/lib/domain');
+const {
+  isValidCategoryForSeries, CATEGORIES_8, categoriesForSeries,
+} = require('../netlify/functions/lib/coding');
 
 const open = { code: '010000', name: 'General Fund', series: '7', active: true, allowedStaffIds: [] };
 const mels = { code: '002060', name: 'Mel & Amy Ellenwood', series: '8', active: true, allowedStaffIds: ['recMel'] };
@@ -41,6 +46,36 @@ test('visibleExpenseAccounts: Finance sees every active account', () => {
   const all = [open, mels, retired];
   const codes = visibleExpenseAccounts(all, 'recFinance', 'Finance').map((a) => a.code);
   assert.deepEqual(codes.sort(), ['002060', '010000']); // both active ones, still no retired
+});
+
+test('categoriesForExpenseAccount: no subset = the whole series list', () => {
+  const acct = { series: '8', categoryCodes: [] };
+  assert.equal(categoriesForExpenseAccount(acct).length, CATEGORIES_8.length);
+});
+
+test('categoriesForExpenseAccount: a subset limits to just those codes', () => {
+  const first = CATEGORIES_8[0].code;
+  const acct = { series: '8', categoryCodes: [first] };
+  const list = categoriesForExpenseAccount(acct);
+  assert.equal(list.length, 1);
+  assert.equal(list[0].code, first);
+});
+
+test('categoriesForExpenseAccount: a subset is still intersected with the series', () => {
+  // A stale/foreign code in the subset can never leak a wrong-series category.
+  const acct = { series: '8', categoryCodes: ['not-a-real-code'] };
+  assert.equal(categoriesForExpenseAccount(acct).length, 0);
+});
+
+test('isCategoryAllowedForAccount: honours the subset, allows anything when unset', () => {
+  const only = CATEGORIES_8[0].code;
+  const other = CATEGORIES_8[1] && CATEGORIES_8[1].code;
+  const restricted = { series: '8', categoryCodes: [only] };
+  assert.equal(isCategoryAllowedForAccount(restricted, only), true);
+  if (other) assert.equal(isCategoryAllowedForAccount(restricted, other), false);
+  const openAcct = { series: '8', categoryCodes: [] };
+  assert.equal(isCategoryAllowedForAccount(openAcct, only), true);
+  if (other) assert.equal(isCategoryAllowedForAccount(openAcct, other), true);
 });
 
 test('isValidCategoryForSeries: General Fund (7) and standard (8) accept different codes', () => {

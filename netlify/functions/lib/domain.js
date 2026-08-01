@@ -398,9 +398,32 @@ async function listExpenseAccounts() {
         series: String(f.Series || coding.seriesForAccount(f.Code) || '8'),
         active: f.Active !== false,
         allowedStaffIds: Array.isArray(f['Allowed Staff']) ? f['Allowed Staff'] : [],
+        categoryCodes: parseCategoryCodes(f['Category Codes']),
       };
     })
     .filter((a) => a.code);
+}
+
+// The optional per-account category subset, stored as comma/space/newline-
+// separated GL codes. Empty array = no restriction (use the whole series list).
+function parseCategoryCodes(raw) {
+  return String(raw || '')
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+// The categories an account actually offers: its restricted subset if it has one,
+// otherwise every category for its series. Always intersected with the series
+// list so a stale code can never sneak a wrong-fund category through.
+function categoriesForExpenseAccount(acct) {
+  const full = coding.categoriesForSeries(acct && acct.series);
+  const only = acct && acct.categoryCodes && acct.categoryCodes.length
+    ? new Set(acct.categoryCodes) : null;
+  return only ? full.filter((c) => only.has(c.code)) : full;
+}
+function isCategoryAllowedForAccount(acct, catCode) {
+  return categoriesForExpenseAccount(acct).some((c) => c.code === String(catCode || '').trim());
 }
 
 // Fill the table with any accounts that exist in code but not yet in Airtable —
@@ -430,12 +453,17 @@ function accountVisibleTo(acct, staffId, isFinance) {
   return !!staffId && allowed.includes(staffId);
 }
 
-// The active accounts a given caller may pick, shaped for the app.
+// The active accounts a given caller may pick, shaped for the app. Only sends the
+// per-account category subset when there is one (keeps the payload lean).
 function visibleExpenseAccounts(accounts, staffId, role) {
   const isFinance = role === 'Finance';
   return accounts
     .filter((a) => accountVisibleTo(a, staffId, isFinance))
-    .map((a) => ({ code: a.code, name: a.name, series: a.series }));
+    .map((a) => {
+      const shaped = { code: a.code, name: a.name, series: a.series };
+      if (a.categoryCodes && a.categoryCodes.length) shaped.categoryCodes = a.categoryCodes;
+      return shaped;
+    });
 }
 
 // One account by code, from the table (falling back to the built-in list) —
@@ -456,11 +484,12 @@ async function getExpenseAccountByCode(code) {
       series: String(f.Series || coding.seriesForAccount(c) || '8'),
       active: f.Active !== false,
       allowedStaffIds: Array.isArray(f['Allowed Staff']) ? f['Allowed Staff'] : [],
+      categoryCodes: parseCategoryCodes(f['Category Codes']),
     };
   }
   const name = coding.accountName(c);
   if (!name) return null;
-  return { id: null, code: c, name, series: coding.seriesForAccount(c), active: true, allowedStaffIds: [] };
+  return { id: null, code: c, name, series: coding.seriesForAccount(c), active: true, allowedStaffIds: [], categoryCodes: [] };
 }
 
 // People list for the Finance management screen.
@@ -802,6 +831,8 @@ module.exports = {
   ensureExpenseAccountsSeeded,
   visibleExpenseAccounts,
   accountVisibleTo,
+  categoriesForExpenseAccount,
+  isCategoryAllowedForAccount,
   getExpenseAccountByCode,
   staffMap,
   accountAccessFor,

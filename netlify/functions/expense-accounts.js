@@ -15,9 +15,10 @@ const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const {
-  TABLES, ensureStaff, ensureExpenseAccountsSeeded, listExpenseAccounts, listPeople,
+  TABLES, ensureStaff, ensureExpenseAccountsSeeded, listExpenseAccounts,
+  getExpenseAccountByCode, listPeople,
 } = require('./lib/domain');
-const { GENERAL_FUND_CODE } = require('./lib/coding');
+const { GENERAL_FUND_CODE, categoriesForSeries } = require('./lib/coding');
 
 function bad(message, code = 400) {
   const err = new Error(message);
@@ -91,6 +92,21 @@ exports.handler = async (event) => {
         ? body.staffIds.filter((s) => typeof s === 'string' && s.startsWith('rec'))
         : [];
       await airtable.updateRecord(TABLES.EXPENSE_ACCOUNTS, id, { 'Allowed Staff': staffIds });
+      return ok({ accounts: await listExpenseAccounts() });
+    }
+
+    if (action === 'categories') {
+      const code = String(body.code || '').trim();
+      if (!code) throw bad('Missing the account to update.');
+      const acct = await getExpenseAccountByCode(code);
+      if (!acct || !acct.id) throw bad('That account isn’t recognised.');
+      // Keep only real categories for this account's series; an empty list clears
+      // the restriction (the account then offers every category for its series).
+      const valid = new Set(categoriesForSeries(acct.series).map((c) => c.code));
+      const codes = Array.isArray(body.categoryCodes)
+        ? body.categoryCodes.map((c) => String(c || '').trim()).filter((c) => valid.has(c))
+        : [];
+      await airtable.updateRecord(TABLES.EXPENSE_ACCOUNTS, acct.id, { 'Category Codes': codes.join(', ') });
       return ok({ accounts: await listExpenseAccounts() });
     }
 

@@ -25,6 +25,7 @@ const {
   householdScope,
   getExpenseAccountByCode,
   accountVisibleTo,
+  isCategoryAllowedForAccount,
 } = require('./lib/domain');
 const { isValidCategoryForSeries } = require('./lib/coding');
 
@@ -106,6 +107,7 @@ exports.handler = async (event) => {
         throw err;
       }
       if (!isValidCategoryForSeries(expAcct.series, account)) throw badRequest('That category isn’t valid for this account.');
+      if (!isCategoryAllowedForAccount(expAcct, account)) throw badRequest('That category isn’t one of the ones set up for this account.');
     }
 
     const currencyId = await resolveCurrencyId(currency);

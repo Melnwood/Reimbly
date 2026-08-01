@@ -9,7 +9,7 @@
     view: 'submit',
     loaded: { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false, people: false, accounts: false },
     accounts: [],
-    acct: { accounts: [], people: [], q: '', showRetired: false, editingAccessId: null }, // Accounts & access screen
+    acct: { accounts: [], people: [], q: '', showRetired: false, editingAccessId: null, editingCatsId: null }, // Accounts & access screen
     mileageRates: [],
     rates: [], // full list (Finance management screen)
     expenseType: 'receipt', // 'receipt' | 'mileage'
@@ -515,11 +515,17 @@
     link.disabled = isDefault;
   }
 
-  // The categories that apply to an account — General Fund gets the 7-series,
-  // every other account the 8-series.
+  // The categories that apply to an account. General Fund gets the 7-series,
+  // every other account the 8-series — but an account can be restricted to a
+  // subset of that list (set by CedarStone), in which case we show just those.
   function categoriesForCode(code) {
-    return String(code) === String(state.generalFundCode || '010000')
-      ? (state.categories7 || []) : (state.categories8 || []);
+    const acct = (state.expenseAccounts || []).find((a) => a.code === code);
+    const series = acct ? acct.series
+      : (String(code) === String(state.generalFundCode || '010000') ? '7' : '8');
+    const full = String(series) === '7' ? (state.categories7 || []) : (state.categories8 || []);
+    const only = acct && acct.categoryCodes && acct.categoryCodes.length
+      ? new Set(acct.categoryCodes) : null;
+    return only ? full.filter((c) => only.has(c.code)) : full;
   }
 
   // Fill the Category dropdown with the set for the chosen account — General Fund
@@ -4074,6 +4080,43 @@
     return `<span class="acct-restricted">🔒 ${escapeHtml(shown)}${escapeHtml(extra)}</span>`;
   }
 
+  // The full category list for an account's series (what it can be limited to).
+  function seriesCategories(a) {
+    return String(a.series) === '7' ? (state.categories7 || []) : (state.categories8 || []);
+  }
+
+  // The one-line "which categories" summary under each account.
+  function categoriesSummary(a) {
+    const total = seriesCategories(a).length;
+    const set = (a.categoryCodes || []).length;
+    if (!set) return `<span class="acct-open">All ${total} categories</span>`;
+    return `<span class="acct-restricted">📂 ${set} of ${total} categories</span>`;
+  }
+
+  // The inline "which categories" editor: tick the categories this account may use.
+  function categoriesEditorHtml(a) {
+    const chosen = new Set(a.categoryCodes || []);
+    const cats = seriesCategories(a);
+    const rows = cats.map((c) => `
+      <label class="acc-pick">
+        <input type="checkbox" data-cat="${escapeHtml(c.code)}"${chosen.has(c.code) ? ' checked' : ''} />
+        <span><strong>${escapeHtml(c.code)}</strong> ${escapeHtml(c.name)}</span>
+      </label>`).join('');
+    return `
+      <div class="acc-editor">
+        <p class="acc-editor-hint">Tick the categories people may use on this account. Leave all unticked to allow every category for this ${String(a.series) === '7' ? 'General Fund' : 'account'}.</p>
+        <div class="acc-editor-tools">
+          <button type="button" class="link-btn" data-act="acct-cats-all">Select all</button>
+          <button type="button" class="link-btn" data-act="acct-cats-none">Clear all</button>
+        </div>
+        <div class="acc-people">${rows || '<div class="state">No categories loaded.</div>'}</div>
+        <div class="acc-editor-actions">
+          <button type="button" class="btn primary small" data-act="acct-cats-save" data-id="${escapeHtml(a.id)}" data-code="${escapeHtml(a.code)}">Save categories</button>
+          <button type="button" class="link-btn" data-act="acct-cats-cancel">Cancel</button>
+        </div>
+      </div>`;
+  }
+
   // The inline "who can use it" editor: a searchable list of people to tick.
   function accessEditorHtml(a) {
     const chosen = new Set(a.allowedStaffIds || []);
@@ -4114,21 +4157,24 @@
       return;
     }
     list.innerHTML = visible.map((a) => {
-      const editing = state.acct.editingAccessId === a.id;
+      const editingAccess = state.acct.editingAccessId === a.id;
+      const editingCats = state.acct.editingCatsId === a.id;
       return `
         <article class="expense acct-row${a.active ? '' : ' retired'}" data-id="${escapeHtml(a.id)}">
           <div class="acct-head">
             <div class="acct-main">
               <div class="acct-title"><span class="acct-code">${escapeHtml(a.code)}</span> ${escapeHtml(a.name)}${a.active ? '' : ' <span class="acct-badge">Retired</span>'}</div>
-              <div class="acct-access">${accessSummary(a)}</div>
+              <div class="acct-access">${accessSummary(a)} <span class="acct-sep">·</span> ${categoriesSummary(a)}</div>
             </div>
             <div class="acct-actions">
-              <button type="button" class="btn ghost small" data-act="acct-access" data-id="${escapeHtml(a.id)}">${editing ? 'Close' : 'Who can use it'}</button>
+              <button type="button" class="btn ghost small" data-act="acct-access" data-id="${escapeHtml(a.id)}">${editingAccess ? 'Close' : 'Who can use it'}</button>
+              <button type="button" class="btn ghost small" data-act="acct-cats" data-id="${escapeHtml(a.id)}">${editingCats ? 'Close' : 'Categories'}</button>
               <button type="button" class="link-btn" data-act="acct-rename" data-id="${escapeHtml(a.id)}">Rename</button>
               <button type="button" class="link-btn${a.active ? ' danger' : ''}" data-act="acct-toggle" data-id="${escapeHtml(a.id)}">${a.active ? 'Retire' : 'Restore'}</button>
             </div>
           </div>
-          ${editing ? accessEditorHtml(a) : ''}
+          ${editingAccess ? accessEditorHtml(a) : ''}
+          ${editingCats ? categoriesEditorHtml(a) : ''}
         </article>`;
     }).join('');
   }
@@ -4142,12 +4188,43 @@
 
     if (act === 'acct-access') {
       state.acct.editingAccessId = state.acct.editingAccessId === id ? null : id;
+      state.acct.editingCatsId = null;
       renderAccountsAdmin();
       return;
     }
     if (act === 'acct-access-cancel') {
       state.acct.editingAccessId = null;
       renderAccountsAdmin();
+      return;
+    }
+    if (act === 'acct-cats') {
+      state.acct.editingCatsId = state.acct.editingCatsId === id ? null : id;
+      state.acct.editingAccessId = null;
+      renderAccountsAdmin();
+      return;
+    }
+    if (act === 'acct-cats-cancel') {
+      state.acct.editingCatsId = null;
+      renderAccountsAdmin();
+      return;
+    }
+    if (act === 'acct-cats-all' || act === 'acct-cats-none') {
+      const row = btn.closest('.acct-row');
+      $$('.acc-pick input[data-cat]', row).forEach((c) => { c.checked = act === 'acct-cats-all'; });
+      return;
+    }
+    if (act === 'acct-cats-save') {
+      const row = btn.closest('.acct-row');
+      const code = btn.dataset.code;
+      const categoryCodes = $$('.acc-pick input[data-cat]', row).filter((c) => c.checked).map((c) => c.dataset.cat);
+      btn.disabled = true;
+      try {
+        const data = await api('expense-accounts', { method: 'POST', body: { action: 'categories', code, categoryCodes } });
+        state.acct.accounts = data.accounts || state.acct.accounts;
+        state.acct.editingCatsId = null;
+        renderAccountsAdmin();
+        toast(categoryCodes.length ? 'Saved this account’s categories.' : 'This account now allows every category.', 'good');
+      } catch (e) { toast(e.message, 'bad'); btn.disabled = false; }
       return;
     }
     if (act === 'acct-access-save') {
