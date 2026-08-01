@@ -26,6 +26,7 @@ const {
   getExpenseAccountByCode,
   accountVisibleTo,
   isCategoryAllowedForAccount,
+  receiptGatePasses,
 } = require('./lib/domain');
 const { isValidCategoryForSeries } = require('./lib/coding');
 
@@ -150,6 +151,13 @@ exports.handler = async (event) => {
     // Editing a sent-back expense sends it back through for approval, clean.
     const wasRejected = (current.fields && current.fields.Status) === STATUS.REJECTED;
     if (wasRejected) {
+      // Receipt gate: it can't go back for approval bare — needs a receipt (one
+      // arriving now or already attached), a signed "no receipt" declaration, or
+      // to be a mileage claim.
+      const incomingReceipt = !!(body.receipt && body.receipt.base64);
+      if (!incomingReceipt && !receiptGatePasses(current.fields)) {
+        throw badRequest('Add a receipt, or declare you don’t have one, before resubmitting this expense.');
+      }
       fields.Status = STATUS.SUBMITTED;
       fields['Submitted On'] = today();
       fields['Decided On'] = null;

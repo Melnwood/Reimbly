@@ -10,7 +10,7 @@ const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const {
   TABLES, STATUS, EVENTS,
-  ensureStaff, isHeldEmailReceipt, sourceOf, logActivity, staffById,
+  ensureStaff, isHeldEmailReceipt, sourceOf, logActivity, staffById, receiptGatePasses,
 } = require('./lib/domain');
 const notify = require('./lib/notify');
 
@@ -56,12 +56,15 @@ exports.handler = async (event) => {
 
     let submitted = 0;
     let totalUsd = 0;
+    let heldForReceipt = 0;
     const skipped = [];
     for (const rec of candidates) {
       const f = rec.fields || {};
       // Only my own, only unsubmitted, never a held email receipt.
       if (emailOf(f) !== me) { skipped.push(rec.id); continue; }
       if ((f.Status || '') !== STATUS.DRAFT || isHeldEmailReceipt(f)) { skipped.push(rec.id); continue; }
+      // Receipt gate: hold back anything with no receipt and no signed declaration.
+      if (!receiptGatePasses(f)) { skipped.push(rec.id); heldForReceipt += 1; continue; }
 
       await airtable.updateRecord(TABLES.EXPENSES, rec.id, {
         Status: STATUS.SUBMITTED,
@@ -85,7 +88,10 @@ exports.handler = async (event) => {
       }
     }
 
-    return ok({ submitted, skipped });
+    const warning = heldForReceipt
+      ? `${heldForReceipt} expense${heldForReceipt === 1 ? ' was' : 's were'} held back — ${heldForReceipt === 1 ? 'it needs' : 'they need'} a receipt or a “no receipt” declaration first.`
+      : null;
+    return ok({ submitted, skipped, heldForReceipt, warning });
   } catch (err) {
     return error(err);
   }

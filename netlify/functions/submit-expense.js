@@ -143,6 +143,24 @@ exports.handler = async (event) => {
     fields['Expense Account'] = `${expenseAccount} – ${expAcct.name}`;
     if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
+
+    // The receipt gate. An expense that goes straight to approval (not into a
+    // report as a draft) must carry proof of spend: a receipt, a signed "no
+    // receipt" declaration, or be a mileage claim. If the person declared no
+    // receipt inline, record that; otherwise block, so nothing bare gets through.
+    const declare = body.missingReceipt && typeof body.missingReceipt === 'object' ? body.missingReceipt : null;
+    const declaring = !!(declare && String(declare.reason || '').trim() && declare.agree === true);
+    if (declaring) {
+      fields['Missing Receipt'] = true;
+      fields['Affidavit Reason'] = String(declare.reason).trim();
+      fields['Affidavit Signed By'] = user.name || user.email;
+      fields['Affidavit Signed On'] = today();
+      fields['Affidavit Status'] = 'Pending';
+      fields.Receipt = []; // a signed declaration stands in for the receipt
+    }
+    if (!reportLink && !mileage && !receipt && !declaring) {
+      throw badRequest('This expense has no receipt. Add one, or declare you don’t have a receipt, before submitting.');
+    }
     // Time read off the photo (HH:MM) — helps tell apart repeat charges like tolls.
     const timeIn = /^(\d{1,2}):(\d{2})$/.exec(String(body.time || '').trim());
     if (timeIn && Number(timeIn[1]) < 24) fields['Receipt Time'] = `${timeIn[1].padStart(2, '0')}:${timeIn[2]}`;

@@ -15,6 +15,7 @@
     expenseType: 'receipt', // 'receipt' | 'mileage'
     mineExpenses: [],
     editingId: null,
+    pendingDeclaration: null, // a signed "no receipt" declaration waiting to submit with a new expense
     importRows: [],
     importMode: 'add', // 'add' | 'reconcile'
     sortKey: 'date', // 'date' | 'desc' | 'amt'
@@ -815,6 +816,24 @@
     $('#affidavit-modal').hidden = false;
     document.body.classList.add('modal-open');
   }
+  // Same window, but for a brand-new expense that has no receipt yet: the person
+  // signs the declaration here, and submitting the form resumes with it attached.
+  function openReceiptGate() {
+    state.affidavitFor = '__new__';
+    const amount = parseFloat($('#f-amount').value);
+    const currency = $('#f-currency').value;
+    $('#aff-summary').innerHTML = [
+      ['What', $('#f-business').value || $('#f-description').value || '(no description)'],
+      ['Amount', amount > 0 ? money(amount, currency) : '—'],
+      ['Date', fmtDate($('#f-date').value) || '—'],
+    ].map(([k, v]) => `<div class="aff-sum-row"><span>${k}</span><strong>${escapeHtml(v)}</strong></div>`).join('');
+    $('#aff-reason').value = '';
+    const name = (state.me && state.me.name) || 'me';
+    $('#aff-statement').innerHTML = `This will be signed by <strong>${escapeHtml(name)}</strong> on <strong>${escapeHtml(fmtDate(new Date().toISOString().slice(0, 10)))}</strong>.`;
+    $('#aff-agree').checked = false;
+    $('#affidavit-modal').hidden = false;
+    document.body.classList.add('modal-open');
+  }
   function closeAffidavitModal() {
     const w = $('#affidavit-modal');
     if (w && !w.hidden) { w.hidden = true; document.body.classList.remove('modal-open'); }
@@ -825,6 +844,14 @@
     const reason = $('#aff-reason').value.trim();
     if (!reason) { toast('Please say why there’s no receipt.', 'bad'); return; }
     if (!$('#aff-agree').checked) { toast('Please check the box to sign.', 'bad'); return; }
+    // New expense: stash the signed declaration and let the form submit carry it.
+    if (id === '__new__') {
+      state.pendingDeclaration = { reason };
+      state.affidavitFor = null;
+      closeAffidavitModal();
+      onSubmit(new Event('submit'));
+      return;
+    }
     const btn = $('#aff-submit');
     btn.disabled = true;
     try {
@@ -1118,6 +1145,7 @@
     (input === el.receiptCamera ? el.receiptInput : el.receiptCamera).value = '';
     el.receiptName.textContent = file ? file.name : '';
     if (!file) return;
+    state.pendingDeclaration = null; // a real receipt supersedes any "no receipt" declaration
 
     if (state.editingId) return; // during an edit, just attach — don't re-scan/overwrite fields
 
@@ -1184,6 +1212,18 @@
     const reportId = !editing ? ($('#f-report') && $('#f-report').value) : '';
     if (reportId && reportId !== '__new__') body.reportId = reportId;
     if (!editing && state.scanTime) body.time = state.scanTime; // time read off the photo
+
+    // Receipt gate: a new expense that goes straight to approval (not into a
+    // report) must have a receipt or a signed "no receipt" declaration. If there's
+    // neither, ask them to declare it — then this submit resumes with it attached.
+    const willSubmitNow = !editing && !mileageMode && !body.reportId;
+    if (willSubmitNow && !file && !state.pendingDeclaration) {
+      openReceiptGate();
+      return;
+    }
+    if (!editing && !file && state.pendingDeclaration) {
+      body.missingReceipt = { reason: state.pendingDeclaration.reason, agree: true };
+    }
 
     el.submitBtn.disabled = true;
     el.submitBtn.textContent = editing ? 'Saving…' : 'Submitting…';
@@ -1321,6 +1361,7 @@
   function cancelEdit() {
     state.editingId = null;
     state.scanTime = '';
+    state.pendingDeclaration = null;
     el.form.reset();
     $('#f-date').value = new Date().toISOString().slice(0, 10);
     populateExpenseAccounts(); // re-apply the default account…

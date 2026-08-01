@@ -63,6 +63,23 @@ Rule of thumb: *the account picker appears only if you've been given accounts.*
 
 ## 2. Front-side receipt gate (hard stop, not a nudge)
 
+> **Status — built, live.** Nothing reaches an approver without proof of spend.
+> The rule lives in `receiptGatePasses(fields)` (`lib/domain.js`): an expense
+> passes if it has a **receipt**, a **complete signed "no receipt" declaration**
+> (Missing Receipt + reason + signer), or is a **mileage** claim. It's enforced at
+> every point an expense goes for approval:
+> - **`submit-expense.js`** — a stand-alone submit with no receipt is blocked; the
+>   form offers "I don't have a receipt," and the signed declaration rides along in
+>   the same submit (`missingReceipt: { reason, agree }`).
+> - **`reports.js` (submit)** — submitting a report is blocked if any draft in it
+>   lacks proof, naming how many need fixing.
+> - **`submit-batch.js`** — "submit all" holds back the ones without proof and says so.
+> - **`update-expense.js`** — resubmitting a sent-back expense is blocked until it
+>   has a receipt or a declaration.
+>
+> Drafts can still be incomplete while you build a report; the gate fires at the
+> moment of submission. The rest of this section is the original design.
+
 An expense **cannot go into a report** unless one of these is true:
 
 1. It **has a receipt attached**, **or**

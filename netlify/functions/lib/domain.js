@@ -529,6 +529,28 @@ async function accountMap() {
   return map;
 }
 
+// ---- Receipt gate ------------------------------------------------------
+// The rule that keeps bad expenses out of an approval queue: nothing gets
+// submitted without proof of spend — a receipt, OR a signed "no receipt"
+// declaration. Mileage claims are computed from distance × rate, so they need
+// neither. Takes raw Airtable `fields`.
+
+function isMileageExpense(fields) {
+  const f = fields || {};
+  return Number(f.Distance) > 0 || Number(f.Miles) > 0
+    || (f['Mileage Rate'] != null && f['Mileage Rate'] !== '');
+}
+
+function receiptGatePasses(fields) {
+  const f = fields || {};
+  if (isMileageExpense(f)) return true;
+  const hasReceipt = Array.isArray(f.Receipt) && f.Receipt.length > 0;
+  const declared = f['Missing Receipt'] === true
+    && String(f['Affidavit Reason'] || '').trim() !== ''
+    && String(f['Affidavit Signed By'] || '').trim() !== '';
+  return hasReceipt || declared;
+}
+
 // The small maps needed to display expenses. Fetched once per request.
 async function displayMaps() {
   const [currency, category, staff, account, report] = await Promise.all([
@@ -834,6 +856,8 @@ module.exports = {
   categoriesForExpenseAccount,
   isCategoryAllowedForAccount,
   getExpenseAccountByCode,
+  receiptGatePasses,
+  isMileageExpense,
   staffMap,
   accountAccessFor,
   listPeople,
