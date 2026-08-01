@@ -910,7 +910,20 @@ body.modal-open { overflow: hidden; }
 .rv-pv-flag .rv-q { color: var(--ink-soft); font-style: italic; margin-top: 5px; }
 .rv-pv-ok { color: #0a7a6d; font-weight: 700; font-size: 0.9rem; padding: 6px 0; }
 .rv-rc { margin-top: 4px; }
+.rv-rc-imgwrap { position: relative; display: block; line-height: 0; }
 .rv-rc-img { width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--line); background: #fff; display: block; }
+/* Highlights over the total & date on the receipt image (normalized coords). */
+.rc-mark { position: absolute; box-sizing: border-box; border-radius: 4px; pointer-events: none;
+  border: 2px solid; box-shadow: 0 0 0 2px rgba(255,255,255,0.55); }
+.rc-mark.amt { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 18%, transparent); }
+.rc-mark.date { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.rc-mark-lbl { position: absolute; top: -9px; left: -2px; transform: translateY(-100%);
+  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase;
+  color: #fff; padding: 1px 5px; border-radius: 999px; white-space: nowrap; line-height: 1.4; }
+.rc-mark.amt .rc-mark-lbl { background: var(--brand); }
+.rc-mark.date .rc-mark-lbl { background: var(--accent); }
+.rv-rc-read { margin-top: 8px; font-size: 0.85rem; color: var(--ink-soft); }
+.rv-rc-read b { color: var(--ink); }
 .rv-rc-frame { width: 100%; height: 480px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; }
 .rv-rc-open { display: inline-block; margin-top: 9px; font-weight: 700; color: var(--brand-ink); font-size: 0.85rem; text-decoration: none; }
 .rv-rc-open:hover { text-decoration: underline; }

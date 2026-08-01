@@ -745,7 +745,17 @@ function shapeExpense(record, maps = {}) {
           filename: receipts[0].filename,
         }
       : null,
+    // Where the total & date sit on the receipt image (for the reviewer's highlight).
+    receiptMarks: parseReceiptMarks(f['Receipt Marks']),
   };
+}
+
+function parseReceiptMarks(raw) {
+  if (!raw) return null;
+  try {
+    const m = JSON.parse(raw);
+    return m && typeof m === 'object' ? m : null;
+  } catch { return null; }
 }
 
 // Held email receipts waiting to be claimed: a person's Draft expenses that came

@@ -167,6 +167,9 @@ exports.handler = async (event) => {
     // Provenance: a manual entry that arrives with a photo is "taken by a
     // picture"; one typed in by hand has no receipt. sourceOf() reads this.
     if (receipt) fields.Notes = fields.Notes ? `${fields.Notes}\nAdded by photo` : 'Added by photo';
+    // Where the total & date sit on the receipt image (for the reviewer's highlight).
+    const marks = sanitizeReceiptMarks(body.receiptMarks);
+    if (receipt && marks) fields['Receipt Marks'] = JSON.stringify(marks);
 
     // Soft duplicate heads-up — same person, same amount, same day. Never blocks.
     let dupWarning = null;
@@ -227,6 +230,22 @@ exports.handler = async (event) => {
     return error(err);
   }
 };
+
+// A normalized 0–1 box, or null (guards against a bad client payload).
+function cleanBox(b) {
+  if (!b || typeof b !== 'object') return null;
+  const n = (v) => Number(v);
+  const x = n(b.x); const y = n(b.y); const w = n(b.w); const h = n(b.h);
+  if (![x, y, w, h].every((v) => isFinite(v))) return null;
+  if (x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > 1.0001 || y + h > 1.0001) return null;
+  return { x, y, w, h };
+}
+function sanitizeReceiptMarks(m) {
+  if (!m || typeof m !== 'object') return null;
+  const amount = cleanBox(m.amount);
+  const date = cleanBox(m.date);
+  return amount || date ? { amount, date } : null;
+}
 
 function validateReceipt(receipt) {
   if (!receipt) return null;

@@ -77,7 +77,7 @@ exports.handler = async (event) => {
     // was read off that receipt, since it came from the wrong image.
     if (body.removeReceipt === true && !body.receipt) {
       await airtable.updateRecord(TABLES.EXPENSES, id, {
-        Receipt: [], 'Original Amount': null, 'Original Currency': '',
+        Receipt: [], 'Original Amount': null, 'Original Currency': '', 'Receipt Marks': '',
       });
       await logActivity({ expenseId: id, event: EVENTS.EDITED, user, note: 'Removed the receipt' });
       const [fresh, maps] = await Promise.all([getExpenseById(id), displayMaps()]);
@@ -174,7 +174,9 @@ exports.handler = async (event) => {
     const receipt = validateReceipt(body.receipt);
     if (receipt) {
       try {
-        await airtable.updateRecord(TABLES.EXPENSES, id, { Receipt: [] }); // replace, don't append
+        // Replace, don't append — and drop the old highlight coords (they were for
+        // the previous image).
+        await airtable.updateRecord(TABLES.EXPENSES, id, { Receipt: [], 'Receipt Marks': '' });
         await airtable.uploadAttachment(id, 'Receipt', receipt);
       } catch (e) {
         console.error('[reimbly] receipt upload failed', e);

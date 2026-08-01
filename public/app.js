@@ -1035,6 +1035,9 @@
     if (s.merchant) $('#f-business').value = s.merchant;
     if (s.description || s.merchant) $('#f-description').value = s.description || s.merchant;
     state.scanTime = s.time || ''; // carried through to save, for repeat-charge matching
+    // Where the total & date sit on the image — carried through so approvers see
+    // them highlighted on the receipt.
+    state.scanMarks = (s.amountBox || s.dateBox) ? { amount: s.amountBox || null, date: s.dateBox || null } : null;
   }
 
   function currentReceipt() {
@@ -1146,6 +1149,7 @@
     el.receiptName.textContent = file ? file.name : '';
     if (!file) return;
     state.pendingDeclaration = null; // a real receipt supersedes any "no receipt" declaration
+    state.scanMarks = null;          // clear marks from any previous receipt until this one is read
 
     if (state.editingId) return; // during an edit, just attach — don't re-scan/overwrite fields
 
@@ -1212,6 +1216,7 @@
     const reportId = !editing ? ($('#f-report') && $('#f-report').value) : '';
     if (reportId && reportId !== '__new__') body.reportId = reportId;
     if (!editing && state.scanTime) body.time = state.scanTime; // time read off the photo
+    if (!editing && state.scanMarks) body.receiptMarks = state.scanMarks; // where date/total sit on the image
 
     // Receipt gate: a new expense that goes straight to approval (not into a
     // report) must have a receipt or a signed "no receipt" declaration. If there's
@@ -1361,6 +1366,7 @@
   function cancelEdit() {
     state.editingId = null;
     state.scanTime = '';
+    state.scanMarks = null;
     state.pendingDeclaration = null;
     el.form.reset();
     $('#f-date').value = new Date().toISOString().slice(0, 10);
@@ -2916,14 +2922,42 @@
     </button>`;
   }
 
-  // The receipt itself, shown inline (image, or an embedded viewer for PDFs).
+  // A highlight box over the receipt image, positioned by its normalized 0–1 coords.
+  function receiptMarkBox(box, label, cls) {
+    if (!box) return '';
+    const pct = (v) => `${(Math.max(0, Math.min(1, v)) * 100).toFixed(2)}%`;
+    return `<span class="rc-mark ${cls}" style="left:${pct(box.x)};top:${pct(box.y)};width:${pct(box.w)};height:${pct(box.h)}"><span class="rc-mark-lbl">${escapeHtml(label)}</span></span>`;
+  }
+
+  // What Rembly read off the receipt — shown under it so a reviewer can eyeball
+  // it against the printed figures even when a highlight box is missing.
+  function receiptReadLine(e) {
+    const amt = (e.originalAmount != null && e.originalCurrency)
+      ? money(e.originalAmount, e.originalCurrency)
+      : (e.amount != null ? money(e.amount, e.currency || 'USD') : '');
+    const parts = [];
+    if (amt) parts.push(`<b>${escapeHtml(amt)}</b>`);
+    if (e.date) parts.push(escapeHtml(fmtDate(e.date)));
+    if (!parts.length) return '';
+    return `<div class="rv-rc-read">Rembly read ${parts.join(' · ')} — check it matches the receipt.</div>`;
+  }
+
+  // The receipt itself, shown inline (image, or an embedded viewer for PDFs), with
+  // the total and date highlighted on the image when we know where they sit.
   function receiptViewer(e) {
     if (!e.receipt) return '';
     const isPdf = /\.pdf$/i.test(e.receipt.filename || '');
-    const media = isPdf
-      ? `<iframe class="rv-rc-frame" src="${escapeHtml(e.receipt.url)}" title="Receipt"></iframe>`
-      : `<img class="rv-rc-img" src="${escapeHtml(e.receipt.url)}" alt="Receipt for ${escapeHtml(e.description || e.merchant || 'expense')}" loading="lazy" />`;
-    return `<div class="rv-rc">${media}<a class="rv-rc-open" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">Open full size ↗</a></div>`;
+    let media;
+    if (isPdf) {
+      media = `<iframe class="rv-rc-frame" src="${escapeHtml(e.receipt.url)}" title="Receipt"></iframe>`;
+    } else {
+      const m = e.receiptMarks || {};
+      const marks = `${receiptMarkBox(m.amount, 'Total', 'amt')}${receiptMarkBox(m.date, 'Date', 'date')}`;
+      media = `<span class="rv-rc-imgwrap">
+        <img class="rv-rc-img" src="${escapeHtml(e.receipt.url)}" alt="Receipt for ${escapeHtml(e.description || e.merchant || 'expense')}" loading="lazy" />${marks}
+      </span>`;
+    }
+    return `<div class="rv-rc">${media}${receiptReadLine(e)}<a class="rv-rc-open" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">Open full size ↗</a></div>`;
   }
 
   // The right-hand preview: the selected expense's details with its receipt open.

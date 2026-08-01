@@ -32,8 +32,10 @@ function receiptTool() {
         merchant: { type: ['string', 'null'], description: 'The store or vendor name.' },
         description: { type: ['string', 'null'], description: 'A short, human description in English, e.g. "Lunch at Cafe Louvre" or "Train ticket Praha–Ostrava".' },
         account: { type: ['string', 'null'], description: 'The single best-fit GL account CODE from the account list in the instructions. Return only the numeric code, e.g. "8394000". null if unsure.' },
+        amountBox: { type: ['object', 'null'], description: 'Where the printed TOTAL amount sits on the image, as a normalized box (fractions of image width/height, origin top-left). null if not an image or not locatable.', properties: { x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } }, required: ['x', 'y', 'w', 'h'], additionalProperties: false },
+        dateBox: { type: ['object', 'null'], description: 'Where the printed DATE sits on the image, as a normalized box (fractions of image width/height, origin top-left). null if not an image or not locatable.', properties: { x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } }, required: ['x', 'y', 'w', 'h'], additionalProperties: false },
       },
-      required: ['amount', 'currency', 'date', 'time', 'merchant', 'description', 'account'],
+      required: ['amount', 'currency', 'date', 'time', 'merchant', 'description', 'account', 'amountBox', 'dateBox'],
       additionalProperties: false,
     },
   };
@@ -61,7 +63,13 @@ function prompt(accounts) {
     '"Hotel stay in <city>"; a restaurant → "Meal at <name>"; an airline → "Flight <route>". ' +
     'Keep it short and human. Put the vendor name in "merchant".\n\n' +
     'For "account", choose the single best-fit GL account and return only its numeric code from ' +
-    'this list:\n' + legend
+    'this list:\n' + legend + '\n\n' +
+    'Finally, for "amountBox" and "dateBox": give the location on the image of the printed TOTAL ' +
+    'amount and the printed DATE, so a reviewer can see them highlighted. Use a box normalized to ' +
+    'the image size — x and y are the top-left corner as fractions of the width and height (0 = ' +
+    'left/top, 1 = right/bottom), w and h are the width and height as fractions. Draw the box ' +
+    'snugly around just those characters. Return null for a box you can\'t place (or when the ' +
+    'input is text, not an image).'
   );
 }
 
@@ -99,7 +107,24 @@ function normalize(input = {}, { accountCodes = new Set() } = {}) {
     merchant: clean(input.merchant) || null,
     description: clean(input.description) || null,
     account: account && accountCodes.has(String(account)) ? String(account) : null,
+    amountBox: normalizeBox(input.amountBox),
+    dateBox: normalizeBox(input.dateBox),
   };
+}
+
+// A normalized 0–1 box, or null. Clamps into range and rejects empty/degenerate
+// boxes so a bad guess can never draw a highlight in the wrong place off-screen.
+function normalizeBox(b) {
+  if (!b || typeof b !== 'object') return null;
+  const n = (v) => (isFinite(Number(v)) ? Number(v) : NaN);
+  let x = n(b.x); let y = n(b.y); let w = n(b.w); let h = n(b.h);
+  if ([x, y, w, h].some((v) => Number.isNaN(v))) return null;
+  x = Math.min(Math.max(x, 0), 1);
+  y = Math.min(Math.max(y, 0), 1);
+  w = Math.min(Math.max(w, 0), 1 - x);
+  h = Math.min(Math.max(h, 0), 1 - y);
+  if (w <= 0.005 || h <= 0.005) return null; // too small to be real
+  return { x, y, w, h };
 }
 
 const MODEL = () => process.env.SCAN_MODEL || 'claude-opus-4-8';
