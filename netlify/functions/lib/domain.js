@@ -8,6 +8,7 @@
 
 const crypto = require('crypto');
 const airtable = require('./airtable');
+const coding = require('./coding');
 
 // Receipts are served through the app's own /api/receipt so the browser never
 // sees an Airtable file URL. A short HMAC (keyed on the server-only Airtable
@@ -30,6 +31,7 @@ const TABLES = {
   CURRENCIES: 'Currencies',
   CATEGORIES: 'Categories',
   ACCOUNTS: 'Accounts',
+  EXPENSE_ACCOUNTS: 'Expense Accounts',
   ACTIVITY: 'Activity Log',
   MILEAGE_RATES: 'Mileage Rates',
   REPORTS: 'Reports',
@@ -362,6 +364,103 @@ async function accountAccessFor(email) {
     accounts.filter((a) => !restrictedIds.has(a.id) || allowedIds.has(a.id)).map((a) => a.id),
   );
   return { accounts, visibleIds, allowedIds, restrictedIds };
+}
+
+// ---- Expense Accounts (ExpenseWire "Expense Types") ---------------------
+// The account a person picks FIRST on an expense (e.g. "Mel & Amy Ellenwood").
+// The master list lives in the "Expense Accounts" table so CedarStone can add,
+// rename, retire, and control access to it from the app. The static coding.js
+// list is the seed and a fallback if the table isn't there yet.
+
+async function listExpenseAccounts() {
+  let records;
+  try {
+    records = await airtable.listRecords(TABLES.EXPENSE_ACCOUNTS, {
+      'sort[0][field]': 'Code',
+      'sort[0][direction]': 'asc',
+    });
+  } catch {
+    records = null; // table missing — fall back to the built-in list
+  }
+  if (!records || !records.length) {
+    return coding.ACCOUNTS.map((a) => ({
+      id: null, code: a.code, name: a.name, series: a.series || '8',
+      active: true, allowedStaffIds: [],
+    }));
+  }
+  return records
+    .map((r) => {
+      const f = r.fields || {};
+      return {
+        id: r.id,
+        code: (f.Code || '').trim(),
+        name: f.Name || '',
+        series: String(f.Series || coding.seriesForAccount(f.Code) || '8'),
+        active: f.Active !== false,
+        allowedStaffIds: Array.isArray(f['Allowed Staff']) ? f['Allowed Staff'] : [],
+      };
+    })
+    .filter((a) => a.code);
+}
+
+// Fill the table with any accounts that exist in code but not yet in Airtable —
+// so the list is complete the first time CedarStone opens the screen, and self-
+// heals whenever the built-in list gains a new account.
+async function ensureExpenseAccountsSeeded() {
+  const existing = await listExpenseAccounts();
+  const have = new Set(existing.map((a) => a.code));
+  const missing = coding.ACCOUNTS.filter((a) => !have.has(a.code));
+  if (missing.length) {
+    await airtable.createRecords(
+      TABLES.EXPENSE_ACCOUNTS,
+      missing.map((a) => ({ Code: a.code, Name: a.name, Series: a.series || '8', Active: true })),
+    );
+    return listExpenseAccounts();
+  }
+  return existing;
+}
+
+// Can this person charge to this account? An account with nobody assigned is
+// open to everyone; once anyone is assigned, only they (and Finance) may use it.
+function accountVisibleTo(acct, staffId, isFinance) {
+  if (!acct || !acct.active) return false;
+  const allowed = acct.allowedStaffIds || [];
+  if (!allowed.length) return true;       // open to everyone
+  if (isFinance) return true;             // Finance can code to anything
+  return !!staffId && allowed.includes(staffId);
+}
+
+// The active accounts a given caller may pick, shaped for the app.
+function visibleExpenseAccounts(accounts, staffId, role) {
+  const isFinance = role === 'Finance';
+  return accounts
+    .filter((a) => accountVisibleTo(a, staffId, isFinance))
+    .map((a) => ({ code: a.code, name: a.name, series: a.series }));
+}
+
+// One account by code, from the table (falling back to the built-in list) —
+// used to validate + name an expense on submit/edit.
+async function getExpenseAccountByCode(code) {
+  const c = String(code || '').trim();
+  if (!c) return null;
+  let rec = null;
+  try {
+    rec = await airtable.findFirst(TABLES.EXPENSE_ACCOUNTS, {
+      filterByFormula: `{Code} = '${esc(c)}'`,
+    });
+  } catch { rec = null; }
+  if (rec) {
+    const f = rec.fields || {};
+    return {
+      id: rec.id, code: c, name: f.Name || '',
+      series: String(f.Series || coding.seriesForAccount(c) || '8'),
+      active: f.Active !== false,
+      allowedStaffIds: Array.isArray(f['Allowed Staff']) ? f['Allowed Staff'] : [],
+    };
+  }
+  const name = coding.accountName(c);
+  if (!name) return null;
+  return { id: null, code: c, name, series: coding.seriesForAccount(c), active: true, allowedStaffIds: [] };
 }
 
 // People list for the Finance management screen.
@@ -699,6 +798,11 @@ module.exports = {
   resolveCategoryId,
   resolveAccountId,
   listAccounts,
+  listExpenseAccounts,
+  ensureExpenseAccountsSeeded,
+  visibleExpenseAccounts,
+  accountVisibleTo,
+  getExpenseAccountByCode,
   staffMap,
   accountAccessFor,
   listPeople,

@@ -433,6 +433,15 @@ function isValidCategory(accountCode, catCode) {
   const c = String(catCode || '').trim();
   return categoriesForAccount(accountCode).some((x) => x.code === c);
 }
+// Same check when you already know the series (e.g. from the Expense Accounts
+// table) rather than a code in this static list.
+function categoriesForSeries(series) {
+  return String(series) === '7' ? CATEGORIES_7 : CATEGORIES_8;
+}
+function isValidCategoryForSeries(series, catCode) {
+  const c = String(catCode || '').trim();
+  return categoriesForSeries(series).some((x) => x.code === c);
+}
 function accountName(code) { const a = accountByCode.get(String(code || '').trim()); return a ? a.name : ''; }
 function categoryName(code) {
   const c = String(code || '').trim();
@@ -442,5 +451,6 @@ function categoryName(code) {
 
 module.exports = {
   ACCOUNTS, CATEGORIES_7, CATEGORIES_8, GENERAL_FUND_CODE,
-  seriesForAccount, categoriesForAccount, isValidCategory, accountName, categoryName,
+  seriesForAccount, categoriesForAccount, isValidCategory,
+  categoriesForSeries, isValidCategoryForSeries, accountName, categoryName,
 };

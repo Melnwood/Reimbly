@@ -7,8 +7,9 @@
     token: null, // Google ID token (Bearer)
     me: null, // { email, name, role, canApprove }
     view: 'submit',
-    loaded: { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false, people: false },
+    loaded: { mine: false, approvals: false, audit: false, dashboard: false, archive: false, rates: false, people: false, accounts: false },
     accounts: [],
+    acct: { accounts: [], people: [], q: '', showRetired: false, editingAccessId: null }, // Accounts & access screen
     mileageRates: [],
     rates: [], // full list (Finance management screen)
     expenseType: 'receipt', // 'receipt' | 'mileage'
@@ -622,7 +623,7 @@
     updateDescribeBtn();
   }
 
-  const MGMT_VIEWS = ['review', 'approvals', 'audit', 'archive', 'timing', 'rates', 'people'];
+  const MGMT_VIEWS = ['review', 'approvals', 'audit', 'archive', 'timing', 'rates', 'accounts', 'people'];
 
   function switchView(view) {
     state.view = view;
@@ -643,6 +644,7 @@
     if (view === 'archive' && !state.loaded.archive) loadArchive();
     if (view === 'timing' && !state.loaded.timing) loadTiming();
     if (view === 'rates' && !state.loaded.rates) loadRates();
+    if (view === 'accounts' && !state.loaded.accounts) loadAccountsAdmin();
     if (view === 'people' && !state.loaded.people) loadPeople();
   }
 
@@ -4041,6 +4043,167 @@
     }
   }
 
+  // ---------- Accounts & access (CedarStone back-office) ----------
+
+  async function loadAccountsAdmin() {
+    const list = $('#accounts-list');
+    if (list) list.innerHTML = `<div class="state">Loading…</div>`;
+    try {
+      const data = await api('expense-accounts');
+      state.acct.accounts = data.accounts || [];
+      state.acct.people = (data.people || []).slice().sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+      state.loaded.accounts = true;
+      renderAccountsAdmin();
+    } catch (e) {
+      if (list) list.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function peopleNameById(id) {
+    const p = state.acct.people.find((x) => x.id === id);
+    return p ? (p.name || p.email) : '';
+  }
+
+  // The one-line "who can use it" summary under each account.
+  function accessSummary(a) {
+    const ids = a.allowedStaffIds || [];
+    if (!ids.length) return '<span class="acct-open">Open to everyone</span>';
+    const names = ids.map(peopleNameById).filter(Boolean).sort((x, y) => x.localeCompare(y));
+    const shown = names.slice(0, 4).join(', ');
+    const extra = names.length > 4 ? ` +${names.length - 4} more` : '';
+    return `<span class="acct-restricted">🔒 ${escapeHtml(shown)}${escapeHtml(extra)}</span>`;
+  }
+
+  // The inline "who can use it" editor: a searchable list of people to tick.
+  function accessEditorHtml(a) {
+    const chosen = new Set(a.allowedStaffIds || []);
+    const rows = state.acct.people.map((p) => `
+      <label class="acc-pick">
+        <input type="checkbox" data-staff="${escapeHtml(p.id)}"${chosen.has(p.id) ? ' checked' : ''} />
+        <span>${escapeHtml(p.name || p.email)}${p.role && p.role !== 'Staff' ? ` <em>(${escapeHtml(p.role)})</em>` : ''}</span>
+      </label>`).join('');
+    return `
+      <div class="acc-editor">
+        <p class="acc-editor-hint">Tick everyone who may charge to this account. Leave all unticked to keep it open to everyone.</p>
+        <div class="acc-people">${rows || '<div class="state">No people yet.</div>'}</div>
+        <div class="acc-editor-actions">
+          <button type="button" class="btn primary small" data-act="acct-access-save" data-id="${escapeHtml(a.id)}">Save who can use it</button>
+          <button type="button" class="link-btn" data-act="acct-access-cancel">Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  function renderAccountsAdmin() {
+    const list = $('#accounts-list');
+    if (!list) return;
+    const q = state.acct.q.trim().toLowerCase();
+    const all = state.acct.accounts;
+    const visible = all.filter((a) => {
+      if (!state.acct.showRetired && !a.active) return false;
+      if (!q) return true;
+      return a.code.toLowerCase().includes(q) || (a.name || '').toLowerCase().includes(q);
+    });
+    const summary = $('#accounts-summary');
+    if (summary) {
+      const active = all.filter((a) => a.active).length;
+      const restricted = all.filter((a) => a.active && (a.allowedStaffIds || []).length).length;
+      summary.textContent = `${active} active account${active === 1 ? '' : 's'} · ${restricted} restricted to specific people · ${all.length - active} retired`;
+    }
+    if (!visible.length) {
+      list.innerHTML = `<div class="state">No accounts match “${escapeHtml(state.acct.q)}”.</div>`;
+      return;
+    }
+    list.innerHTML = visible.map((a) => {
+      const editing = state.acct.editingAccessId === a.id;
+      return `
+        <article class="expense acct-row${a.active ? '' : ' retired'}" data-id="${escapeHtml(a.id)}">
+          <div class="acct-head">
+            <div class="acct-main">
+              <div class="acct-title"><span class="acct-code">${escapeHtml(a.code)}</span> ${escapeHtml(a.name)}${a.active ? '' : ' <span class="acct-badge">Retired</span>'}</div>
+              <div class="acct-access">${accessSummary(a)}</div>
+            </div>
+            <div class="acct-actions">
+              <button type="button" class="btn ghost small" data-act="acct-access" data-id="${escapeHtml(a.id)}">${editing ? 'Close' : 'Who can use it'}</button>
+              <button type="button" class="link-btn" data-act="acct-rename" data-id="${escapeHtml(a.id)}">Rename</button>
+              <button type="button" class="link-btn${a.active ? ' danger' : ''}" data-act="acct-toggle" data-id="${escapeHtml(a.id)}">${a.active ? 'Retire' : 'Restore'}</button>
+            </div>
+          </div>
+          ${editing ? accessEditorHtml(a) : ''}
+        </article>`;
+    }).join('');
+  }
+
+  async function onAccountsClick(event) {
+    const btn = event.target.closest('button[data-act]');
+    if (!btn) return;
+    const act = btn.dataset.act;
+    const id = btn.dataset.id;
+    const acct = state.acct.accounts.find((a) => a.id === id);
+
+    if (act === 'acct-access') {
+      state.acct.editingAccessId = state.acct.editingAccessId === id ? null : id;
+      renderAccountsAdmin();
+      return;
+    }
+    if (act === 'acct-access-cancel') {
+      state.acct.editingAccessId = null;
+      renderAccountsAdmin();
+      return;
+    }
+    if (act === 'acct-access-save') {
+      const row = btn.closest('.acct-row');
+      const staffIds = $$('.acc-pick input[data-staff]', row).filter((c) => c.checked).map((c) => c.dataset.staff);
+      btn.disabled = true;
+      try {
+        const data = await api('expense-accounts', { method: 'POST', body: { action: 'access', id, staffIds } });
+        state.acct.accounts = data.accounts || state.acct.accounts;
+        state.acct.editingAccessId = null;
+        renderAccountsAdmin();
+        toast('Saved who can use that account.', 'good');
+      } catch (e) { toast(e.message, 'bad'); btn.disabled = false; }
+      return;
+    }
+    if (act === 'acct-rename') {
+      if (!acct) return;
+      const name = (window.prompt('Rename this account:', acct.name) || '').trim();
+      if (!name || name === acct.name) return;
+      try {
+        const data = await api('expense-accounts', { method: 'POST', body: { action: 'update', id, name } });
+        state.acct.accounts = data.accounts || state.acct.accounts;
+        renderAccountsAdmin();
+        toast('Renamed.', 'good');
+      } catch (e) { toast(e.message, 'bad'); }
+      return;
+    }
+    if (act === 'acct-toggle') {
+      if (!acct) return;
+      const active = !acct.active;
+      if (!active && !window.confirm(`Retire “${acct.code} – ${acct.name}”? People won’t be able to pick it on new expenses. You can restore it anytime.`)) return;
+      try {
+        const data = await api('expense-accounts', { method: 'POST', body: { action: 'update', id, active } });
+        state.acct.accounts = data.accounts || state.acct.accounts;
+        renderAccountsAdmin();
+        toast(active ? 'Account restored.' : 'Account retired.', 'good');
+      } catch (e) { toast(e.message, 'bad'); }
+    }
+  }
+
+  async function onAccountAdd() {
+    const codeIn = $('#acct-new-code');
+    const nameIn = $('#acct-new-name');
+    const code = (codeIn.value || '').trim();
+    const name = (nameIn.value || '').trim();
+    if (!code || !name) { toast('Enter both a code and a name.', 'bad'); return; }
+    try {
+      const data = await api('expense-accounts', { method: 'POST', body: { action: 'create', code, name } });
+      state.acct.accounts = data.accounts || state.acct.accounts;
+      codeIn.value = ''; nameIn.value = '';
+      state.acct.q = ''; const s = $('#acct-search'); if (s) s.value = '';
+      renderAccountsAdmin();
+      toast('Account added.', 'good');
+    } catch (e) { toast(e.message, 'bad'); }
+  }
+
   async function onPeopleFile(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
@@ -4279,10 +4442,20 @@
     }
     // One delegated listener covers "History" toggles on every card, everywhere.
     el.app.addEventListener('click', onHistoryClick);
+    // Accounts & access screen.
+    const accountsList = $('#accounts-list');
+    if (accountsList) accountsList.addEventListener('click', onAccountsClick);
+    const acctAddBtn = $('#acct-add-btn');
+    if (acctAddBtn) acctAddBtn.addEventListener('click', onAccountAdd);
+    const acctSearch = $('#acct-search');
+    if (acctSearch) acctSearch.addEventListener('input', (e) => { state.acct.q = e.target.value; renderAccountsAdmin(); });
+    const acctShowRetired = $('#acct-show-retired');
+    if (acctShowRetired) acctShowRetired.addEventListener('change', (e) => { state.acct.showRetired = e.target.checked; renderAccountsAdmin(); });
     const refreshers = {
       add: () => { invalidateReports(); showAddExpense(); },
       mine: () => { invalidateReports(); showReports(); },
       review: loadReview, approvals: loadApprovals, audit: loadAudit, dashboard: loadDashboard, archive: loadArchive, timing: loadTiming, rates: loadRates, people: loadPeople,
+      accounts: loadAccountsAdmin,
     };
     $$('[data-refresh]').forEach((b) =>
       b.addEventListener('click', () => (refreshers[b.dataset.refresh] || (() => {}))())

@@ -15,6 +15,8 @@ const {
   ensureStaff,
   resolveCurrencyId,
   accountAccessFor,
+  getExpenseAccountByCode,
+  accountVisibleTo,
   getMileageRate,
   round2,
   displayMaps,
@@ -25,7 +27,7 @@ const {
   reportOwnedBy,
   householdScope,
 } = require('./lib/domain');
-const { isValidCategory, accountName } = require('./lib/coding');
+const { isValidCategoryForSeries } = require('./lib/coding');
 const notify = require('./lib/notify');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024; // ~8 MB decoded
@@ -44,7 +46,7 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { id: staffId, record: staffRec } = await ensureStaff(user);
+    const { id: staffId, role, record: staffRec } = await ensureStaff(user);
     const { ids: householdIds } = await householdScope(staffRec);
     const body = parseBody(event);
 
@@ -85,9 +87,15 @@ exports.handler = async (event) => {
     if (!description) throw badRequest('Please add a short description.');
     if (!date) throw badRequest('Please pick the date of the expense.');
     if (!expenseAccount) throw badRequest('Please choose the account to charge this to.');
-    if (!accountName(expenseAccount)) throw badRequest('That account isn’t recognised.');
+    const expAcct = await getExpenseAccountByCode(expenseAccount);
+    if (!expAcct || !expAcct.active) throw badRequest('That account isn’t recognised.');
+    if (!accountVisibleTo(expAcct, staffId, role === 'Finance')) {
+      const err = new Error('You don’t have access to that account.');
+      err.statusCode = 403;
+      throw err;
+    }
     if (!account) throw badRequest('Please choose an expense category.');
-    if (!isValidCategory(expenseAccount, account)) throw badRequest('That category isn’t valid for this account.');
+    if (!isValidCategoryForSeries(expAcct.series, account)) throw badRequest('That category isn’t valid for this account.');
 
     const receipt = validateReceipt(body.receipt);
 
@@ -130,7 +138,7 @@ exports.handler = async (event) => {
       ...mileageFields,
     };
     if (reportLink) fields.Report = [reportLink];
-    fields['Expense Account'] = `${expenseAccount} – ${accountName(expenseAccount)}`;
+    fields['Expense Account'] = `${expenseAccount} – ${expAcct.name}`;
     if (merchant) fields.Merchant = merchant;
     if (purpose) fields['Business Purpose'] = purpose;
     // Time read off the photo (HH:MM) — helps tell apart repeat charges like tolls.

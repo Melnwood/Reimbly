@@ -23,8 +23,10 @@ const {
   getReportById,
   reportOwnedBy,
   householdScope,
+  getExpenseAccountByCode,
+  accountVisibleTo,
 } = require('./lib/domain');
-const { isValidCategory, accountName } = require('./lib/coding');
+const { isValidCategoryForSeries } = require('./lib/coding');
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -51,7 +53,7 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role, record: staffRec } = await ensureStaff(user);
+    const { id: staffId, role, record: staffRec } = await ensureStaff(user);
     // The household this person is pooled with — a partner may finish their
     // expenses and file them into the household's reports.
     const { ids: householdIds, emails: householdEmails } = await householdScope(staffRec);
@@ -92,10 +94,18 @@ exports.handler = async (event) => {
     if (!isFinite(amount) || amount <= 0) throw badRequest('Amount must be greater than zero.');
     if (!date) throw badRequest('Please pick the date of the expense.');
     if (!account) throw badRequest('Please choose an expense category.');
-    // When the account came along (main form), enforce the fund → category rule.
+    // When the account came along (main form / two-level editor), check it's a
+    // real, active account this person may use, and that the category fits it.
+    let expAcct = null;
     if (expenseAccount) {
-      if (!accountName(expenseAccount)) throw badRequest('That account isn’t recognised.');
-      if (!isValidCategory(expenseAccount, account)) throw badRequest('That category isn’t valid for this account.');
+      expAcct = await getExpenseAccountByCode(expenseAccount);
+      if (!expAcct || !expAcct.active) throw badRequest('That account isn’t recognised.');
+      if (!accountVisibleTo(expAcct, staffId, role === 'Finance')) {
+        const err = new Error('You don’t have access to that account.');
+        err.statusCode = 403;
+        throw err;
+      }
+      if (!isValidCategoryForSeries(expAcct.series, account)) throw badRequest('That category isn’t valid for this account.');
     }
 
     const currencyId = await resolveCurrencyId(currency);
@@ -118,7 +128,7 @@ exports.handler = async (event) => {
       Currency: [currencyId],
       Account: [accountId],
     };
-    if (expenseAccount) fields['Expense Account'] = `${expenseAccount} – ${accountName(expenseAccount)}`;
+    if (expAcct) fields['Expense Account'] = `${expenseAccount} – ${expAcct.name}`;
 
     // Optionally move the expense into (or out of) a report in the same save, so
     // filing it happens together with the edits — no separate step.

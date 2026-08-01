@@ -976,3 +976,30 @@ body.modal-open { overflow: hidden; }
   0%, 25% { background: color-mix(in srgb, var(--warn) 34%, var(--card)); }
   100% { background: color-mix(in srgb, var(--warn) 8%, var(--card)); }
 }
+
+/* ---- Accounts & access (CedarStone back-office) ---- */
+.acct-add { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 4px 0 14px; }
+.acct-in { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink); font-size: 0.95rem; }
+.acct-in-name { flex: 1 1 240px; min-width: 180px; }
+.acct-toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.acct-search { flex: 1 1 260px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink); font-size: 0.95rem; }
+.acct-showretired { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-soft); font-size: 0.88rem; white-space: nowrap; }
+.acct-summary { color: var(--ink-soft); font-size: 0.85rem; margin-bottom: 10px; }
+.acct-row { padding: 12px 14px; }
+.acct-row.retired { opacity: 0.62; }
+.acct-head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.acct-main { min-width: 0; flex: 1 1 320px; }
+.acct-title { font-weight: 700; color: var(--ink); }
+.acct-code { display: inline-block; font-variant-numeric: tabular-nums; font-weight: 800; color: var(--brand-ink); margin-right: 6px; }
+.acct-badge { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+.acct-access { margin-top: 3px; font-size: 0.85rem; }
+.acct-open { color: var(--accent); font-weight: 600; }
+.acct-restricted { color: var(--ink-soft); }
+.acct-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.acc-editor { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.acc-editor-hint { color: var(--ink-soft); font-size: 0.85rem; margin: 0 0 8px; }
+.acc-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; max-height: 320px; overflow-y: auto; padding: 4px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-soft); }
+.acc-pick { display: flex; gap: 8px; align-items: center; padding: 5px 6px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; color: var(--ink); }
+.acc-pick:hover { background: var(--card); }
+.acc-pick em { color: var(--ink-soft); font-style: normal; font-size: 0.8rem; }
+.acc-editor-actions { display: flex; gap: 12px; align-items: center; margin-top: 12px; }

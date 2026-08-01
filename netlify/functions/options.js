@@ -5,8 +5,11 @@
 
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
-const { accountAccessFor, listMileageRates } = require('./lib/domain');
-const { ACCOUNTS, CATEGORIES_7, CATEGORIES_8, GENERAL_FUND_CODE } = require('./lib/coding');
+const {
+  ensureStaff, accountAccessFor, listMileageRates,
+  listExpenseAccounts, visibleExpenseAccounts,
+} = require('./lib/domain');
+const { CATEGORIES_7, CATEGORIES_8, GENERAL_FUND_CODE } = require('./lib/coding');
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
@@ -14,7 +17,12 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const [access, mileageRates] = await Promise.all([accountAccessFor(user.email), listMileageRates()]);
+    const { id: staffId, role } = await ensureStaff(user);
+    const [access, mileageRates, allExpenseAccounts] = await Promise.all([
+      accountAccessFor(user.email),
+      listMileageRates(),
+      listExpenseAccounts(),
+    ]);
     // The old "accounts" list is the base's GL-code table (the app's original
     // single picker). Kept for the category picker until the two-level flow lands.
     const accounts = access.accounts
@@ -22,10 +30,12 @@ exports.handler = async (event) => {
       .map((a) => ({ id: a.id, code: a.code, name: a.name }));
     // The ExpenseWire two-level coding: pick an Expense Account, then a Category.
     // General Fund uses the 7-series categories; every other account the 8-series.
+    // Only the accounts this person may charge to are sent.
+    const expenseAccounts = visibleExpenseAccounts(allExpenseAccounts, staffId, role);
     return ok({
       accounts,
       mileageRates,
-      expenseAccounts: ACCOUNTS,
+      expenseAccounts,
       categories7: CATEGORIES_7,
       categories8: CATEGORIES_8,
       generalFundCode: GENERAL_FUND_CODE,

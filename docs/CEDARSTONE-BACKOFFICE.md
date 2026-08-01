@@ -13,6 +13,31 @@ Three connected pieces: (1) **role-based accounts** on the submit side, (2) a
 
 ## 1. Role-based accounts (account, then category)
 
+> **Status — built (v1), live.** The two-level coding (pick **Account**, then
+> **Category**) is on the New-expense form and the My-reports quick editor, with
+> each person's most-used floated to the top. The account list and who-can-use-it
+> now live in Airtable and are managed in-app:
+>
+> - **Airtable table `Expense Accounts`** (`tbllDHsNDUJpQXWyo`): `Code`, `Name`,
+>   `Series` ('7' for the General Fund `010000`, '8' for all others), `Active`
+>   (retire without deleting), and `Allowed Staff` (link to Staff). Seeded from
+>   `netlify/functions/lib/coding.js`; `ensureExpenseAccountsSeeded()` fills any
+>   accounts that exist in code but not yet in the table (self-healing).
+> - **Access rule:** an account with **nobody** in `Allowed Staff` is open to
+>   everyone; once anyone is listed, only they (and Finance) may charge to it. So
+>   personal accounts get locked to their owners while shared pools stay open —
+>   and nobody is blocked until CedarStone assigns them. Enforced server-side in
+>   `options.js` (the picker only shows permitted accounts) and again in
+>   `submit-expense.js` / `update-expense.js`.
+> - **Screen:** Management → **Accounts & access** (Finance only). Add / rename /
+>   retire accounts, search, and tick who may use each one. Backed by
+>   `netlify/functions/expense-accounts.js`.
+>
+> Not yet done: per-account **category** lists (still one standard list per series);
+> and the "hide the account step entirely for people with only their own account"
+> nicety — today everyone picks an account, but they only see the ones they're
+> allowed. The rest of this section is the original design.
+
 Some people manage extra **accounts** beyond their own personal ministry account.
 Example: Mel is an executive and can log expenses for **Selah** (and possibly one
 or two others). Most people have none.

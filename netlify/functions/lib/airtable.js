@@ -98,6 +98,24 @@ async function createRecord(table, fields, { typecast = true } = {}) {
   return parseOrThrow(res, `create ${table}`);
 }
 
+// Create many records at once, batching by Airtable's limit of 10 per request.
+// `rows` is an array of field objects.
+async function createRecords(table, rows, { typecast = true } = {}) {
+  const created = [];
+  for (let i = 0; i < rows.length; i += 10) {
+    const records = rows.slice(i, i + 10).map((fields) => ({ fields }));
+    const url = `${API_BASE}/${baseId()}/${encodeTable(table)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ records, typecast }),
+    });
+    const body = await parseOrThrow(res, `create ${table}`);
+    created.push(...(body.records || []));
+  }
+  return created;
+}
+
 async function updateRecord(table, id, fields, { typecast = true } = {}) {
   const url = `${API_BASE}/${baseId()}/${encodeTable(table)}/${id}`;
   const res = await fetch(url, {
@@ -142,6 +160,7 @@ module.exports = {
   listRecords,
   findFirst,
   createRecord,
+  createRecords,
   updateRecord,
   deleteRecord,
   uploadAttachment,
