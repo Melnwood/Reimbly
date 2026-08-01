@@ -1875,9 +1875,12 @@
     const incomplete = readiness.length > 0;
     const cls = `expense mini${over ? ' over50' : ''}${needsReceipt ? ' needs-receipt' : ''}${incomplete ? ' incomplete' : ''}${sentBack ? ' sent-back' : ''}`;
     // For a foreign expense, stack the bank USD over the original amount + rate.
+    // Collapsed row shows the bank USD over just the original amount — the
+    // exchange rate is kept for the open editor so the row stays compact and
+    // never overflows (it's what shoved the status dot off the edge before).
     const fx = fxInfo(e);
     const amtCell = fx
-      ? `<span class="mini-amt has-fx"><span class="ma-usd">${escapeHtml(fx.usd != null ? money(fx.usd, 'USD') : money(fx.amount, fx.currency))}</span><span class="ma-fx">${escapeHtml(money(fx.amount, fx.currency))}${fx.rate != null ? ` · ${escapeHtml(fxRateText(fx))}` : ''}</span></span>`
+      ? `<span class="mini-amt has-fx"><span class="ma-usd">${escapeHtml(fx.usd != null ? money(fx.usd, 'USD') : money(fx.amount, fx.currency))}</span><span class="ma-fx">${escapeHtml(money(fx.amount, fx.currency))}</span></span>`
       : `<span class="mini-amt">${escapeHtml(amt)}</span>`;
     return `
       <article class="${cls}" data-id="${escapeHtml(e.id)}">
