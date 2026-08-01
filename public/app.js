@@ -441,6 +441,23 @@
     } catch { /* private mode — no history, that's fine */ }
   }
 
+  // Same idea for categories: learn the ones you reach for most and float them
+  // to the top, so the odd one is the only thing you ever have to hunt for.
+  function catUsageKey() {
+    return `reimbly.cats.${(state.me && state.me.email) || 'anon'}`;
+  }
+  function categoryUsage() {
+    try { return JSON.parse(localStorage.getItem(catUsageKey()) || '{}') || {}; } catch { return {}; }
+  }
+  function bumpCategoryUsage(code) {
+    if (!code) return;
+    try {
+      const u = categoryUsage();
+      u[code] = (u[code] || 0) + 1;
+      localStorage.setItem(catUsageKey(), JSON.stringify(u));
+    } catch { /* private mode — no history, that's fine */ }
+  }
+
   // The account each person wants pre-selected on a new expense (their pick).
   // This lives on the person's Staff record in Airtable, so it follows them from
   // device to device — not on this computer.
@@ -512,8 +529,18 @@
     const cats = String(code) === String(state.generalFundCode || '010000')
       ? (state.categories7 || []) : (state.categories8 || []);
     const cur = sel.value;
-    sel.innerHTML = '<option value="">Choose a category…</option>'
-      + cats.map((c) => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.code + ' – ' + c.name)}</option>`).join('');
+    const opt = (c) => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.code + ' – ' + c.name)}</option>`;
+    // Float this person's most-used categories (within the set that applies here)
+    // to the top; everything else stays available below.
+    const usage = categoryUsage();
+    const frequent = cats
+      .filter((c) => usage[c.code] > 0)
+      .sort((a, b) => usage[b.code] - usage[a.code] || a.code.localeCompare(b.code))
+      .slice(0, 10);
+    let html = '<option value="">Choose a category…</option>';
+    if (frequent.length) html += `<optgroup label="Your most-used">${frequent.map(opt).join('')}</optgroup>`;
+    html += `<optgroup label="All categories">${cats.map(opt).join('')}</optgroup>`;
+    sel.innerHTML = html;
     sel.disabled = false;
     if (cats.some((c) => c.code === cur)) sel.value = cur;
     if (hint) hint.textContent = `${cats.length} categories`;
@@ -1120,6 +1147,7 @@
       const result = await api(editing ? 'update-expense' : 'submit-expense', { method: 'POST', body });
 
       bumpAccountUsage(expenseAccount); // learn this person's go-to accounts
+      bumpCategoryUsage(category);      // …and their go-to categories
       cancelEdit(); // resets form, date, labels, banner, editingId
       populateExpenseAccounts(); // re-sort with the freshly used account near the top
 
