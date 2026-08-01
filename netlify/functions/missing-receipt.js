@@ -9,7 +9,7 @@ const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const {
-  TABLES, EVENTS,
+  TABLES, STATUS, EVENTS,
   ensureStaff, householdScope, getExpenseById, canModify,
   displayMaps, shapeExpense, logActivity,
 } = require('./lib/domain');
@@ -46,7 +46,7 @@ exports.handler = async (event) => {
       throw err;
     }
 
-    await airtable.updateRecord(TABLES.EXPENSES, id, {
+    const fields = {
       'Missing Receipt': true,
       'Affidavit Reason': reason,
       'Affidavit Signed By': user.name || user.email,
@@ -54,17 +54,31 @@ exports.handler = async (event) => {
       'Affidavit Status': 'Pending',
       // A signed affidavit stands in for the receipt — clear any stray blank.
       Receipt: [],
-    });
+    };
+
+    // If this was sent back for want of a receipt, signing the declaration is the
+    // fix — send it straight back through for approval, clean, so it doesn't sit
+    // stuck in "needs your fix".
+    const wasRejected = (current.fields && current.fields.Status) === STATUS.REJECTED;
+    if (wasRejected) {
+      fields.Status = STATUS.SUBMITTED;
+      fields['Submitted On'] = today();
+      fields['Decided On'] = null;
+      fields.Approver = [];
+      fields['Approver Note'] = '';
+    }
+
+    await airtable.updateRecord(TABLES.EXPENSES, id, fields);
 
     await logActivity({
       expenseId: id,
-      event: EVENTS.AFFIDAVIT_SIGNED,
+      event: wasRejected ? EVENTS.RESUBMITTED : EVENTS.AFFIDAVIT_SIGNED,
       user,
       note: `“${reason}” — signed by ${user.name || user.email}`,
     });
 
     const [fresh, maps] = await Promise.all([getExpenseById(id), displayMaps()]);
-    return ok({ expense: shapeExpense(fresh || current, maps) });
+    return ok({ expense: shapeExpense(fresh || current, maps), resubmitted: wasRejected });
   } catch (err) {
     return error(err);
   }

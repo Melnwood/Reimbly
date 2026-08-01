@@ -855,8 +855,10 @@
     const btn = $('#aff-submit');
     btn.disabled = true;
     try {
-      await api('missing-receipt', { method: 'POST', body: { id, reason, agree: true } });
-      toast('Declaration signed — your approver will sign off on it.', 'good');
+      const res = await api('missing-receipt', { method: 'POST', body: { id, reason, agree: true } });
+      toast(res && res.resubmitted
+        ? 'Declaration signed — sent back for approval.'
+        : 'Declaration signed — your approver will sign off on it.', 'good');
       closeAffidavitModal();
       await refreshExpenseViews();
     } catch (e) {
