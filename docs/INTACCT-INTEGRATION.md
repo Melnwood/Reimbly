@@ -2,6 +2,10 @@
 
 *Prepared July 2026 · research / for investigation · share with Cedarstone and JV finance/IT*
 
+> **The exact upload format Cedarstone uses is now confirmed** — see
+> **[INTACCT-UPLOAD-FORMAT.md](INTACCT-UPLOAD-FORMAT.md)** (the Journal-Entry
+> columns, the field mapping, and the source files from Olivia at Cedarstone).
+
 One coded, receipt-attached expense flowing from a staff member's phone all the
 way into Intacct — with each person seeing only the accounts and dimensions that
 apply to them.
