@@ -50,15 +50,17 @@ exports.handler = async (event) => {
     const next = scan && scan.date ? scan.date : null;
 
     const patch = {};
-    if (next && next !== old) patch['Expense Date'] = next;
-    // Backfill the highlight positions (the total & date on the image).
+    // Only FILL a missing date — never overwrite one the person already set (they
+    // may have deliberately chosen it, e.g. the charge date on a two-date receipt).
+    if (next && !old) patch['Expense Date'] = next;
+    // Refresh the highlight positions (the total & date on the image).
     const marks = scan && (scan.amountBox || scan.dateBox)
       ? { amount: scan.amountBox || null, date: scan.dateBox || null } : null;
     if (marks) patch['Receipt Marks'] = JSON.stringify(marks);
 
-    if (!Object.keys(patch).length) return ok({ id, merchant: rec.fields.Merchant || '', changed: false, date: old });
+    if (!Object.keys(patch).length) return ok({ id, merchant: rec.fields.Merchant || '', changed: false, marked: false, date: old });
     await airtable.updateRecord(TABLES.EXPENSES, id, patch);
-    return ok({ id, merchant: rec.fields.Merchant || '', changed: !!patch['Expense Date'], marked: !!marks, old, date: next || old });
+    return ok({ id, merchant: rec.fields.Merchant || '', changed: !!patch['Expense Date'], marked: !!marks, old, date: patch['Expense Date'] || old });
   } catch (err) {
     return error(err);
   }

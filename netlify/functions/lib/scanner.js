@@ -49,7 +49,11 @@ function prompt(accounts) {
     'languages, in local currencies). Read it carefully and call record_receipt with what ' +
     'you find. Use the total actually paid and the currency printed on the receipt. Translate ' +
     'the description to English. If a field is not legible, return null for it rather than guessing.\n\n' +
-    'IMPORTANT — dates: read the date exactly as this receipt means it. A European ' +
+    'IMPORTANT — dates: use the date the money was actually spent — the ' +
+    'PAYMENT / TRANSACTION date (when the card was charged or cash paid). If the receipt ' +
+    'shows several dates — a hotel’s check-in and check-out, an invoice’s issue and due ' +
+    'date, a booking date vs. a stay date — choose the payment/transaction date, not the ' +
+    'service date. Read it exactly as this receipt means it: a European ' +
     'receipt is day-first (e.g. a Czech/Polish receipt showing 12.07.2026 or 12/07/2026 ' +
     'means 12 July 2026); a US receipt is month-first (07/12/2026 means 12 July 2026 too, ' +
     'but 03/05 means March 5). Decide from the receipt’s country, currency, language, and ' +
@@ -65,7 +69,8 @@ function prompt(accounts) {
     'For "account", choose the single best-fit GL account and return only its numeric code from ' +
     'this list:\n' + legend + '\n\n' +
     'Finally, for "amountBox" and "dateBox": give the location on the image of the printed TOTAL ' +
-    'amount and the printed DATE, so a reviewer can see them highlighted. Use a box normalized to ' +
+    'you returned and the printed PAYMENT DATE you returned (the exact same date — not a check-in ' +
+    'or other date), so a reviewer can see them highlighted. Use a box normalized to ' +
     'the image size — x and y are the top-left corner as fractions of the width and height (0 = ' +
     'left/top, 1 = right/bottom), w and h are the width and height as fractions. Draw the box ' +
     'snugly around just those characters. Return null for a box you can\'t place (or when the ' +

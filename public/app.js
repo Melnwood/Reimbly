@@ -2348,31 +2348,29 @@
     const note = $('#rescan-note');
     const btn = $('#rescan-dates');
     if (!items.length) { toast('No receipts to re-read here.', 'bad'); return; }
-    if (!window.confirm(`Re-read the date on ${items.length} receipt${items.length === 1 ? '' : 's'} from the images? Only dates are changed.`)) return;
+    if (!window.confirm(`Re-read ${items.length} receipt${items.length === 1 ? '' : 's'} to highlight the date & total on each (and fill any that are missing a date)? Dates you already set are left alone.`)) return;
 
     btn.disabled = true;
     note.hidden = false;
     const changes = [];
+    let marked = 0;
     let done = 0;
     for (const e of items) {
       note.textContent = `🔁 Re-reading receipts… ${done + 1}/${items.length}`;
       try {
         const res = await api('rescan-date', { method: 'POST', body: { id: e.id } });
         if (res.changed) changes.push(res);
+        if (res.marked) marked += 1;
       } catch (err) { /* skip this one, keep going */ }
       done += 1;
     }
     btn.disabled = false;
-    if (changes.length) {
-      note.innerHTML = `✅ Corrected ${changes.length} date${changes.length === 1 ? '' : 's'}: ` +
-        changes.map((c) => `<strong>${escapeHtml(c.merchant || 'receipt')}</strong> ${escapeHtml(c.old || '—')} → ${escapeHtml(c.date)}`).join('; ');
-      toast(`Fixed ${changes.length} date${changes.length === 1 ? '' : 's'} from the receipts.`, 'good');
-      state.loaded.mine = false;
-      showAddExpense();
-    } else {
-      note.textContent = '✅ Re-read every receipt — all the dates already matched. Nothing to change.';
-      toast('All receipt dates already matched.', 'good');
-    }
+    const bits = [];
+    if (marked) bits.push(`highlighted the date & total on ${marked}`);
+    if (changes.length) bits.push(`filled ${changes.length} missing date${changes.length === 1 ? '' : 's'}`);
+    note.textContent = bits.length ? `✅ Done — ${bits.join(', ')}.` : '✅ Re-read every receipt — nothing needed changing.';
+    toast(marked ? `Highlighted ${marked} receipt${marked === 1 ? '' : 's'}.` : 'Re-read every receipt.', 'good');
+    if (changes.length) { state.loaded.mine = false; showAddExpense(); }
   }
 
   // ---------- Approvals ----------

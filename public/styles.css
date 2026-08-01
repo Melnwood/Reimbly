@@ -912,14 +912,15 @@ body.modal-open { overflow: hidden; }
 .rv-rc { margin-top: 4px; }
 .rv-rc-imgwrap { position: relative; display: block; line-height: 0; }
 .rv-rc-img { width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--line); background: #fff; display: block; }
-/* Highlights over the total & date on the receipt image (normalized coords). */
-.rc-mark { position: absolute; box-sizing: border-box; border-radius: 4px; pointer-events: none;
-  border: 2px solid; box-shadow: 0 0 0 2px rgba(255,255,255,0.55); }
-.rc-mark.amt { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 18%, transparent); }
-.rc-mark.date { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
-.rc-mark-lbl { position: absolute; top: -9px; left: -2px; transform: translateY(-100%);
-  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase;
-  color: #fff; padding: 1px 5px; border-radius: 999px; white-space: nowrap; line-height: 1.4; }
+/* Soft highlighter marks over the total & date on the receipt image (normalized
+   coords). Translucent fill, no hard border — like a highlighter pen, so even if
+   it's a little off the text underneath stays readable. */
+.rc-mark { position: absolute; box-sizing: border-box; border-radius: 3px; pointer-events: none; mix-blend-mode: multiply; }
+.rc-mark.amt { background: color-mix(in srgb, var(--brand) 32%, transparent); }
+.rc-mark.date { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+.rc-mark-lbl { position: absolute; top: -8px; left: -1px; transform: translateY(-100%); mix-blend-mode: normal;
+  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase;
+  color: #fff; padding: 1px 5px; border-radius: 999px; white-space: nowrap; line-height: 1.4; opacity: 0.9; }
 .rc-mark.amt .rc-mark-lbl { background: var(--brand); }
 .rc-mark.date .rc-mark-lbl { background: var(--accent); }
 .rv-rc-read { margin-top: 8px; font-size: 0.85rem; color: var(--ink-soft); }
