@@ -442,10 +442,15 @@
   }
 
   // The account each person wants pre-selected on a new expense (their pick).
-  function defaultKey() { return `reimbly.default-acct.${(state.me && state.me.email) || 'anon'}`; }
-  function getDefaultAccount() { try { return localStorage.getItem(defaultKey()) || ''; } catch { return ''; } }
-  function setDefaultAccount(code) {
-    try { code ? localStorage.setItem(defaultKey(), code) : localStorage.removeItem(defaultKey()); } catch { /* ignore */ }
+  // This lives on the person's Staff record in Airtable, so it follows them from
+  // device to device — not on this computer.
+  function getDefaultAccount() { return (state.me && state.me.defaultAccount) || ''; }
+  async function setDefaultAccount(code) {
+    const val = code || '';
+    if (state.me) state.me.defaultAccount = val; // update now so the UI reflects it instantly
+    try {
+      await api('save-default-account', { method: 'POST', body: { code: val } });
+    } catch { /* best-effort — the pick still shows this session */ }
   }
 
   // ---- Two-level coding: Account (Expense Type) → Category (GL code) ----
@@ -4153,10 +4158,10 @@
     $('#new-report-btn').addEventListener('click', createReportPrompt);
     $('#f-report').addEventListener('change', onFormReportChange);
     $('#f-expense-account').addEventListener('change', () => { populateCategories(); updateDefaultLink(); });
-    $('#set-default-account').addEventListener('click', () => {
+    $('#set-default-account').addEventListener('click', async () => {
       const code = selectedAccountCode();
       if (!code) return;
-      setDefaultAccount(code);
+      await setDefaultAccount(code);
       updateDefaultLink();
       const a = (state.expenseAccounts || []).find((x) => x.code === code);
       toast(`★ ${a ? a.name : code} is now your default account.`, 'good');

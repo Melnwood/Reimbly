@@ -13,12 +13,13 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role } = await ensureStaff(user);
+    const { role, record } = await ensureStaff(user);
     return ok({
       email: user.email,
       name: user.name,
       role,
       canApprove: isApprover(role),
+      defaultAccount: (record && record.fields && record.fields['Default Account']) || '',
     });
   } catch (err) {
     return error(err);
