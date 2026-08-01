@@ -468,6 +468,34 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .rc-item .mini-amt { font-weight: 700; white-space: nowrap; }
 .rc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
 
+/* ---- Report lifecycle: the process a report moves through in My reports ---- */
+/* Section groupings: Being worked on → On its way → Paid. */
+.rp-section { margin: 0 0 22px; }
+.rp-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin: 6px 2px 10px; }
+.rp-title { font-weight: 800; font-size: 1.05rem; color: var(--ink); }
+.rp-sub { font-size: 0.82rem; color: var(--ink-soft); }
+.rp-count { display: inline-block; margin-left: 4px; font-size: 0.78rem; font-weight: 800; color: var(--ink-soft); background: var(--bg-soft); border-radius: 999px; padding: 1px 8px; vertical-align: middle; }
+/* The Paid pile collapses so months of history stay tidy. */
+.rp-paid { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-soft); padding: 10px 12px; }
+.rp-paid > summary { cursor: pointer; list-style: none; margin-bottom: 0; }
+.rp-paid[open] > summary { margin-bottom: 12px; }
+.rp-paid > summary::-webkit-details-marker { display: none; }
+.rp-paid[open] { background: #fff; }
+.rp-month { margin-bottom: 14px; }
+.rp-month-head { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; margin: 0 2px 8px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+
+/* The stepper under a submitted report's header: Submitted → Approved →
+   Reimbursing → Paid, with the current stage lit up. */
+.rc-steps { display: flex; align-items: center; gap: 0; padding: 2px 16px 12px; }
+.rc-step { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 0 0 auto; }
+.rc-step-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--line); box-shadow: 0 0 0 3px var(--card); }
+.rc-step-lbl { font-size: 0.72rem; color: var(--ink-soft); white-space: nowrap; }
+.rc-step.done .rc-step-dot { background: var(--accent); }
+.rc-step.now .rc-step-dot { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, var(--card)); }
+.rc-step.now .rc-step-lbl { color: var(--accent); font-weight: 800; }
+.rc-step-bar { flex: 1 1 auto; height: 2px; background: var(--line); margin: 0 4px 18px; min-width: 12px; }
+.rc-paid-on { padding: 0 16px 12px; font-size: 0.82rem; color: var(--ink-soft); }
+
 .mini-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 
 /* Clickable Date / Description / Cost sort headers above an expense list.

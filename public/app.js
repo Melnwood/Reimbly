@@ -2282,7 +2282,39 @@
       else if (counts.waiting) status = 'Waiting to be paid';
       else status = 'Reimbursed';
     }
-    return { items, counts, total, status };
+    // Dates that drive the lifecycle view: when it went in, and when it was paid.
+    let paidOn = null; let submittedOn = null;
+    items.forEach((e) => {
+      if (e.paidOn && (!paidOn || e.paidOn > paidOn)) paidOn = e.paidOn;
+      if (e.submittedOn && (!submittedOn || e.submittedOn < submittedOn)) submittedOn = e.submittedOn;
+    });
+    return { items, counts, total, status, paidOn, submittedOn };
+  }
+
+  // The payment pipeline a submitted report moves through, and where it sits now.
+  const REPORT_PIPELINE = [
+    { key: 'Submitted', label: 'Submitted' },
+    { key: 'Approved', label: 'Approved' },
+    { key: 'Waiting to be paid', label: 'Reimbursing' },
+    { key: 'Reimbursed', label: 'Paid' },
+  ];
+  const PIPELINE_INDEX = { Submitted: 0, Approved: 1, 'Waiting to be paid': 2, Reimbursed: 3 };
+
+  // A little stepper showing the report's stage: Submitted → Approved →
+  // Reimbursing → Paid. Only shown once a report has been submitted.
+  function reportStepper(status) {
+    const idx = PIPELINE_INDEX[status];
+    if (idx == null) return '';
+    return `<div class="rc-steps" aria-label="Report progress">${REPORT_PIPELINE.map((s, i) => `
+      <span class="rc-step${i < idx ? ' done' : ''}${i === idx ? ' now' : ''}"><span class="rc-step-dot"></span><span class="rc-step-lbl">${escapeHtml(s.label)}</span></span>`).join('<span class="rc-step-bar" aria-hidden="true"></span>')}</div>`;
+  }
+
+  // "2026-08" → "August 2026".
+  function monthLabel(key) {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(key || ''));
+    if (!m) return 'Earlier';
+    const names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${names[Number(m[2]) - 1]} ${m[1]}`;
   }
 
   function memberRowHtml(e) {
@@ -2298,7 +2330,7 @@
   }
 
   function reportCardHtml(r) {
-    const { items, total, counts, status } = reportRollup(r.id);
+    const { items, total, counts, status, paidOn } = reportRollup(r.id);
     const badge = status === 'Empty' ? '<span class="badge empty">Empty</span>' : statusBadge(status);
     const canSubmit = counts.unsubmitted > 0;
     // Health colour (green / yellow / red) with a short "what to do" pill, shown
@@ -2324,6 +2356,7 @@
           ${badge}
           <span class="mini-caret" aria-hidden="true">▾</span>
         </button>
+        ${reportStepper(status)}${status === 'Reimbursed' && paidOn ? `<div class="rc-paid-on">Paid ${escapeHtml(fmtDateShort(paidOn))}</div>` : ''}
         <div class="rc-body"${hasFix ? '' : ' hidden'}>
           ${items.length ? ordered.map(expenseRowHtml).join('') : '<div class="state small">No expenses yet — add some on the “Add expense” tab, then pick this report.</div>'}
           <div class="rc-actions">
@@ -2380,7 +2413,49 @@
     if (!reports.length) {
       html += `<div class="state"><span class="emoji">🗂️</span>No reports yet. Tap “＋ New report”, then file expenses into it from the “Add expense” tab.</div>`;
     } else {
-      html += reports.map(reportCardHtml).join('');
+      // Sort every report into the stage it's at, so the screen reads like the
+      // real process: things you're still working on, things on their way to
+      // being paid, and everything that's been paid (filed away by month).
+      const working = [];   // Draft/Empty — still being put together
+      const moving = [];    // Submitted / Approved / Reimbursing — out of your hands
+      const paidByMonth = new Map(); // Reimbursed, keyed by the month it was paid
+      reports.forEach((r) => {
+        const roll = reportRollup(r.id);
+        if (roll.status === 'Reimbursed') {
+          const key = (roll.paidOn || '').slice(0, 7) || 'earlier';
+          if (!paidByMonth.has(key)) paidByMonth.set(key, []);
+          paidByMonth.get(key).push(r);
+        } else if (roll.status === 'Submitted' || roll.status === 'Approved' || roll.status === 'Waiting to be paid') {
+          moving.push(r);
+        } else {
+          working.push(r);
+        }
+      });
+
+      if (working.length) {
+        html += `<div class="rp-section">
+          <div class="rp-head"><span class="rp-title">Being worked on</span><span class="rp-sub">Add, fix, and submit these</span></div>
+          ${working.map(reportCardHtml).join('')}
+        </div>`;
+      }
+      if (moving.length) {
+        html += `<div class="rp-section">
+          <div class="rp-head"><span class="rp-title">On its way</span><span class="rp-sub">Submitted — moving toward payment</span></div>
+          ${moving.map(reportCardHtml).join('')}
+        </div>`;
+      }
+      if (paidByMonth.size) {
+        // Newest month first.
+        const months = [...paidByMonth.keys()].sort().reverse();
+        const totalPaid = months.reduce((n, k) => n + paidByMonth.get(k).length, 0);
+        html += `<details class="rp-section rp-paid"${working.length || moving.length ? '' : ' open'}>
+          <summary class="rp-head"><span class="rp-title">Paid <span class="rp-count">${totalPaid}</span></span><span class="rp-sub">Reimbursed — filed by the month they were paid</span></summary>
+          ${months.map((k) => `<div class="rp-month">
+            <div class="rp-month-head">${escapeHtml(monthLabel(k))}</div>
+            ${paidByMonth.get(k).map(reportCardHtml).join('')}
+          </div>`).join('')}
+        </details>`;
+      }
     }
     if (unfiled) {
       html += `<p class="import-note">You still have ${unfiled} expense${unfiled === 1 ? '' : 's'} not in a report — file ${unfiled === 1 ? 'it' : 'them'} on the “Add expense” tab.</p>`;
