@@ -1,10 +1,10 @@
 'use strict';
 
-// Re-read the DATE off one expense's attached receipt, using the current
-// (US/European-aware) reader, and correct it if it changed. Used by the
-// "Re-read receipt dates" action so dates captured by an earlier version can be
-// fixed against the real receipt — one expense per call to stay well within the
-// per-request time limit. Only the date is touched; amount/account are left alone.
+// Re-read one expense's attached receipt with the current reader: correct the
+// DATE if it changed, and record where the total & date sit on the image so the
+// reviewer's highlight shows on receipts added before that feature existed. Used
+// by the "Re-read receipt dates" action — one expense per call to stay well
+// within the per-request time limit. Amount/account are left alone.
 
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
@@ -48,10 +48,17 @@ exports.handler = async (event) => {
     const scan = await scanReceipt({ filename: att.filename || 'receipt', contentType: att.type, base64 }, { accounts });
     const old = rec.fields['Expense Date'] || null;
     const next = scan && scan.date ? scan.date : null;
-    if (!next || next === old) return ok({ id, merchant: rec.fields.Merchant || '', changed: false, date: old });
 
-    await airtable.updateRecord(TABLES.EXPENSES, id, { 'Expense Date': next });
-    return ok({ id, merchant: rec.fields.Merchant || '', changed: true, old, date: next });
+    const patch = {};
+    if (next && next !== old) patch['Expense Date'] = next;
+    // Backfill the highlight positions (the total & date on the image).
+    const marks = scan && (scan.amountBox || scan.dateBox)
+      ? { amount: scan.amountBox || null, date: scan.dateBox || null } : null;
+    if (marks) patch['Receipt Marks'] = JSON.stringify(marks);
+
+    if (!Object.keys(patch).length) return ok({ id, merchant: rec.fields.Merchant || '', changed: false, date: old });
+    await airtable.updateRecord(TABLES.EXPENSES, id, patch);
+    return ok({ id, merchant: rec.fields.Merchant || '', changed: !!patch['Expense Date'], marked: !!marks, old, date: next || old });
   } catch (err) {
     return error(err);
   }
