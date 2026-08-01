@@ -150,6 +150,12 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 }
 .menu-item:hover { background: var(--bg-soft); }
 .menu-item.active { color: var(--brand-ink); background: #fff5fa; }
+/* Small group labels inside the Management menu. */
+.menu-section {
+  font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-soft); padding: 10px 12px 4px; margin-top: 2px;
+}
+.menu-section:first-child { margin-top: 0; }
 .who { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .who-name { font-weight: 600; }
 /* The name is a button that opens the account menu (Face ID, alerts, sign out). */

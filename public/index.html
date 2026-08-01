@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Reimbly" />
-    <link rel="stylesheet" href="styles.css?v=20260801p" />
+    <link rel="stylesheet" href="styles.css?v=20260801q" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -64,17 +64,31 @@
           <div class="tab-menu" id="mgmt-menu" hidden>
             <button type="button" class="tab" id="mgmt-btn" aria-haspopup="true" aria-expanded="false">Management ▾</button>
             <div class="tab-menu-list" id="mgmt-list" hidden>
+              <!-- Day-to-day: work the queue and the payments -->
+              <div class="menu-section">Approve &amp; pay</div>
               <button type="button" class="menu-item" data-view="review">Review</button>
-              <!-- Approvals is hidden for now: Review does the same job (quick approve + receipts inline).
-                   The view and its code are kept intact — remove `hidden` to bring it back. -->
-              <button type="button" class="menu-item" data-view="approvals" hidden>Approvals</button>
-              <button type="button" class="menu-item" data-view="audit">Audit</button>
               <button type="button" class="menu-item" data-view="archive">Paid</button>
+
+              <!-- Health / how the loop is keeping up -->
+              <div class="menu-section">Insights</div>
               <button type="button" class="menu-item" data-view="timing">Timing</button>
-              <button type="button" class="menu-item mgmt-finance" data-view="rates">Mileage rates</button>
+
+              <!-- CedarStone / system setup (Finance) -->
+              <div class="menu-section mgmt-finance">Setup</div>
               <button type="button" class="menu-item mgmt-finance" data-view="accounts">Accounts &amp; access</button>
               <button type="button" class="menu-item mgmt-finance" data-view="people">People &amp; access</button>
+              <button type="button" class="menu-item mgmt-finance" data-view="rates">Mileage rates</button>
+
+              <!-- Maintenance tools (temporary — remove once no longer needed) -->
+              <div class="menu-section mgmt-finance">Tools</div>
               <button type="button" class="menu-item mgmt-finance" data-action="rescan">Highlight receipts (date &amp; total)</button>
+
+              <!-- Hidden for now (kept intact — remove `hidden` to bring back):
+                   Approvals — Review already does approving with receipts inline.
+                   Audit — the receipt gate now blocks missing receipts/fields at submit,
+                   so this completeness sweep is redundant. -->
+              <button type="button" class="menu-item" data-view="approvals" hidden>Approvals</button>
+              <button type="button" class="menu-item" data-view="audit" hidden>Audit</button>
             </div>
           </div>
         </nav>
@@ -478,7 +492,7 @@
               <h2>Paid</h2>
               <button class="link-btn" data-refresh="archive">Refresh</button>
             </div>
-            <p class="panel-sub">How a payment moves: export the approved batch (that sends it to “Waiting to be paid”), then once the money’s gone out, mark those paid — in bulk — and it updates in everyone’s app.</p>
+            <p class="panel-sub">The payment side, grouped by report. You’ll see the approved reports that are ready to pay, and the ones waiting to be paid. Export the batch for CedarStone, then mark a whole report paid once the money’s gone out — everyone’s app updates.</p>
             <div id="archive-ready-wrap" hidden>
               <h3 class="dash-h">Approved — ready to export</h3>
               <div id="archive-ready" class="list"></div>
@@ -601,6 +615,6 @@
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260801p"></script>
+    <script src="app.js?v=20260801q"></script>
   </body>
 </html>
