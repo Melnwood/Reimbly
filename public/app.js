@@ -483,6 +483,8 @@
     // pick it for them and show it as a plain line instead of a dropdown.
     const single = $('#ea-single');
     const btn = $('#set-default-account');
+    const defHint = $('#ea-default-hint');
+    if (defHint && state.expenseAccounts.length <= 1) defHint.hidden = true;
     if (state.expenseAccounts.length === 0) {
       sel.innerHTML = '<option value="">No account set up for you yet</option>';
       sel.hidden = true;
@@ -527,16 +529,26 @@
     return sel ? (sel.value || '') : '';
   }
 
-  // The "★ Make this my default" link reflects the current selection.
+  // The "★ Make this my default" link reflects the current selection. When a
+  // person has several accounts but hasn't picked a default yet, a gentle tip
+  // points them at it — so their own account becomes the pre-selected one.
   function updateDefaultLink() {
     const link = $('#set-default-account');
-    if (!link) return;
+    const hint = $('#ea-default-hint');
     const code = selectedAccountCode();
-    if (!code) { link.hidden = true; return; }
-    link.hidden = false;
-    const isDefault = code === getDefaultAccount();
-    link.textContent = isDefault ? '★ Your default' : '★ Make this my default';
-    link.disabled = isDefault;
+    if (link) {
+      if (!code) { link.hidden = true; }
+      else {
+        link.hidden = false;
+        const isDefault = code === getDefaultAccount();
+        link.textContent = isDefault ? '★ Your default' : '★ Make this my default';
+        link.disabled = isDefault;
+      }
+    }
+    if (hint) {
+      const multi = (state.expenseAccounts || []).length > 1;
+      hint.hidden = !(multi && !getDefaultAccount());
+    }
   }
 
   // The categories that apply to an account. General Fund gets the 7-series,
