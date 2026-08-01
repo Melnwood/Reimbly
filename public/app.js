@@ -514,6 +514,13 @@
     link.disabled = isDefault;
   }
 
+  // The categories that apply to an account — General Fund gets the 7-series,
+  // every other account the 8-series.
+  function categoriesForCode(code) {
+    return String(code) === String(state.generalFundCode || '010000')
+      ? (state.categories7 || []) : (state.categories8 || []);
+  }
+
   // Fill the Category dropdown with the set for the chosen account — General Fund
   // gets the 7-series, every other account the 8-series. Off until an account is set.
   function populateCategories() {
@@ -526,8 +533,7 @@
       if (hint) hint.textContent = '';
       return;
     }
-    const cats = String(code) === String(state.generalFundCode || '010000')
-      ? (state.categories7 || []) : (state.categories8 || []);
+    const cats = categoriesForCode(code);
     const cur = sel.value;
     const opt = (c) => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.code + ' – ' + c.name)}</option>`;
     // Float this person's most-used categories (within the set that applies here)
@@ -1434,6 +1440,17 @@
   // it creates the report and selects it. Picking an existing report is saved
   // when the line is closed (together with any field edits), so nothing is lost.
   async function onAddListChange(event) {
+    // The Account picker changed — rebuild the Category list for the new account.
+    const eaSel = event.target.closest('.ie-expense-account');
+    if (eaSel) {
+      const details = eaSel.closest('.mini-details');
+      const catSel = details && $('.ie-account', details);
+      if (catSel) {
+        catSel.innerHTML = ieCategoryOptions(eaSel.value, '');
+        catSel.disabled = !eaSel.value;
+      }
+      return;
+    }
     // A receipt was picked in the inline editor — show its name; it attaches on Save.
     const fileInput = event.target.closest('.ie-receipt-input');
     if (fileInput) {
@@ -1848,9 +1865,37 @@
   // Currencies offered in the inline editor (kept in step with the form).
   const CURRENCIES = ['USD', 'EUR', 'CZK', 'PLN', 'GBP', 'RON', 'HUF', 'BGN', 'RSD', 'UAH'];
 
-  function ieAccountOptions(selected) {
-    const opt = (a) => `<option value="${escapeHtml(a.code)}"${a.code === selected ? ' selected' : ''}>${escapeHtml(a.code)} – ${escapeHtml(a.name)}</option>`;
-    return `<option value="">Choose account…</option>${(state.accounts || []).map(opt).join('')}`;
+  // The inline editor's Account picker (Expense Type) — same two-level coding and
+  // "float your most-used to the top" behaviour as the main New-expense form.
+  function ieExpenseAccountOptions(selectedCode) {
+    const list = state.expenseAccounts || [];
+    const opt = (a) => `<option value="${escapeHtml(a.code)}"${a.code === selectedCode ? ' selected' : ''}>${escapeHtml(a.code + ' – ' + a.name)}</option>`;
+    const usage = accountUsage();
+    const frequent = list
+      .filter((a) => usage[a.code] > 0)
+      .sort((a, b) => usage[b.code] - usage[a.code] || a.code.localeCompare(b.code))
+      .slice(0, 8);
+    let html = '<option value="">Choose account…</option>';
+    if (frequent.length) html += `<optgroup label="Frequently used">${frequent.map(opt).join('')}</optgroup>`;
+    html += `<optgroup label="All accounts">${list.map(opt).join('')}</optgroup>`;
+    return html;
+  }
+
+  // The inline editor's Category picker — the set depends on the chosen account,
+  // with this person's most-used floated to the top.
+  function ieCategoryOptions(expenseAccountCode, selectedCatCode) {
+    if (!expenseAccountCode) return '<option value="">Choose the account first…</option>';
+    const cats = categoriesForCode(expenseAccountCode);
+    const opt = (c) => `<option value="${escapeHtml(c.code)}"${c.code === selectedCatCode ? ' selected' : ''}>${escapeHtml(c.code + ' – ' + c.name)}</option>`;
+    const usage = categoryUsage();
+    const frequent = cats
+      .filter((c) => usage[c.code] > 0)
+      .sort((a, b) => usage[b.code] - usage[a.code] || a.code.localeCompare(b.code))
+      .slice(0, 10);
+    let html = '<option value="">Choose a category…</option>';
+    if (frequent.length) html += `<optgroup label="Your most-used">${frequent.map(opt).join('')}</optgroup>`;
+    html += `<optgroup label="All categories">${cats.map(opt).join('')}</optgroup>`;
+    return html;
   }
   function ieCurrencyOptions(selected) {
     return CURRENCIES.map((c) => `<option${c === (selected || 'USD') ? ' selected' : ''}>${c}</option>`).join('');
@@ -1860,6 +1905,7 @@
   // step. Closing the line saves whatever changed.
   function inlineEditHtml(e) {
     const fx = fxInfo(e);
+    const eaCode = (String(e.expenseAccount || '').match(/^(\S+)/) || [])[1] || '';
     const fxLine = fx ? `
         <div class="ie-fx">
           <span class="ie-fx-title">Foreign currency</span>
@@ -1873,7 +1919,8 @@
           <label class="ie-f"><span>Amount</span><input class="ie-amount" type="number" inputmode="decimal" step="0.01" min="0" value="${e.amount != null ? e.amount : ''}" /></label>
           <label class="ie-f ie-cur"><span>Currency</span><select class="ie-currency">${ieCurrencyOptions(e.currency)}</select></label>
         </div>
-        <label class="ie-f"><span>Account</span><select class="ie-account">${ieAccountOptions(e.accountCode)}</select></label>
+        <label class="ie-f"><span>Account</span><select class="ie-expense-account">${ieExpenseAccountOptions(eaCode)}</select></label>
+        <label class="ie-f"><span>Category</span><select class="ie-account"${eaCode ? '' : ' disabled'}>${ieCategoryOptions(eaCode, e.accountCode)}</select></label>
         <label class="ie-f"><span>Date</span><input class="ie-date" type="date" value="${escapeHtml(e.date || '')}" /></label>
         <label class="ie-f"><span>Where (business)</span><input class="ie-business" type="text" maxlength="80" value="${escapeHtml(e.merchant || '')}" /></label>
         <label class="ie-f">
@@ -1937,10 +1984,12 @@
     if (!e) return 'unchanged';
     const amount = parseFloat(amtInput.value);
     const currency = details.querySelector('.ie-currency').value;
+    const expenseAccount = (details.querySelector('.ie-expense-account') || {}).value || '';
     const account = details.querySelector('.ie-account').value;
     const date = details.querySelector('.ie-date').value;
     const merchant = details.querySelector('.ie-business').value.trim();
     const description = details.querySelector('.ie-description').value.trim();
+    const eaWas = (String(e.expenseAccount || '').match(/^(\S+)/) || [])[1] || '';
 
     // The report picker is saved together with the fields — so choosing a report
     // and closing the line files the expense into it (no separate step).
@@ -1952,16 +2001,17 @@
     const receiptFile = fileInput && fileInput.files && fileInput.files[0];
 
     const fieldsChanged = amount !== e.amount || currency !== (e.currency || 'USD')
-      || account !== (e.accountCode || '') || date !== (e.date || '')
+      || expenseAccount !== eaWas || account !== (e.accountCode || '') || date !== (e.date || '')
       || merchant !== (e.merchant || '') || description !== (e.description || '');
     if (!fieldsChanged && !reportChanged && !receiptFile) return 'unchanged';
 
     if (!description) { toast('Add a short description.', 'bad'); return false; }
     if (!(amount > 0)) { toast('Amount must be greater than zero.', 'bad'); return false; }
     if (!date) { toast('Pick the date.', 'bad'); return false; }
-    if (!account) { toast('Choose an account.', 'bad'); return false; }
+    if (!expenseAccount) { toast('Choose an account.', 'bad'); return false; }
+    if (!account) { toast('Choose a category.', 'bad'); return false; }
 
-    const body = { id, amount, currency, account, date, description, merchant };
+    const body = { id, amount, currency, account, expenseAccount, date, description, merchant };
     if (reportChanged) body.reportId = reportVal; // '' removes from its report
     if (receiptFile) {
       body.receipt = await prepareReceipt(receiptFile);
@@ -1969,7 +2019,8 @@
 
     try {
       const res = await api('update-expense', { method: 'POST', body });
-      bumpAccountUsage(account);
+      bumpAccountUsage(expenseAccount); // learn go-to accounts…
+      bumpCategoryUsage(account);       // …and go-to categories
       if (res && res.warning) toast(res.warning, 'bad');
       else toast(receiptFile ? 'Saved with your receipt.' : (reportChanged && reportVal ? 'Saved and filed into the report.' : 'Saved.'), 'good');
       return 'saved';
