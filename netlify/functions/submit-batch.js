@@ -10,7 +10,7 @@ const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const {
   TABLES, STATUS, EVENTS,
-  ensureStaff, isHeldEmailReceipt, sourceOf, logActivity, staffById, isExpenseReady,
+  ensureStaff, isHeldEmailReceipt, sourceOf, logActivity, staffById, isExpenseReady, getReceiptThresholdUsd,
 } = require('./lib/domain');
 const notify = require('./lib/notify');
 
@@ -54,6 +54,7 @@ exports.handler = async (event) => {
       }
     }
 
+    const receiptLimit = await getReceiptThresholdUsd();
     let submitted = 0;
     let totalUsd = 0;
     let heldForReceipt = 0;
@@ -65,7 +66,7 @@ exports.handler = async (event) => {
       if ((f.Status || '') !== STATUS.DRAFT || isHeldEmailReceipt(f)) { skipped.push(rec.id); continue; }
       // Readiness gate: hold back anything not ready (no receipt/declaration, no
       // account, or a missing field).
-      if (!isExpenseReady(f)) { skipped.push(rec.id); heldForReceipt += 1; continue; }
+      if (!isExpenseReady(f, receiptLimit)) { skipped.push(rec.id); heldForReceipt += 1; continue; }
 
       await airtable.updateRecord(TABLES.EXPENSES, rec.id, {
         Status: STATUS.SUBMITTED,

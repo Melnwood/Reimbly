@@ -656,6 +656,12 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .rate-form-actions { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
 .rate-row.off { opacity: 0.6; }
 
+/* Receipt rules: the "$ [amount]" input on the Receipt rules screen. */
+.rule-amount { display: flex; align-items: center; gap: 8px; max-width: 200px; }
+.rule-dollar { font-size: 1.4rem; font-weight: 800; color: var(--ink-soft); }
+.rule-amount input { font-size: 1.2rem; font-weight: 700; }
+.rule-note { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+
 .sendback-row { display: none; gap: 8px; width: 100%; }
 .sendback-row.open { display: flex; }
 .sendback-row input { flex: 1; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }

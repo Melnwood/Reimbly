@@ -28,7 +28,7 @@ const {
   reportOwnedBy,
   householdScope,
   getCurrencyRate,
-  RECEIPT_MIN_USD,
+  getReceiptThresholdUsd,
 } = require('./lib/domain');
 const { isValidCategoryForSeries } = require('./lib/coding');
 const notify = require('./lib/notify');
@@ -160,12 +160,13 @@ exports.handler = async (event) => {
       fields['Affidavit Status'] = 'Pending';
       fields.Receipt = []; // a signed declaration stands in for the receipt
     }
-    // Only expenses over $50 (USD) need proof — small spends go through as-is.
+    // Only expenses over the receipt-free limit (USD) need proof — small spends
+    // go through as-is.
     if (!reportLink && !mileage && !receipt && !declaring) {
-      const rate = await getCurrencyRate(currency);
+      const [rate, limit] = await Promise.all([getCurrencyRate(currency), getReceiptThresholdUsd()]);
       const usd = rate != null ? amount * rate : null;
-      if (usd != null && usd > RECEIPT_MIN_USD) {
-        throw badRequest(`This expense is over $${RECEIPT_MIN_USD} and has no receipt. Add one, or declare you don’t have a receipt, before submitting.`);
+      if (usd != null && usd > limit) {
+        throw badRequest(`This expense is over $${limit} and has no receipt. Add one, or declare you don’t have a receipt, before submitting.`);
       }
     }
     // Time read off the photo (HH:MM) — helps tell apart repeat charges like tolls.

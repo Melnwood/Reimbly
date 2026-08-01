@@ -12,7 +12,7 @@ const {
   ensureStaff, staffById, logActivity,
   getReportById, listReportsOwnedByAny, createReport, setExpenseReport, reportOwnedBy,
   householdScope, submitterEmailFormula,
-  displayMaps, shapeExpense, isHeldEmailReceipt, isExpenseReady,
+  displayMaps, shapeExpense, isHeldEmailReceipt, isExpenseReady, getReceiptThresholdUsd,
 } = require('./lib/domain');
 const { pickBest } = require('./lib/matching');
 const notify = require('./lib/notify');
@@ -196,7 +196,8 @@ exports.handler = async (event) => {
       // in. If any aren't ready, block the whole submit so nothing half-done
       // reaches the approver. The app highlights the ones that need fixing.
       const drafts = members.filter((rec) => (rec.fields.Status || '') === STATUS.DRAFT);
-      const notReady = drafts.filter((rec) => !isExpenseReady(rec.fields));
+      const receiptLimit = await getReceiptThresholdUsd();
+      const notReady = drafts.filter((rec) => !isExpenseReady(rec.fields, receiptLimit));
       if (notReady.length) {
         const n = notReady.length;
         throw badRequest(`${n} expense${n === 1 ? '' : 's'} in this report ${n === 1 ? 'isn’t' : 'aren’t'} ready — each needs an account, a receipt (or a signed “no receipt” note), and the basics filled in. Fix the highlighted one${n === 1 ? '' : 's'}, then submit.`);

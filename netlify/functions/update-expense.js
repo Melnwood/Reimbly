@@ -27,6 +27,7 @@ const {
   accountVisibleTo,
   isCategoryAllowedForAccount,
   receiptGatePasses,
+  getReceiptThresholdUsd,
 } = require('./lib/domain');
 const { isValidCategoryForSeries } = require('./lib/coding');
 
@@ -155,7 +156,8 @@ exports.handler = async (event) => {
       // arriving now or already attached), a signed "no receipt" declaration, or
       // to be a mileage claim.
       const incomingReceipt = !!(body.receipt && body.receipt.base64);
-      if (!incomingReceipt && !receiptGatePasses(current.fields)) {
+      const receiptLimit = await getReceiptThresholdUsd();
+      if (!incomingReceipt && !receiptGatePasses(current.fields, receiptLimit)) {
         throw badRequest('Add a receipt, or declare you don’t have one, before resubmitting this expense.');
       }
       fields.Status = STATUS.SUBMITTED;

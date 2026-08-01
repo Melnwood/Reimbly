@@ -35,6 +35,12 @@ const TABLES = {
   ACTIVITY: 'Activity Log',
   MILEAGE_RATES: 'Mileage Rates',
   REPORTS: 'Reports',
+  SETTINGS: 'Settings',
+};
+
+// Org-wide settings live one-per-row in the Settings table (Setting / Value).
+const SETTING = {
+  RECEIPT_THRESHOLD: 'Receipt-free limit (USD)',
 };
 
 // Event names in the Activity Log's "Event" single-select. This is the trail
@@ -548,9 +554,43 @@ async function accountMap() {
 // declaration. Mileage claims are computed from distance × rate, so they need
 // neither. Takes raw Airtable `fields`.
 
-// Expenses at or under this USD amount don't need a receipt or a declaration —
-// small out-of-pocket spends (coffee, tolls, SMS) are taken on trust.
+// Default receipt-free limit: expenses at or under this USD amount don't need a
+// receipt or a declaration. Finance can change it on the Receipt rules screen;
+// this is the fallback when nothing's been set.
 const RECEIPT_MIN_USD = 50;
+
+// Read the org's receipt-free limit (USD) from Settings, falling back to the
+// default. Never throws — a missing/blank row just means "use the default".
+async function getReceiptThresholdUsd() {
+  try {
+    const rec = await airtable.findFirst(TABLES.SETTINGS, {
+      filterByFormula: `{Setting} = '${esc(SETTING.RECEIPT_THRESHOLD)}'`,
+    });
+    const v = rec && rec.fields ? Number(rec.fields.Value) : NaN;
+    return isFinite(v) && v >= 0 ? v : RECEIPT_MIN_USD;
+  } catch (e) {
+    return RECEIPT_MIN_USD;
+  }
+}
+
+// Set the org's receipt-free limit (USD). Upserts the single Settings row.
+async function setReceiptThresholdUsd(value) {
+  const v = Number(value);
+  if (!isFinite(v) || v < 0) throw new Error('The receipt-free limit must be $0 or more.');
+  const rec = await airtable.findFirst(TABLES.SETTINGS, {
+    filterByFormula: `{Setting} = '${esc(SETTING.RECEIPT_THRESHOLD)}'`,
+  });
+  if (rec) {
+    await airtable.updateRecord(TABLES.SETTINGS, rec.id, { Value: v });
+  } else {
+    await airtable.createRecord(TABLES.SETTINGS, {
+      Setting: SETTING.RECEIPT_THRESHOLD,
+      Value: v,
+      Notes: 'Expenses at or under this USD amount need no receipt. Managed by Reimbly’s Receipt rules screen.',
+    });
+  }
+  return v;
+}
 
 function isMileageExpense(fields) {
   const f = fields || {};
@@ -567,10 +607,11 @@ function expenseUsd(fields) {
   return Number(f.Amount) || 0;
 }
 
-function receiptGatePasses(fields) {
+function receiptGatePasses(fields, threshold) {
   const f = fields || {};
   if (isMileageExpense(f)) return true;
-  if (expenseUsd(f) <= RECEIPT_MIN_USD) return true; // $50 or less needs no receipt
+  const limit = threshold != null && isFinite(Number(threshold)) ? Number(threshold) : RECEIPT_MIN_USD;
+  if (expenseUsd(f) <= limit) return true; // at or under the limit needs no receipt
   const hasReceipt = Array.isArray(f.Receipt) && f.Receipt.length > 0;
   const declared = f['Missing Receipt'] === true
     && String(f['Affidavit Reason'] || '').trim() !== ''
@@ -580,18 +621,18 @@ function receiptGatePasses(fields) {
 
 // Everything an expense needs before it can go for approval. Returns the list of
 // what's still missing (empty = ready). Takes raw Airtable `fields`.
-function expenseReadinessFields(fields) {
+function expenseReadinessFields(fields, threshold) {
   const f = fields || {};
   const issues = [];
   if (!f.Description) issues.push('description');
   if (!(Number(f.Amount) > 0)) issues.push('amount');
   if (!f['Expense Date']) issues.push('date');
   if (!(Array.isArray(f.Account) && f.Account.length)) issues.push('account');
-  if (!receiptGatePasses(f)) issues.push('receipt'); // covers mileage + "no receipt" note
+  if (!receiptGatePasses(f, threshold)) issues.push('receipt'); // covers mileage + "no receipt" note
   return issues;
 }
-function isExpenseReady(fields) {
-  return expenseReadinessFields(fields).length === 0;
+function isExpenseReady(fields, threshold) {
+  return expenseReadinessFields(fields, threshold).length === 0;
 }
 
 // The small maps needed to display expenses. Fetched once per request.
@@ -926,6 +967,8 @@ module.exports = {
   expenseReadinessFields,
   isExpenseReady,
   RECEIPT_MIN_USD,
+  getReceiptThresholdUsd,
+  setReceiptThresholdUsd,
   getCurrencyRate,
   accountMap,
   staffMap,

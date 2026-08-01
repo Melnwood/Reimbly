@@ -618,6 +618,7 @@
       state.categories7 = (data && data.categories7) || [];
       state.categories8 = (data && data.categories8) || [];
       state.generalFundCode = (data && data.generalFundCode) || '010000';
+      if (data && data.receiptThresholdUsd != null) RECEIPT_THRESHOLD = Number(data.receiptThresholdUsd) || 0;
       populateExpenseAccounts();
       populateCategories();
       populateRates();
@@ -666,7 +667,7 @@
     updateDescribeBtn();
   }
 
-  const MGMT_VIEWS = ['review', 'approvals', 'audit', 'archive', 'timing', 'rates', 'accounts', 'people'];
+  const MGMT_VIEWS = ['review', 'approvals', 'audit', 'archive', 'timing', 'rates', 'accounts', 'people', 'settings'];
 
   function switchView(view) {
     state.view = view;
@@ -689,6 +690,40 @@
     if (view === 'rates' && !state.loaded.rates) loadRates();
     if (view === 'accounts' && !state.loaded.accounts) loadAccountsAdmin();
     if (view === 'people' && !state.loaded.people) loadPeople();
+    if (view === 'settings') showReceiptRules();
+  }
+
+  // Receipt rules screen (Finance): the dollar limit below which no receipt is
+  // needed. The current value already rode in on /options (RECEIPT_THRESHOLD).
+  function showReceiptRules() {
+    const input = $('#receipt-threshold');
+    if (input) input.value = String(RECEIPT_THRESHOLD);
+    const note = $('#receipt-rule-note');
+    if (note) note.hidden = true;
+  }
+
+  async function saveReceiptThreshold(event) {
+    if (event) event.preventDefault();
+    const input = $('#receipt-threshold');
+    const btn = $('#receipt-threshold-save');
+    const note = $('#receipt-rule-note');
+    const value = parseFloat(input && input.value);
+    if (!(value >= 0)) { toast('Enter a dollar amount of $0 or more.', 'bad'); return; }
+    if (btn) btn.disabled = true;
+    try {
+      const res = await api('receipt-threshold', { method: 'POST', body: { value } });
+      RECEIPT_THRESHOLD = Number(res.receiptThresholdUsd) || 0;
+      if (input) input.value = String(RECEIPT_THRESHOLD);
+      if (note) { note.hidden = false; note.textContent = `✓ Saved — receipts aren’t needed at or under $${RECEIPT_THRESHOLD}.`; }
+      toast('Receipt rule saved.', 'good');
+      // The "needs receipt" flags everywhere depend on this — refresh the lists.
+      state.loaded.mine = false;
+      if (state.view === 'submit') showAddExpense();
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   // The "Management" dropdown that holds the admin screens.
@@ -1803,8 +1838,10 @@
 
   // ----- Add-expense tab: expenses not yet filed into a report -----
 
-  // The amount in US dollars, used for the "over $50" rule and cost sorting.
-  const RECEIPT_THRESHOLD = 50;
+  // The receipt-free limit in US dollars: expenses at or under this need no
+  // receipt. Default $50; overridden by the org setting loaded from /options
+  // and editable by Finance on the Receipt rules screen.
+  let RECEIPT_THRESHOLD = 50;
   function usdAmount(e) {
     return Number(e.amountUsd != null ? e.amountUsd : e.amount) || 0;
   }
@@ -1894,7 +1931,7 @@
           ${amtCell}
           ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
           ${e.missingReceipt ? `<span class="mini-clip" title="No-receipt declaration (${escapeHtml(e.affidavitStatus || 'Pending')})">🖊️</span>` : ''}
-          ${incomplete ? `<span class="mini-need" title="Not ready to submit yet">needs ${escapeHtml(readiness.join(', '))}</span>` : (needsReceipt ? '<span class="mini-need" title="Over $50 and no receipt yet">needs receipt</span>' : '')}
+          ${incomplete ? `<span class="mini-need" title="Not ready to submit yet">needs ${escapeHtml(readiness.join(', '))}</span>` : (needsReceipt ? `<span class="mini-need" title="Over $${RECEIPT_THRESHOLD} and no receipt yet">needs receipt</span>` : '')}
           ${sentBack ? '<span class="mini-sentback">↩︎ sent back</span>' : ''}
           ${sourceDot(e.source)}
           <span class="mini-caret" aria-hidden="true">▾</span>
@@ -4899,6 +4936,8 @@
     $('#f-rate').addEventListener('change', updateMileageCalc);
     $('#rate-form').addEventListener('submit', saveRate);
     $('#rate-cancel').addEventListener('click', resetRateForm);
+    const rrf = $('#receipt-rule-form');
+    if (rrf) rrf.addEventListener('submit', saveReceiptThreshold);
     el.ratesList.addEventListener('click', onRatesClick);
     $('#people-choose').addEventListener('click', () => el.peopleFile.click());
     $('#people-template').addEventListener('click', downloadPeopleTemplate);
