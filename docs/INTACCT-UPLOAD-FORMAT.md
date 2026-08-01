@@ -14,6 +14,21 @@ attachments, now saved in Mel's Google Drive:
 Cedarstone owns and maintains the chart of accounts. Keep this doc in step if they
 send a revised template. This is the master reference for building the export.
 
+> **Status — export built (v1), live.** Management → **Paid** has an **"Export for
+> Intacct (JE)"** button (Finance only). It builds the .xlsx in this exact column
+> format from the payable batch (Approved + Waiting-to-be-paid), one debit line per
+> expense. `lib/intacct.js` maps the fields; `export-intacct.js` reads Airtable and
+> writes the workbook with the `xlsx` package. It fills everything Rembly reliably
+> has — `JOURNAL`, `DATE`, `DESCRIPTION`, `LINE_NO`, `ACCT_NO` (GL code),
+> `LOCATION_ID`, `MEMO`, `DEBIT` (USD), and `GLENTRY_PROJECTID` (the account code)
+> — and pulls `DEPT_ID` / `GLENTRY_PROJECTID` / `GLENTRY_CLASSID` from the
+> expense's Fund/Project links when present. Lines still missing a **fund** or
+> **class** are reported back on export instead of shipping half-coded.
+>
+> **Still to finish** (needs the two open questions below answered): (a) populate
+> Fund/Project/Class per expense so `DEPT_ID` and `GLENTRY_CLASSID` fill in for
+> every line, and (b) add the balancing **credit line(s)** so the JE nets to zero.
+
 ## How Cedarstone loads it (Olivia's answers)
 
 - **Delivery:** an **Excel file** (their preferred method unless we do a direct

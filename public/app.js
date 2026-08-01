@@ -3382,6 +3382,7 @@
       <div class="pay-toolbar">
         <span class="pay-count">${groups.length} report${groups.length === 1 ? '' : 's'} · ${escapeHtml(money(totalUsd, 'USD'))} approved</span>
         <span class="grow"></span>
+        <button class="btn ghost small" data-act="export-intacct">⤓ Export for Intacct (JE)</button>
         <button class="btn primary small" data-act="export-csv">⤓ Export CSV &amp; move to waiting</button>
       </div>`;
     el.archiveReady.innerHTML = toolbar + groups.map((g) => `
@@ -3473,6 +3474,40 @@
   }
 
   // Download the approved batch as a CSV (CedarStone's hand-off into its own
+  // Download the payable batch as Cedarstone's Intacct Journal-Entry .xlsx (the
+  // "ExpWire batch" format). Built server-side so it carries the coding. Read-
+  // only — it makes the file, it doesn't move anything. If some lines still need
+  // a fund/class, we say so rather than shipping a half-coded batch silently.
+  async function exportIntacctJe(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
+    try {
+      const res = await api('export-intacct');
+      if (!res.count) { toast('Nothing approved to export.', 'bad'); return; }
+      const bin = atob(res.base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.filename || 'rembly-intacct-je.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const miss = (res.missing || []).length;
+      if (miss) {
+        toast(`Exported ${res.count} line${res.count === 1 ? '' : 's'} — but ${miss} still need a fund/class before Intacct will accept them.`, 'bad');
+      } else {
+        toast(`Exported ${res.count} line${res.count === 1 ? '' : 's'} for Intacct.`, 'good');
+      }
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '⤓ Export for Intacct (JE)'; }
+    }
+  }
+
   // payment process) and move those reports into "Waiting to be paid".
   async function exportApprovedCsv() {
     const rows = state.archiveReady || [];
@@ -3598,6 +3633,7 @@
     const act = btn.dataset.act;
 
     if (act === 'export-csv') { exportApprovedCsv(); return; }
+    if (act === 'export-intacct') { exportIntacctJe(event.target.closest('button')); return; }
     if (act === 'mark-selected') { markSelectedPaid(); return; }
 
     if (act === 'mark-paid') {

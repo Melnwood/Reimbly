@@ -858,6 +858,7 @@ module.exports = {
   getExpenseAccountByCode,
   receiptGatePasses,
   isMileageExpense,
+  accountMap,
   staffMap,
   accountAccessFor,
   listPeople,
