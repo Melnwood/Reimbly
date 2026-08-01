@@ -3503,7 +3503,51 @@
 
   // ---------- Paid / archive ----------
 
-  // A read-only expense card (used in the paid history).
+  // The paid history is management-wide, so it reads at the report level: one row
+  // per report with the report's name and whose it is — not every expense laid
+  // out. Tap a row to open it and see the expenses inside.
+  function groupPaidByReport(paid) {
+    const groups = new Map();
+    for (const e of paid) {
+      // Expenses in a report group by report; loose ones group per person.
+      const key = e.reportId || `solo:${e.submitterId || e.submitterEmail || 'unknown'}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          reportName: e.reportName || '',
+          person: e.submitterName || e.submitterEmail || 'Someone',
+          items: [], total: 0, paidOn: null,
+        });
+      }
+      const g = groups.get(key);
+      g.items.push(e);
+      g.total += Number(e.amountUsd) || 0;
+      if (e.paidOn && (!g.paidOn || e.paidOn > g.paidOn)) g.paidOn = e.paidOn;
+    }
+    // Most recently paid first.
+    return [...groups.values()].sort((a, b) => String(b.paidOn || '').localeCompare(String(a.paidOn || '')));
+  }
+
+  function paidReportCard(g) {
+    const title = g.reportName || `${g.person}’s expenses`;
+    return `
+      <details class="paid-report">
+        <summary class="paid-report-head">
+          <div class="paid-report-who">
+            <div class="paid-report-name">${escapeHtml(title)}</div>
+            <div class="paid-report-person">${escapeHtml(g.person)}</div>
+          </div>
+          <div class="paid-report-meta">
+            <span class="paid-report-total">${escapeHtml(money(g.total, 'USD'))}</span>
+            <span class="paid-report-sub">${g.items.length} expense${g.items.length === 1 ? '' : 's'}${g.paidOn ? ` · Paid ${escapeHtml(fmtDate(g.paidOn))}` : ''}</span>
+          </div>
+          <span class="mini-caret" aria-hidden="true">▾</span>
+        </summary>
+        <div class="paid-report-body">${sortExpenses(g.items).map(paidCard).join('')}</div>
+      </details>`;
+  }
+
+  // A read-only expense card (used inside an opened paid report).
   function paidCard(e) {
     return `
       <article class="expense">
@@ -3651,7 +3695,7 @@
       if (el.archiveWaitingWrap) el.archiveWaitingWrap.hidden = true;
     }
     el.archivePaid.innerHTML = paid.length
-      ? paid.map(paidCard).join('')
+      ? groupPaidByReport(paid).map(paidReportCard).join('')
       : `<div class="state"><span class="emoji">🗂️</span>No paid expenses yet.</div>`;
   }
 

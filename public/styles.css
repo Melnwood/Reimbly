@@ -876,6 +876,22 @@ body.modal-open { overflow: hidden; }
 .pay-batch-body { padding: 6px 12px 12px; }
 .pay-batch-body .report { box-shadow: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; margin: 0; }
 .pay-batch-body .report:last-child { border-bottom: 0; }
+
+/* Paid history, management view: one collapsible row per report — its name and
+   whose it is — with the expenses tucked inside until you open it. */
+.paid-report { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); margin-bottom: 10px; overflow: hidden; }
+.paid-report-head { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 13px 16px; list-style: none; }
+.paid-report-head::-webkit-details-marker { display: none; }
+.paid-report-head:hover { background: var(--bg-soft); }
+.paid-report-who { flex: 1 1 auto; min-width: 0; }
+.paid-report-name { font-weight: 700; font-size: 1rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paid-report-person { font-size: 0.85rem; color: var(--ink-soft); margin-top: 2px; }
+.paid-report-meta { text-align: right; flex: none; }
+.paid-report-total { display: block; font-weight: 800; color: var(--ink); }
+.paid-report-sub { display: block; font-size: 0.78rem; color: var(--ink-soft); margin-top: 1px; white-space: nowrap; }
+.paid-report .mini-caret { transition: transform 0.15s; color: var(--ink-soft); flex: none; }
+.paid-report[open] .mini-caret { transform: rotate(180deg); }
+.paid-report-body { padding: 4px 16px 12px; border-top: 1px solid var(--line); }
 /* keep the person's name next to its checkbox, button pinned right */
 .report-head .report-who { margin-right: auto; }
 
