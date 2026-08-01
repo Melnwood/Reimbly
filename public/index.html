@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Reimbly" />
-    <link rel="stylesheet" href="styles.css?v=20260801r" />
+    <link rel="stylesheet" href="styles.css?v=20260801s" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -317,40 +317,6 @@
             <div id="add-list" class="list"></div>
           </div>
 
-          <!-- Maintenance tool, opened from Management → "Highlight receipts" -->
-          <div id="rescan-modal" class="modal-overlay" hidden>
-            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rescan-title">
-              <div class="detail-head">
-                <h3 id="rescan-title">Highlight receipts (date &amp; total)</h3>
-                <button class="link-btn" id="rescan-close">✕ Close</button>
-              </div>
-              <p class="panel-sub">Re-reads each receipt image with the latest reader to mark where the date and total sit (so they’re highlighted when reviewing) and to fill in any receipt that’s missing a date. Dates you already set are left alone.</p>
-              <div id="rescan-note" class="import-note" hidden></div>
-              <button class="btn primary" id="rescan-dates" title="Re-read each receipt to highlight the date & total">🔁 Highlight receipts now</button>
-            </div>
-          </div>
-
-          <!-- Missing-receipt affidavit -->
-          <div id="affidavit-modal" class="modal-overlay" hidden>
-            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="aff-title">
-              <div class="detail-head">
-                <h3 id="aff-title">No receipt? Sign a declaration</h3>
-                <button class="link-btn" id="aff-close">✕ Close</button>
-              </div>
-              <p class="panel-sub">Use this only when a receipt truly isn’t available (a market stall, a taxi, a tip). You’re certifying the expense is real — it then goes to your approver to sign off.</p>
-              <div id="aff-summary" class="aff-summary"></div>
-              <label class="ie-f">
-                <span>Why isn’t there a receipt?</span>
-                <textarea id="aff-reason" rows="3" maxlength="400" placeholder="e.g. Paid a market stall in cash — no receipt was given"></textarea>
-              </label>
-              <div id="aff-statement" class="aff-statement"></div>
-              <label class="check-row"><input type="checkbox" id="aff-agree" /> <span>I certify that the above is true and correct, and that a receipt is not available.</span></label>
-              <div class="expense-actions">
-                <button class="btn primary" id="aff-submit">🖊️ Sign &amp; submit</button>
-                <button class="link-btn" id="aff-cancel">Cancel</button>
-              </div>
-            </div>
-          </div>
         </section>
 
         <!-- My reports -->
@@ -611,10 +577,47 @@
     </div>
 
     <!-- Toast -->
+    <!-- Modals live at the top level so they show over any screen (not trapped
+         inside a view that's hidden). -->
+    <!-- Maintenance tool, opened from Management → "Highlight receipts" -->
+    <div id="rescan-modal" class="modal-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rescan-title">
+        <div class="detail-head">
+          <h3 id="rescan-title">Highlight receipts (date &amp; total)</h3>
+          <button class="link-btn" id="rescan-close">✕ Close</button>
+        </div>
+        <p class="panel-sub">Re-reads each receipt image with the latest reader to mark where the date and total sit (so they’re highlighted when reviewing) and to fill in any receipt that’s missing a date. Dates you already set are left alone.</p>
+        <div id="rescan-note" class="import-note" hidden></div>
+        <button class="btn primary" id="rescan-dates" title="Re-read each receipt to highlight the date & total">🔁 Highlight receipts now</button>
+      </div>
+    </div>
+
+    <!-- Missing-receipt affidavit -->
+    <div id="affidavit-modal" class="modal-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="aff-title">
+        <div class="detail-head">
+          <h3 id="aff-title">No receipt? Sign a declaration</h3>
+          <button class="link-btn" id="aff-close">✕ Close</button>
+        </div>
+        <p class="panel-sub">Use this only when a receipt truly isn’t available (a market stall, a taxi, a tip). You’re certifying the expense is real — it then goes to your approver to sign off.</p>
+        <div id="aff-summary" class="aff-summary"></div>
+        <label class="ie-f">
+          <span>Why isn’t there a receipt?</span>
+          <textarea id="aff-reason" rows="3" maxlength="400" placeholder="e.g. Paid a market stall in cash — no receipt was given"></textarea>
+        </label>
+        <div id="aff-statement" class="aff-statement"></div>
+        <label class="check-row"><input type="checkbox" id="aff-agree" /> <span>I certify that the above is true and correct, and that a receipt is not available.</span></label>
+        <div class="expense-actions">
+          <button class="btn primary" id="aff-submit">🖊️ Sign &amp; submit</button>
+          <button class="link-btn" id="aff-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260801r"></script>
+    <script src="app.js?v=20260801s"></script>
   </body>
 </html>

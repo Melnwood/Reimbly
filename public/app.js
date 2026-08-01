@@ -2043,13 +2043,13 @@
         <label class="ie-f"><span>Category</span><select class="ie-account"${eaCode ? '' : ' disabled'}>${ieCategoryOptions(eaCode, e.accountCode)}</select></label>
         <label class="ie-f"><span>Date</span><input class="ie-date" type="date" value="${escapeHtml(e.date || '')}" /></label>
         <label class="ie-f"><span>Where (business)</span><input class="ie-business" type="text" maxlength="80" value="${escapeHtml(e.merchant || '')}" /></label>
-        <label class="ie-f">
+        <label class="ie-f ie-f-wide">
           <span>Description</span>
           <input class="ie-description" type="text" maxlength="120" value="${escapeHtml(e.description || '')}" />
           <div class="ie-describe-options describe-options" hidden></div>
         </label>
         <label class="report-row"><span>Report</span>${reportSelectHtml(e.reportId, `data-role="report-pick" data-id="${escapeHtml(e.id)}"`)}</label>
-        <div class="ie-f">
+        <div class="ie-f ie-f-wide">
           <span>Receipt</span>
           <div class="ie-receipt">
             ${e.receipt && e.receipt.url

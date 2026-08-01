@@ -526,6 +526,29 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .ie-receipt-name { font-size: 0.82rem; }
 .mini-clip { font-size: 0.85rem; }
 
+/* On a wider screen the stacked, full-width fields and buttons read as big white
+   bars across the report. Give the fields a sensible width and lay the whole
+   editor out in two columns; let the receipt buttons sit side by side. Phones
+   keep the simple stacked layout above. */
+@media (min-width: 720px) {
+  .inline-edit {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; align-items: start;
+  }
+  /* Full-width rows span both columns; the rest pair up two-across. */
+  .inline-edit > .mini-badges,
+  .inline-edit > .ie-fx,
+  .inline-edit > .ie-row,
+  .inline-edit > .report-row,
+  .inline-edit > .ie-f-wide,
+  .inline-edit > .expense-actions,
+  .inline-edit > .ie-affidavit,
+  .inline-edit > .ie-hint,
+  .inline-edit > .expense-note { grid-column: 1 / -1; }
+  .ie-f input, .ie-f select { max-width: 460px; }
+  .ie-receipt { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .ie-receipt .btn { width: auto; }
+}
+
 /* Per-expense report picker on the Add-expense list */
 .report-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.88rem; color: var(--ink-soft); }
 .report-row > span { font-weight: 600; }
@@ -702,7 +725,8 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 /* Drill-in pop-up */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
-  background: rgba(22, 32, 58, 0.5); padding: 18px; backdrop-filter: blur(2px);
+  background: rgba(22, 32, 58, 0.5); padding: 18px;
+  /* No backdrop-filter — it makes the modal feel laggy on phones. */
 }
 .modal-card {
   background: #fff; border-radius: var(--radius); width: 100%; max-width: 560px;
