@@ -520,19 +520,23 @@ async function listPeople() {
   const codeById = {};
   for (const a of accounts) codeById[a.id] = a.code;
   const nameById = {};
-  for (const r of records) nameById[r.id] = (r.fields || {}).Name || (r.fields || {}).Email || '';
+  const emailById = {};
+  for (const r of records) {
+    nameById[r.id] = (r.fields || {}).Name || (r.fields || {}).Email || '';
+    emailById[r.id] = (r.fields || {}).Email || '';
+  }
   return records.map((r) => {
     const f = r.fields || {};
+    const upId = firstLinkId(f.Upline);
     return {
       id: r.id,
       name: f.Name || '',
       email: f.Email || '',
       role: f.Role || 'Staff',
-      uplineEmail: '',
-      uplineName: (() => {
-        const up = firstLinkId(f.Upline);
-        return up ? nameById[up] || '' : '';
-      })(),
+      uplineId: upId || '',
+      uplineEmail: upId ? (emailById[upId] || '') : '',
+      uplineName: upId ? (nameById[upId] || '') : '',
+      household: f.Household || '',
       accounts: (Array.isArray(f['Allowed Accounts']) ? f['Allowed Accounts'] : []).map((id) => codeById[id]).filter(Boolean),
     };
   }).sort((a, b) => a.name.localeCompare(b.name));

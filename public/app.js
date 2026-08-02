@@ -4456,22 +4456,78 @@
     return `<span class="badge ${cls}">${escapeHtml(role || 'Staff')}</span>`;
   }
 
+  let peopleEditingId = null; // which person's inline editor is open
+
+  const ROLE_OPTS = ['Staff', 'Approver', 'Finance'];
+
+  // The shared add/edit form. `p` null → add mode (email is editable).
+  function personFormHtml(p) {
+    const adding = !p;
+    const people = state.people || [];
+    const uplineEmail = p ? p.uplineEmail : '';
+    const uplineOpts = ['<option value="">— none —</option>'].concat(
+      people
+        .filter((x) => !p || x.id !== p.id) // can't be your own upline
+        .map((x) => `<option value="${escapeHtml(x.email)}"${x.email === uplineEmail ? ' selected' : ''}>${escapeHtml(x.name || x.email)}</option>`),
+    ).join('');
+    const roleOpts = ROLE_OPTS.map((r) => `<option value="${r}"${(p && p.role) === r ? ' selected' : ''}>${r}</option>`).join('');
+    return `
+      <div class="person-form" data-id="${escapeHtml(p ? p.id : '')}">
+        <div class="pf-row">
+          <label class="pf-field"><span>Name</span><input class="pf-name" type="text" maxlength="80" value="${escapeHtml(p ? p.name : '')}" placeholder="Full name" /></label>
+          <label class="pf-field"><span>Email</span><input class="pf-email" type="email" value="${escapeHtml(p ? p.email : '')}" placeholder="name@josiahventure.com"${adding ? '' : ' disabled'} /></label>
+        </div>
+        <div class="pf-row">
+          <label class="pf-field"><span>Role</span><select class="pf-role">${roleOpts}</select></label>
+          <label class="pf-field"><span>Upline (who approves them)</span><select class="pf-upline">${uplineOpts}</select></label>
+        </div>
+        <div class="pf-row">
+          <label class="pf-field"><span>Household <em class="opt">(pooled with, e.g. a spouse)</em></span><input class="pf-household" type="text" maxlength="80" value="${escapeHtml(p ? p.household : '')}" placeholder="e.g. Mel & Amy Ellenwood" /></label>
+          <label class="pf-field"><span>Restricted accounts <em class="opt">(GL codes, comma-separated)</em></span><input class="pf-accounts" type="text" value="${escapeHtml(p ? (p.accounts || []).join(', ') : '')}" placeholder="e.g. 9100000, 9200000" /></label>
+        </div>
+        <div class="pf-actions">
+          <button type="button" class="btn primary small" data-act="person-save">${adding ? 'Add person' : 'Save'}</button>
+          <button type="button" class="link-btn" data-act="person-cancel">Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  function renderPeopleAdd() {
+    const box = $('#person-add');
+    if (!box) return;
+    if (peopleEditingId === '__new__') {
+      box.hidden = false;
+      box.innerHTML = personFormHtml(null);
+      const f = box.querySelector('.pf-name');
+      if (f) f.focus();
+    } else {
+      box.hidden = true;
+      box.innerHTML = '';
+    }
+  }
+
   function renderPeople(people) {
+    renderPeopleAdd();
     if (!people.length) {
-      el.peopleList.innerHTML = `<div class="state">No people yet — upload a file above.</div>`;
+      el.peopleList.innerHTML = `<div class="state">No people yet — add one above or upload a file.</div>`;
       return;
     }
     el.peopleList.innerHTML = people.map((p) => {
+      if (peopleEditingId === p.id) {
+        return `<article class="expense person-row editing" data-id="${escapeHtml(p.id)}">${personFormHtml(p)}</article>`;
+      }
       const meta = [p.email];
       if (p.uplineName) meta.push(`upline: ${p.uplineName}`);
+      if (p.household) meta.push(`household: ${p.household}`);
       if (p.accounts && p.accounts.length) meta.push(`funds: ${p.accounts.join(', ')}`);
       return `
-        <article class="expense">
+        <article class="expense person-row" data-id="${escapeHtml(p.id)}">
           <div class="expense-top">
             <div class="expense-main">
               <div class="expense-desc">${escapeHtml(p.name || p.email)} ${roleBadge(p.role)}</div>
               <div class="expense-meta">${escapeHtml(meta.join(' · '))}</div>
             </div>
+            <button type="button" class="btn ghost small" data-act="person-edit" data-id="${escapeHtml(p.id)}">Edit</button>
           </div>
         </article>`;
     }).join('');
@@ -4482,9 +4538,60 @@
     try {
       const data = await api('people');
       state.loaded.people = true;
-      renderPeople(data.people || []);
+      state.people = data.people || [];
+      renderPeople(state.people);
     } catch (e) {
       el.peopleList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  // Add / edit / save / cancel on the People & access screen.
+  function onPeopleClick(event) {
+    const btn = event.target.closest('button[data-act]');
+    if (!btn) return;
+    const act = btn.dataset.act;
+    if (act === 'person-edit') {
+      peopleEditingId = btn.dataset.id;
+      renderPeople(state.people || []);
+    } else if (act === 'person-cancel') {
+      peopleEditingId = null;
+      renderPeople(state.people || []);
+    } else if (act === 'person-save') {
+      savePerson(btn.closest('.person-form'));
+    }
+  }
+
+  function openAddPerson() {
+    peopleEditingId = '__new__';
+    renderPeople(state.people || []);
+  }
+
+  async function savePerson(form) {
+    if (!form) return;
+    const id = form.dataset.id || '';
+    const body = {
+      name: form.querySelector('.pf-name').value.trim(),
+      role: form.querySelector('.pf-role').value,
+      uplineEmail: form.querySelector('.pf-upline').value,
+      household: form.querySelector('.pf-household').value.trim(),
+      accounts: form.querySelector('.pf-accounts').value.split(/[\s,;/|]+/).map((s) => s.trim()).filter(Boolean),
+    };
+    if (id) body.id = id;
+    else body.email = form.querySelector('.pf-email').value.trim();
+    if (!id && (!body.email || !body.email.includes('@'))) { toast('Enter a valid email address.', 'bad'); return; }
+    const btn = form.querySelector('[data-act="person-save"]');
+    if (btn) btn.disabled = true;
+    try {
+      const res = await api('people-save', { method: 'POST', body });
+      state.people = res.people || [];
+      peopleEditingId = null;
+      renderPeople(state.people);
+      state.loaded.mine = false; // access/upline may have changed
+      if ((res.warnings || []).length) toast(res.warnings[0], 'bad');
+      else toast(id ? 'Saved.' : 'Person added.', 'good');
+    } catch (e) {
+      if (btn) btn.disabled = false;
+      toast(e.message, 'bad');
     }
   }
 
@@ -4736,7 +4843,8 @@
         ? `<details class="import-help"><summary>${data.warnings.length} note${data.warnings.length === 1 ? '' : 's'}</summary><ul>${data.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('')}</ul></details>`
         : '';
       el.peopleSummary.innerHTML = `<div class="recon-summary good">✓ ${data.created} added · ${data.updated} updated</div>${warnHtml}`;
-      renderPeople(data.people || []);
+      state.people = data.people || [];
+      renderPeople(state.people);
       el.peopleFile.value = '';
       loadOptions(); // the caller's own account picker may have changed
     } catch (e) {
@@ -4942,7 +5050,10 @@
     $('#people-choose').addEventListener('click', () => el.peopleFile.click());
     $('#people-template').addEventListener('click', downloadPeopleTemplate);
     $('#people-copy').addEventListener('click', copyPeopleInstructions);
+    $('#people-add').addEventListener('click', openAddPerson);
     el.peopleFile.addEventListener('change', onPeopleFile);
+    el.peopleList.addEventListener('click', onPeopleClick);
+    $('#person-add').addEventListener('click', onPeopleClick);
     bindDashboard();
     el.addList.addEventListener('click', onAddListClick);
     el.addList.addEventListener('change', onAddListChange);

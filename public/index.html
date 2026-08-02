@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Reimbly" />
-    <link rel="stylesheet" href="styles.css?v=20260801z" />
+    <link rel="stylesheet" href="styles.css?v=20260802a" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -575,12 +575,14 @@
             </div>
             <p class="panel-sub">Set everyone's role, upline (who approves them), which restricted accounts they can charge to, and which people share a household (pooled &amp; reimbursed together, like a couple) — all from one spreadsheet. People are matched by email: existing ones are updated and new ones added (nobody is ever deleted).</p>
             <div class="import-bar">
+              <button type="button" class="btn primary small" id="people-add">＋ Add a person</button>
               <button type="button" class="btn ghost small" id="people-choose">📄 Upload people file</button>
               <button type="button" class="link-btn" id="people-template">Download a template</button>
               <button type="button" class="link-btn" id="people-copy">Copy instructions for Claude</button>
               <input id="people-file" type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
               <span id="people-name" class="file-hint"></span>
             </div>
+            <div id="person-add" hidden></div>
             <details class="import-help">
               <summary>What columns should the file have?</summary>
               <ul>
@@ -643,6 +645,6 @@
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260801z"></script>
+    <script src="app.js?v=20260802a"></script>
   </body>
 </html>

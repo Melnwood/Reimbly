@@ -662,6 +662,18 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .rule-amount input { font-size: 1.2rem; font-weight: 700; }
 .rule-note { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
 
+/* Add / edit a single person on the People & access screen. */
+.person-row .expense-top { align-items: center; }
+.person-row .expense-top .btn { flex: none; }
+.person-form { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+#person-add .person-form { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-soft); padding: 14px; margin-bottom: 14px; }
+.pf-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.pf-field { flex: 1 1 220px; display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); }
+.pf-field .opt { font-weight: 400; font-style: normal; color: var(--ink-soft); opacity: 0.8; }
+.pf-field input, .pf-field select { font: inherit; font-weight: 500; padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; color: var(--ink); }
+.pf-field input:disabled { background: var(--bg-soft); color: var(--ink-soft); }
+.pf-actions { display: flex; align-items: center; gap: 14px; }
+
 .sendback-row { display: none; gap: 8px; width: 100%; }
 .sendback-row.open { display: flex; }
 .sendback-row input { flex: 1; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
