@@ -1,5 +1,13 @@
 /* Reimbly — warm, simple, friendly. */
 
+/* Thin line icons (replace the old emoji). They inherit the surrounding text
+   colour and size, so they sit naturally in buttons, rows, chips and labels. */
+.icon {
+  width: 1.15em; height: 1.15em; flex: none; display: inline-block; vertical-align: -0.17em;
+  stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+}
+.btn .icon, .link-btn .icon { vertical-align: -0.16em; }
+
 :root {
   --bg: #f6f7fb;
   --bg-soft: #eef0f7;

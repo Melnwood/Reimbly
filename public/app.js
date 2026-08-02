@@ -100,6 +100,10 @@
   }
 
   let toastTimer;
+  // Inline a line icon from the sprite (see index.html). currentColor + em-sized,
+  // so it matches whatever text it sits in.
+  function ic(name) { return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"></use></svg>`; }
+
   function toast(message, kind = '') {
     clearTimeout(toastTimer);
     el.toast.textContent = message;
@@ -280,7 +284,7 @@
     if (!webauthnOK()) { btn.hidden = true; return; }
     const on = state.me && faceIdEnrolled(state.me.email);
     btn.hidden = false;
-    btn.textContent = on ? '🔒 Face ID on' : 'Turn on Face ID';
+    btn.innerHTML = on ? ic('lock') + ' Face ID on' : 'Turn on Face ID';
     btn.onclick = on ? disableFaceId : enrollFaceId;
   }
 
@@ -350,7 +354,7 @@
       on = !!(reg && (await reg.pushManager.getSubscription())) && Notification.permission === 'granted';
     } catch { on = false; }
     btn.hidden = false;
-    btn.textContent = on ? '🔔 Alerts on' : 'Turn on alerts';
+    btn.innerHTML = on ? ic('bell') + ' Alerts on' : 'Turn on alerts';
     btn.onclick = on ? disablePush : enablePush;
   }
 
@@ -364,8 +368,8 @@
     const ch = reminderChannels();
     const eBtn = $('#notify-email-toggle');
     const pBtn = $('#notify-push-toggle');
-    if (eBtn) { eBtn.textContent = ch.email ? '📧 Email reminders: On' : '📧 Email reminders: Off'; eBtn.onclick = () => toggleNotifyChannel('email'); }
-    if (pBtn) { pBtn.textContent = ch.push ? '📱 Push reminders: On' : '📱 Push reminders: Off'; pBtn.onclick = () => toggleNotifyChannel('push'); }
+    if (eBtn) { eBtn.innerHTML = ic('mail') + ' Email reminders: ' + (ch.email ? 'On' : 'Off'); eBtn.onclick = () => toggleNotifyChannel('email'); }
+    if (pBtn) { pBtn.innerHTML = ic('phone') + ' Push reminders: ' + (ch.push ? 'On' : 'Off'); pBtn.onclick = () => toggleNotifyChannel('push'); }
   }
   async function toggleNotifyChannel(which) {
     const ch = reminderChannels();
@@ -873,7 +877,7 @@
       statusEl.classList.toggle('all-done', !!done);
       statusEl.innerHTML = html;
     };
-    setStatus(`<span class="rs-icon">🧾</span><span>Reading ${files.length} receipt${files.length === 1 ? '' : 's'}…</span>`);
+    setStatus(`<span class="rs-icon">${ic('receipt')}</span><span>Reading ${files.length} receipt${files.length === 1 ? '' : 's'}…</span>`);
     let matched = 0; let created = 0; let failed = 0; let done = 0;
     const BATCH = 6; // keep each request comfortably under the size limit
     try {
@@ -887,16 +891,16 @@
           matched += res.matched || 0; created += res.created || 0; failed += res.failed || 0;
         }
         done += chunk.length;
-        setStatus(`<span class="rs-icon">🧾</span><span>Reading… ${Math.min(done, files.length)} of ${files.length}</span>`);
+        setStatus(`<span class="rs-icon">${ic('receipt')}</span><span>Reading… ${Math.min(done, files.length)} of ${files.length}</span>`);
       }
       const parts = [];
       if (matched) parts.push(`<strong class="rs-have">${matched}</strong> connected to an expense`);
       if (created) parts.push(`<strong>${created}</strong> added as new`);
       if (failed) parts.push(`<strong class="rs-need">${failed}</strong> couldn’t be read`);
-      setStatus(`<span class="rs-icon">✅</span><span>Done — ${parts.join(' · ') || 'nothing to do'}.</span>`, failed === 0);
+      setStatus(`<span class="rs-icon">${ic('check')}</span><span>Done — ${parts.join(' · ') || 'nothing to do'}.</span>`, failed === 0);
       await refreshExpenseViews();
     } catch (e) {
-      setStatus(`<span class="rs-icon">⚠️</span><span>${escapeHtml(e.message)}</span>`);
+      setStatus(`<span class="rs-icon">${ic('alert')}</span><span>${escapeHtml(e.message)}</span>`);
     }
   }
 
@@ -1183,7 +1187,7 @@
     if (!box) return;
     const chips = [];
     (remembered || []).forEach((o) => chips.push(`<button type="button" class="describe-chip remembered" data-desc="${escapeHtml(o)}">↺ ${escapeHtml(o)}</button>`));
-    (options || []).forEach((o) => chips.push(`<button type="button" class="describe-chip" data-desc="${escapeHtml(o)}">✨ ${escapeHtml(o)}</button>`));
+    (options || []).forEach((o) => chips.push(`<button type="button" class="describe-chip" data-desc="${escapeHtml(o)}">${ic('sparkle')} ${escapeHtml(o)}</button>`));
     if (!chips.length) { box.hidden = true; box.innerHTML = ''; return; }
     const cap = remembered && remembered.length
       ? (options && options.length ? 'You’ve used these here before — or try a new one:' : 'You’ve used these here before — tap one:')
@@ -1219,7 +1223,7 @@
     }
     btn.disabled = true;
     const label = btn.textContent;
-    btn.textContent = '✨ Thinking…';
+    btn.textContent = 'Thinking…';
     const seq = ++describeSeq;
     try {
       const res = await api('suggest-description', { method: 'POST', body });
@@ -1270,7 +1274,7 @@
       });
       if (result && result.scan) {
         applyScan(result.scan);
-        el.receiptName.textContent = `${file.name} · filled from receipt ✨`;
+        el.receiptName.textContent = `${file.name} · filled from receipt`;
         toast('Filled from your receipt — please double-check.', 'good');
       } else {
         el.receiptName.textContent = file.name;
@@ -1361,7 +1365,7 @@
       } else if (body.reportId) {
         toast('Added to your report — submit the report when you’re ready.', 'good');
       } else {
-        toast('Expense submitted 🎉', 'good');
+        toast('Expense submitted', 'good');
       }
 
       state.loaded.mine = false;
@@ -1605,7 +1609,7 @@
     if (e) e.recurringMonthly = on; // optimistic
     try {
       await api('recurring-toggle', { method: 'POST', body: { id, on } });
-      toast(on ? '🔁 Repeats monthly — Reimbly will add it each month.' : 'No longer repeats monthly.', 'good');
+      toast(on ? 'Repeats monthly — Reimbly will add it each month.' : 'No longer repeats monthly.', 'good');
     } catch (err) {
       if (e) e.recurringMonthly = !on;
       if (checkbox) checkbox.checked = !on;
@@ -1628,7 +1632,7 @@
     const box = $('.ie-describe-options', details);
     if (!box) return;
     box.hidden = false;
-    box.innerHTML = `<div class="describe-cap">💭 finding a better description…</div>`;
+    box.innerHTML = `<div class="describe-cap">finding a better description…</div>`;
     try {
       const res = await api('suggest-description', { method: 'POST', body: {
         merchant: (e.merchant || '').trim(),
@@ -1642,7 +1646,7 @@
       if (!remembered.length && !options.length) { box.hidden = true; box.innerHTML = ''; return; }
       const chips = [];
       remembered.forEach((o) => chips.push(`<button type="button" class="describe-chip remembered" data-desc="${escapeHtml(o)}">↺ ${escapeHtml(o)}</button>`));
-      options.forEach((o) => chips.push(`<button type="button" class="describe-chip" data-desc="${escapeHtml(o)}">✨ ${escapeHtml(o)}</button>`));
+      options.forEach((o) => chips.push(`<button type="button" class="describe-chip" data-desc="${escapeHtml(o)}">${ic('sparkle')} ${escapeHtml(o)}</button>`));
       const cap = remembered.length ? 'You’ve used these here before — tap one:' : 'Pick a better description:';
       box.innerHTML = `<div class="describe-cap">${cap}</div>${chips.join('')}`;
     } catch (err) {
@@ -1753,7 +1757,7 @@
     if (btn) btn.disabled = true;
     try {
       const res = await api('reports', { method: 'POST', body: { action: 'submit', id } });
-      toast(`Submitted ${res.submitted} expense${res.submitted === 1 ? '' : 's'} for approval 🎉`, 'good');
+      toast(`Submitted ${res.submitted} expense${res.submitted === 1 ? '' : 's'} for approval`, 'good');
       state.loaded.approvals = false; state.loaded.audit = false; state.loaded.dashboard = false;
       invalidateReports();
       await ensureReportsData(true);
@@ -1845,15 +1849,15 @@
   // How the expense got into Reimbly. The colored dot on each row means *source*
   // (where it came from) — that's what Mel reads at a glance. [emoji, words, colorKey]
   const SOURCE_META = {
-    YNAB: ['📊', 'Imported from YNAB', 'ynab'],
-    Email: ['📧', 'Imported from email', 'email'],
-    Photo: ['📷', 'Taken by a picture', 'photo'],
-    Manual: ['✍️', 'Entered by hand', 'manual'],
-    CSV: ['📄', 'Imported from a file', 'csv'],
+    YNAB: ['chart', 'Imported from YNAB', 'ynab'],
+    Email: ['mail', 'Imported from email', 'email'],
+    Photo: ['camera', 'Taken by a picture', 'photo'],
+    Manual: ['pen', 'Entered by hand', 'manual'],
+    CSV: ['file', 'Imported from a file', 'csv'],
   };
   function sourceBadge(src) {
     const meta = SOURCE_META[src] || SOURCE_META.Manual;
-    return `<span class="src-badge src-${meta[2]}">${meta[0]} ${escapeHtml(meta[1])}</span>`;
+    return `<span class="src-badge src-${meta[2]}">${ic(meta[0])} ${escapeHtml(meta[1])}</span>`;
   }
   // The colored dot on a row: its color tells you the source.
   function sourceDot(src) {
@@ -1863,7 +1867,7 @@
 
   function receiptLink(expense) {
     if (!expense.receipt || !expense.receipt.url) return '';
-    return `<a class="receipt-link" href="${escapeHtml(expense.receipt.url)}" target="_blank" rel="noopener">📎 Receipt</a>`;
+    return `<a class="receipt-link" href="${escapeHtml(expense.receipt.url)}" target="_blank" rel="noopener">${ic('clip')} Receipt</a>`;
   }
 
   // A "History" toggle for any expense card. The trail loads lazily on click.
@@ -1994,7 +1998,7 @@
       ? `Signed by ${escapeHtml(e.affidavitSignedBy)}${e.affidavitSignedOn ? ` on ${escapeHtml(fmtDate(e.affidavitSignedOn))}` : ''}. `
       : '';
     return `<div class="ie-affidavit aff-${cls}">
-      <span class="aff-title">🖊️ No-receipt declaration · ${escapeHtml(label)}</span>
+      <span class="aff-title">${ic('pen')} No-receipt declaration · ${escapeHtml(label)}</span>
       <span class="aff-body">${signed}${e.affidavitReason ? `“${escapeHtml(e.affidavitReason)}”` : ''}</span>
     </div>`;
   }
@@ -2028,9 +2032,9 @@
           <span class="mini-who">${escapeHtml(who)}</span>
           ${submitterTag(e)}
           ${amtCell}
-          ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
-          ${e.missingReceipt ? `<span class="mini-clip" title="No-receipt declaration (${escapeHtml(e.affidavitStatus || 'Pending')})">🖊️</span>` : ''}
-          ${e.recurringMonthly ? '<span class="mini-clip" title="Repeats monthly — Reimbly adds a draft each month">🔁</span>' : ''}
+          ${e.receipt ? `<span class="mini-clip" title="Has a receipt">${ic('clip')}</span>` : ''}
+          ${e.missingReceipt ? `<span class="mini-clip" title="No-receipt declaration (${escapeHtml(e.affidavitStatus || 'Pending')})">${ic('pen')}</span>` : ''}
+          ${e.recurringMonthly ? `<span class="mini-clip" title="Repeats monthly — Reimbly adds a draft each month">${ic('repeat')}</span>` : ''}
           ${incomplete ? `<span class="mini-need" title="Not ready to submit yet">needs ${escapeHtml(readiness.join(', '))}</span>` : (needsReceipt ? `<span class="mini-need" title="Over $${RECEIPT_THRESHOLD} and no receipt yet">needs receipt</span>` : '')}
           ${sentBack ? '<span class="mini-sentback">↩︎ sent back</span>' : ''}
           ${sourceDot(e.source)}
@@ -2090,7 +2094,7 @@
     const unfiled = sortExpenses((state.mineExpenses || []).filter((e) => !e.reportId));
     renderReceiptSummary(unfiled);
     if (!unfiled.length) {
-      box.innerHTML = `<div class="state"><span class="emoji">✅</span>Nothing loose here — every expense is filed into a report. Add a new one above, or see them under “My reports.”</div>`;
+      box.innerHTML = `<div class="state"><span class="emoji">${ic('check')}</span>Nothing loose here — every expense is filed into a report. Add a new one above, or see them under “My reports.”</div>`;
       return;
     }
     box.innerHTML = unfiled.map(expenseRowHtml).join('');
@@ -2109,9 +2113,9 @@
     box.hidden = false;
     box.classList.toggle('all-done', without === 0);
     if (without === 0) {
-      box.innerHTML = `<span class="rs-icon">🎉</span><span>All <strong>${over.length}</strong> expense${over.length === 1 ? '' : 's'} over $${RECEIPT_THRESHOLD} are covered.</span>`;
+      box.innerHTML = `<span class="rs-icon">${ic('check')}</span><span>All <strong>${over.length}</strong> expense${over.length === 1 ? '' : 's'} over $${RECEIPT_THRESHOLD} are covered.</span>`;
     } else {
-      box.innerHTML = `<span class="rs-icon">🧾</span><span>Over $${RECEIPT_THRESHOLD}: <strong class="rs-have">${withR}</strong> covered · <strong class="rs-need">${without}</strong> still ${without === 1 ? 'needs a receipt' : 'need a receipt'}.</span>`;
+      box.innerHTML = `<span class="rs-icon">${ic('receipt')}</span><span>Over $${RECEIPT_THRESHOLD}: <strong class="rs-have">${withR}</strong> covered · <strong class="rs-need">${without}</strong> still ${without === 1 ? 'needs a receipt' : 'need a receipt'}.</span>`;
     }
   }
 
@@ -2198,12 +2202,12 @@
           <span>Receipt</span>
           <div class="ie-receipt">
             ${e.receipt && e.receipt.url
-              ? `<a class="receipt-link" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">📎 View receipt</a>
-                 <button type="button" class="btn ghost small ie-remove" data-act="ie-receipt-remove" data-id="${escapeHtml(e.id)}">🗑️ Remove receipt</button>`
+              ? `<a class="receipt-link" href="${escapeHtml(e.receipt.url)}" target="_blank" rel="noopener">${ic('clip')} View receipt</a>
+                 <button type="button" class="btn ghost small ie-remove" data-act="ie-receipt-remove" data-id="${escapeHtml(e.id)}">${ic('trash')} Remove receipt</button>`
               : (e.missingReceipt ? '' : '<span class="ie-noreceipt">No receipt yet</span>')}
-            <button type="button" class="btn ghost small" data-act="ie-receipt-camera">📷 ${e.receipt ? 'Replace with a picture' : 'Take a picture'}</button>
-            <button type="button" class="btn ghost small" data-act="ie-receipt-choose">📎 ${e.receipt ? 'Replace with a file' : 'Add a receipt'}</button>
-            ${!e.receipt ? `<button type="button" class="btn ghost small" data-act="ie-missing" data-id="${escapeHtml(e.id)}">🖊️ ${e.missingReceipt ? 'Re-sign declaration' : 'No receipt? Declare it'}</button>` : ''}
+            <button type="button" class="btn ghost small" data-act="ie-receipt-camera">${ic('camera')} ${e.receipt ? 'Replace with a picture' : 'Take a picture'}</button>
+            <button type="button" class="btn ghost small" data-act="ie-receipt-choose">${ic('clip')} ${e.receipt ? 'Replace with a file' : 'Add a receipt'}</button>
+            ${!e.receipt ? `<button type="button" class="btn ghost small" data-act="ie-missing" data-id="${escapeHtml(e.id)}">${ic('pen')} ${e.missingReceipt ? 'Re-sign declaration' : 'No receipt? Declare it'}</button>` : ''}
             <input type="file" class="ie-receipt-input" accept="image/*,application/pdf" hidden />
             <span class="ie-receipt-name file-hint"></span>
           </div>
@@ -2211,7 +2215,7 @@
         </div>
         <label class="ie-recurring">
           <input type="checkbox" data-act="ie-recurring" data-id="${escapeHtml(e.id)}"${e.recurringMonthly ? ' checked' : ''} />
-          <span>🔁 Repeats monthly <em class="opt">— Reimbly adds a fresh draft of this each month</em></span>
+          <span>${ic('repeat')} Repeats monthly <em class="opt">— Reimbly adds a fresh draft of this each month</em></span>
         </label>
         <div class="expense-actions">
           <button class="btn primary small" data-act="ie-save" data-id="${escapeHtml(e.id)}">Save</button>
@@ -2229,7 +2233,7 @@
       <div class="mini-badges">${statusBadge(e.status)}${sourceBadge(e.source)}</div>
       <div class="mini-desc">${cardTitle(e)}</div>
       <div class="expense-meta">${cardMeta(e, [e.account || e.category, fmtDate(e.date)])}</div>
-      ${e.reportName ? `<div class="expense-meta">🗂️ ${escapeHtml(e.reportName)}</div>` : ''}
+      ${e.reportName ? `<div class="expense-meta">${ic('folder')} ${escapeHtml(e.reportName)}</div>` : ''}
       <div class="expense-actions">${receiptLink(e)}${historyBtn(e.id)}</div>`;
   }
 
@@ -2361,7 +2365,7 @@
         <div class="dup-item-main">
           <div class="dup-item-top"><strong>${escapeHtml(who)}</strong><span class="dup-item-amt">${escapeHtml(amt)}</span></div>
           <div class="dup-item-meta">${cardMeta(e, [fmtDate(e.date), e.account || e.category])}</div>
-          <div class="dup-item-tags">${statusBadge(e.status)}${sourceBadge(e.source)}${e.reportName ? `<span class="src-badge">🗂️ ${escapeHtml(e.reportName)}</span>` : ''}${receiptLink(e)}</div>
+          <div class="dup-item-tags">${statusBadge(e.status)}${sourceBadge(e.source)}${e.reportName ? `<span class="src-badge">${ic('folder')} ${escapeHtml(e.reportName)}</span>` : ''}${receiptLink(e)}</div>
         </div>
         <button type="button" class="btn ghost small" data-act="dup-delete" data-id="${escapeHtml(e.id)}">Delete this one</button>
       </div>`;
@@ -2371,7 +2375,7 @@
     const ids = g.items.map((e) => e.id).join(',');
     return `
       <div class="dup-group" data-ids="${escapeHtml(ids)}">
-        <div class="dup-reason">💡 Why flagged: ${escapeHtml(g.reason)}</div>
+        <div class="dup-reason">Why flagged: ${escapeHtml(g.reason)}</div>
         ${g.items.map(dupItemHtml).join('')}
         <div class="dup-actions">
           <button type="button" class="btn ghost small" data-act="dup-keep">✓ Not a duplicate — keep both</button>
@@ -2579,7 +2583,7 @@
     if (notReady) bits.push(`<strong>${notReady}</strong> still ${notReady === 1 ? 'needs' : 'need'} a receipt or a detail`);
     if (sentBack) bits.push(`<strong>${sentBack}</strong> sent back to fix`);
     return `<div class="nudge${minLeft != null && minLeft <= 2 ? ' nudge-hot' : ''}">
-      <span class="nudge-ico" aria-hidden="true">${minLeft != null && minLeft <= 2 ? '⏰' : '👋'}</span>
+      <span class="nudge-ico" aria-hidden="true">${minLeft != null && minLeft <= 2 ? ic('clock') : ic('bell')}</span>
       <span class="nudge-text">${bits.join(' · ')}.</span>
       <button type="button" class="nudge-x" data-act="nudge-dismiss" aria-label="Dismiss">✕</button>
     </div>`;
@@ -2612,7 +2616,7 @@
       </div>`;
     }
     if (!reports.length) {
-      html += `<div class="state"><span class="emoji">🗂️</span>No reports yet. Tap “＋ New report”, then file expenses into it from the “Add expense” tab.</div>`;
+      html += `<div class="state"><span class="emoji">${ic('folder')}</span>No reports yet. Tap “＋ New report”, then file expenses into it from the “Add expense” tab.</div>`;
     } else {
       // Sort every report into the stage it's at, so the screen reads like the
       // real process: things you're still working on, things on their way to
@@ -2691,7 +2695,7 @@
     let marked = 0;
     let done = 0;
     for (const e of items) {
-      note.textContent = `🔁 Re-reading receipts… ${done + 1}/${items.length}`;
+      note.textContent = `Re-reading receipts… ${done + 1}/${items.length}`;
       try {
         const res = await api('rescan-date', { method: 'POST', body: { id: e.id } });
         if (res.changed) changes.push(res);
@@ -2703,7 +2707,7 @@
     const bits = [];
     if (marked) bits.push(`highlighted the date & total on ${marked}`);
     if (changes.length) bits.push(`filled ${changes.length} missing date${changes.length === 1 ? '' : 's'}`);
-    note.textContent = bits.length ? `✅ Done — ${bits.join(', ')}.` : '✅ Re-read every receipt — nothing needed changing.';
+    note.textContent = bits.length ? `Done — ${bits.join(', ')}.` : 'Re-read every receipt — nothing needed changing.';
     toast(marked ? `Highlighted ${marked} receipt${marked === 1 ? '' : 's'}.` : 'Re-read every receipt.', 'good');
     if (changes.length) { state.loaded.mine = false; showAddExpense(); }
   }
@@ -2728,7 +2732,7 @@
 
   function renderApprovals(expenses) {
     if (!expenses.length) {
-      el.approvalsList.innerHTML = `<div class="state"><span class="emoji">✅</span>All caught up — nothing waiting.</div>`;
+      el.approvalsList.innerHTML = `<div class="state"><span class="emoji">${ic('check')}</span>All caught up — nothing waiting.</div>`;
       return;
     }
     el.approvalsList.innerHTML = groupBySubmitter(expenses).map((g) => `
@@ -2824,7 +2828,7 @@
         if (!$$('.report', el.approvalsList).length) renderApprovals([]);
       }, 240);
       afterApprovalsChange();
-      toast(`Approved ${res.approved} expense${res.approved === 1 ? '' : 's'} ✅`, 'good');
+      toast(`Approved ${res.approved} expense${res.approved === 1 ? '' : 's'}`, 'good');
     } catch (e) {
       buttons.forEach((b) => (b.disabled = false));
       toast(e.message, 'bad');
@@ -3370,7 +3374,7 @@
 
   function reviewListItem(r) {
     const chip = r.clear ? '<span class="rv-chip clear">✓ all clear</span>' : `<span class="rv-chip flag">${r.flags} to check</span>`;
-    const ytd = r.ytd >= 5 ? `<div class="rv-ytdchip">⚑ ${r.ytd} missing YTD</div>` : '';
+    const ytd = r.ytd >= 5 ? `<div class="rv-ytdchip">${ic('alert')} ${r.ytd} missing YTD</div>` : '';
     return `<button class="rv-item ${reviewSel === r.key ? 'on' : ''}" data-review-sel="${escapeHtml(r.key)}">
       <span class="rv-dot ${r.clear ? 'clear' : 'flag'}"></span>
       <div class="rv-item-main"><div class="rv-item-name">${escapeHtml(r.person)}</div><div class="rv-item-sub">${escapeHtml(r.name)} · ${escapeHtml(money(r.total, 'USD'))} · ${r.days}d</div>${ytd}</div>
@@ -3383,7 +3387,7 @@
     if (!body) return;
     if (reviewSel && !reviewReports.some((r) => r.key === reviewSel)) reviewSel = null;
     if (!reviewReports.length) {
-      body.innerHTML = '<div class="state"><span class="emoji">🎉</span>Nothing waiting — every report has been reviewed.</div>';
+      body.innerHTML = `<div class="state"><span class="emoji">${ic('check')}</span>Nothing waiting — every report has been reviewed.</div>`;
       return;
     }
     const s = reviewSummary();
@@ -3393,7 +3397,7 @@
       : '';
     const pane = reviewSel
       ? reviewDetailHTML(reviewReports.find((r) => r.key === reviewSel))
-      : '<div class="rv-empty">👈 Pick a report to review it here.<br><span>Orange means it needs a look; teal means all clear.</span></div>';
+      : '<div class="rv-empty">Pick a report to review it here.<br><span>Orange means it needs a look; teal means all clear.</span></div>';
     body.innerHTML = `
       <p class="rv-lede"><b>${s.waiting} report${s.waiting > 1 ? 's' : ''}</b> waiting — <b>${s.needLook} need a look</b>, the rest are ready to approve.</p>
       <div class="rv-tiles">
@@ -3437,7 +3441,7 @@
       reviewReports = reviewReports.filter((r) => !keys.includes(r.key));
       if (keys.includes(reviewSel)) reviewSel = null;
       reviewInvalidate();
-      toast(`Approved ${res.approved} expense${res.approved === 1 ? '' : 's'} ✅`, 'good');
+      toast(`Approved ${res.approved} expense${res.approved === 1 ? '' : 's'}`, 'good');
       renderReview();
     } catch (e) {
       toast(e.message, 'bad');
@@ -3897,7 +3901,7 @@
     }
     el.archivePaid.innerHTML = paid.length
       ? groupPaidByReport(paid).map(paidReportCard).join('')
-      : `<div class="state"><span class="emoji">🗂️</span>No paid expenses yet.</div>`;
+      : `<div class="state"><span class="emoji">${ic('folder')}</span>No paid expenses yet.</div>`;
   }
 
   function afterPaidChange() {
@@ -3913,7 +3917,7 @@
     buttons.forEach((b) => (b.disabled = true));
     try {
       const res = await api('mark-paid', { method: 'POST', body: { ids } });
-      toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid 💸`, 'good');
+      toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid`, 'good');
       afterPaidChange();
     } catch (e) {
       buttons.forEach((b) => (b.disabled = false));
@@ -3935,7 +3939,7 @@
     buttons.forEach((b) => (b.disabled = true));
     try {
       const res = await api('mark-paid', { method: 'POST', body });
-      toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid 💸`, 'good');
+      toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid`, 'good');
       afterPaidChange();
     } catch (e) {
       buttons.forEach((b) => (b.disabled = false));
@@ -4054,7 +4058,7 @@
     if (btn) btn.disabled = true;
     try {
       const res = await api('mark-paid', { method: 'POST', body: { ids } });
-      toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid 💸`, 'good');
+      toast(`Marked ${res.paid} expense${res.paid === 1 ? '' : 's'} paid`, 'good');
       afterPaidChange();
     } catch (e) {
       if (btn) btn.disabled = false;
@@ -4083,7 +4087,7 @@
       card.remove();
       if (group && !$$('.expense', group).length) group.remove();
       if (!$$('.report', el.archiveReady).length) {
-        el.archiveReady.innerHTML = `<div class="state"><span class="emoji">💸</span>Nothing waiting — every approved expense has been paid.</div>`;
+        el.archiveReady.innerHTML = `<div class="state"><span class="emoji">${ic('banknote')}</span>Nothing waiting — every approved expense has been paid.</div>`;
       }
     }, 240);
   }
@@ -4219,10 +4223,10 @@
     let summary = `<div class="import-summary-line">${escapeHtml(bits.join(' · '))}</div>`;
     if (data.dateOrder) {
       const dmy = data.dateOrder === 'dmy';
-      summary += `<div class="import-note">📅 Dates read <strong>${dmy ? 'day-first (European)' : 'month-first (US)'}</strong> — e.g. 12/07 = ${dmy ? '12 July' : 'December 7'}. Check a couple below to be sure.</div>`;
+      summary += `<div class="import-note">${ic('calendar')} Dates read <strong>${dmy ? 'day-first (European)' : 'month-first (US)'}</strong> — e.g. 12/07 = ${dmy ? '12 July' : 'December 7'}. Check a couple below to be sure.</div>`;
     }
     if (s.withReceipt) {
-      summary += `<div class="import-note">🧾 ${s.withReceipt} of these will arrive with a receipt already attached from your email.</div>`;
+      summary += `<div class="import-note">${ic('receipt')} ${s.withReceipt} of these will arrive with a receipt already attached from your email.</div>`;
     }
     if (s.receiptsUnmatched) {
       summary += `<div class="import-note">${s.receiptsUnmatched} held receipt${s.receiptsUnmatched === 1 ? '' : 's'} didn’t match a row — they stay in your inbox above.</div>`;
@@ -4259,7 +4263,7 @@
 
     const note = document.createElement('div');
     note.className = 'import-note suggest-note';
-    note.textContent = '✨ Suggesting accounts…';
+    note.textContent = 'Suggesting accounts…';
     el.importSummary.appendChild(note);
 
     const CHUNK = 40;
@@ -4277,10 +4281,10 @@
         const sel = row && $('.ir-acct', row);
         if (sel && Array.from(sel.options).some((o) => o.value === s.code)) { sel.value = s.code; filled += 1; }
       });
-      note.textContent = `✨ Suggesting accounts… ${Math.min(i + CHUNK, rows.length)}/${rows.length}`;
+      note.textContent = `Suggesting accounts… ${Math.min(i + CHUNK, rows.length)}/${rows.length}`;
     }
     note.textContent = filled
-      ? `✨ Suggested an account for ${filled} row${filled === 1 ? '' : 's'} — please double-check before importing.`
+      ? `Suggested an account for ${filled} row${filled === 1 ? '' : 's'} — please double-check before importing.`
       : '';
   }
 
@@ -4291,7 +4295,7 @@
     const checked = !bad && !r.duplicate;
     const flags = [];
     if (r.duplicate) flags.push(`<span class="badge rejected">Duplicate · ${escapeHtml(r.dupReason)}</span>`);
-    if (r.receiptFound) flags.push(`<span class="badge approved">🧾 Receipt matched</span>`);
+    if (r.receiptFound) flags.push(`<span class="badge approved">${ic('receipt')} Receipt matched</span>`);
     (r.issues || []).forEach((i) => { if (i !== 'Currency') flags.push(`<span class="issue">Missing ${escapeHtml(i.toLowerCase())}</span>`); });
     const title = r.merchant || r.description || '(no merchant)';
     const amt = r.amount != null ? `${money(r.amount, r.currency)}` : '—';
@@ -4433,7 +4437,7 @@
       if (skipped.length) bits.push(`${skipped.length} skipped`);
       if (attached) bits.push(`${attached} with a receipt from email`);
       const extra = bits.length ? ` · ${bits.join(' · ')}` : '';
-      toast(`Imported ${created} expense${created === 1 ? '' : 's'}${extra} 🎉`, 'good');
+      toast(`Imported ${created} expense${created === 1 ? '' : 's'}${extra}`, 'good');
       clearImport();
       setImportOpen(false);
       state.loaded.mine = false;
@@ -4779,7 +4783,7 @@
     const names = ids.map(peopleNameById).filter(Boolean).sort((x, y) => x.localeCompare(y));
     const shown = names.slice(0, 4).join(', ');
     const extra = names.length > 4 ? ` +${names.length - 4} more` : '';
-    return `<span class="acct-restricted">🔒 ${escapeHtml(shown)}${escapeHtml(extra)}</span>`;
+    return `<span class="acct-restricted">${ic('lock')} ${escapeHtml(shown)}${escapeHtml(extra)}</span>`;
   }
 
   // The full category list for an account's series (what it can be limited to).
@@ -4792,7 +4796,7 @@
     const total = seriesCategories(a).length;
     const set = (a.categoryCodes || []).length;
     if (!set) return `<span class="acct-open">All ${total} categories</span>`;
-    return `<span class="acct-restricted">📂 ${set} of ${total} categories</span>`;
+    return `<span class="acct-restricted">${ic('folder')} ${set} of ${total} categories</span>`;
   }
 
   // The inline "which categories" editor: tick the categories this account may use.
@@ -5033,8 +5037,8 @@
   // ---------- History / activity trail ----------
 
   const EVENT_ICON = {
-    Imported: '📥', Submitted: '📝', Approved: '✅', 'Sent back': '↩︎', 'Kicked back': '↩︎',
-    Resubmitted: '🔁', Edited: '✏️', 'Queued for payment': '📤', Paid: '💸',
+    Imported: 'download', Submitted: 'upload', Approved: 'check', 'Sent back': 'undo', 'Kicked back': 'undo',
+    Resubmitted: 'repeat', Edited: 'pen', 'Queued for payment': 'upload', Paid: 'banknote',
   };
 
   function fmtDateTime(value) {
@@ -5048,7 +5052,7 @@
     if (!items.length) return `<div class="trail-empty">No history recorded yet.</div>`;
     return `<ol class="trail">${items.map((a) => `
       <li class="trail-item">
-        <span class="trail-icon">${EVENT_ICON[a.event] || '•'}</span>
+        <span class="trail-icon">${EVENT_ICON[a.event] ? ic(EVENT_ICON[a.event]) : '•'}</span>
         <div class="trail-body">
           <div class="trail-line"><strong>${escapeHtml(a.event)}</strong> by ${escapeHtml(a.actor || '—')}</div>
           <div class="trail-when">${escapeHtml(fmtDateTime(a.at))}</div>
