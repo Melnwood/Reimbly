@@ -1530,6 +1530,21 @@
     }
   }
 
+  // Mark (or unmark) an expense as a monthly subscription. Saves on its own so
+  // it sticks whether or not the row's other edits are saved.
+  async function toggleRecurring(id, on, checkbox) {
+    const e = (state.mineExpenses || []).find((x) => x.id === id);
+    if (e) e.recurringMonthly = on; // optimistic
+    try {
+      await api('recurring-toggle', { method: 'POST', body: { id, on } });
+      toast(on ? '🔁 Repeats monthly — Reimbly will add it each month.' : 'No longer repeats monthly.', 'good');
+    } catch (err) {
+      if (e) e.recurringMonthly = !on;
+      if (checkbox) checkbox.checked = !on;
+      toast(err.message, 'bad');
+    }
+  }
+
   function onAddListClick(event) { onExpenseCardClick(event); }
 
   // When you open an expense whose description is just the merchant name copied
@@ -1580,6 +1595,13 @@
         catSel.innerHTML = ieCategoryOptions(eaSel.value, '');
         catSel.disabled = !eaSel.value;
       }
+      return;
+    }
+    // The "Repeats monthly" toggle — save it right away (independent of the row's
+    // other edits) so it sticks even if they just close the line.
+    const recur = event.target.closest('input[data-act="ie-recurring"]');
+    if (recur) {
+      toggleRecurring(recur.dataset.id, recur.checked, recur);
       return;
     }
     // A receipt was picked in the inline editor — show its name; it attaches on Save.
@@ -1931,6 +1953,7 @@
           ${amtCell}
           ${e.receipt ? '<span class="mini-clip" title="Has a receipt">📎</span>' : ''}
           ${e.missingReceipt ? `<span class="mini-clip" title="No-receipt declaration (${escapeHtml(e.affidavitStatus || 'Pending')})">🖊️</span>` : ''}
+          ${e.recurringMonthly ? '<span class="mini-clip" title="Repeats monthly — Reimbly adds a draft each month">🔁</span>' : ''}
           ${incomplete ? `<span class="mini-need" title="Not ready to submit yet">needs ${escapeHtml(readiness.join(', '))}</span>` : (needsReceipt ? `<span class="mini-need" title="Over $${RECEIPT_THRESHOLD} and no receipt yet">needs receipt</span>` : '')}
           ${sentBack ? '<span class="mini-sentback">↩︎ sent back</span>' : ''}
           ${sourceDot(e.source)}
@@ -2109,6 +2132,10 @@
           </div>
           ${e.missingReceipt ? affidavitLine(e) : ''}
         </div>
+        <label class="ie-recurring">
+          <input type="checkbox" data-act="ie-recurring" data-id="${escapeHtml(e.id)}"${e.recurringMonthly ? ' checked' : ''} />
+          <span>🔁 Repeats monthly <em class="opt">— Reimbly adds a fresh draft of this each month</em></span>
+        </label>
         <div class="expense-actions">
           <button class="btn primary small" data-act="ie-save" data-id="${escapeHtml(e.id)}">Save</button>
           ${historyBtn(e.id)}
@@ -2208,6 +2235,7 @@
     if (el.addList) el.addList.innerHTML = `<div class="state">Loading…</div>`;
     loadInbox(); // held email receipts now live on this tab too
     loadDuplicates(); // flag any likely duplicate expenses
+    await runRecurringOnce(); // add this month's subscription drafts, if due
     try {
       await ensureReportsData();
       populateReportPicker();
@@ -2215,6 +2243,20 @@
     } catch (e) {
       if (el.addList) el.addList.innerHTML = `<div class="state">${escapeHtml(e.message)}</div>`;
     }
+  }
+
+  // Once a session, ask the server to create this month's copies of any monthly
+  // subscriptions. If it made any, drop the cached list so they show up.
+  async function runRecurringOnce() {
+    if (state.recurringRan) return;
+    state.recurringRan = true;
+    try {
+      const res = await api('recurring-run', { method: 'POST', body: {} });
+      if (res && res.created > 0) {
+        invalidateReports();
+        toast(`Added ${res.created} monthly subscription${res.created === 1 ? '' : 's'} to fill in.`, 'good');
+      }
+    } catch (e) { /* non-blocking — subscriptions just won't pre-fill this time */ }
   }
 
   // ----- Possible duplicates -----

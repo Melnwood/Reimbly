@@ -828,6 +828,9 @@ function shapeExpense(record, maps = {}) {
     // The CedarStone download this went out in, and when it was downloaded.
     paymentBatch: f['Payment Batch'] || null,
     exportedOn: f['Exported On'] || null,
+    // Monthly subscription: this expense is a template Reimbly copies each month.
+    recurringMonthly: f['Recurring Monthly'] === true,
+    recurringSource: f['Recurring Source'] || null,
     notes: f['Approver Note'] || '',
     receipt: receipts[0]
       ? {
