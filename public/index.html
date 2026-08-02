@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Reimbly" />
-    <link rel="stylesheet" href="styles.css?v=20260802d" />
+    <link rel="stylesheet" href="styles.css?v=20260802e" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -102,6 +102,9 @@
             <p class="acct-role">Signed in as <strong id="who-role"></strong></p>
             <button id="faceid-toggle" class="menu-item" hidden></button>
             <button id="push-toggle" class="menu-item" hidden></button>
+            <div class="acct-section">Deadline reminders</div>
+            <button id="notify-email-toggle" class="menu-item" data-ch="email"></button>
+            <button id="notify-push-toggle" class="menu-item" data-ch="push"></button>
             <button id="signout" class="menu-item danger">Sign out</button>
           </div>
         </div>
@@ -661,6 +664,6 @@
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260802d"></script>
+    <script src="app.js?v=20260802e"></script>
   </body>
 </html>

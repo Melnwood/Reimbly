@@ -606,6 +606,26 @@ const setReportDeadlineDays = (v) => {
   return setSettingNumber(SETTING.REPORT_DEADLINE, Math.round(Number(v)), 'How many days staff have to submit an expense before it’s past the reimbursement deadline. Managed by Reimbly’s Rules screen.');
 };
 
+// How a person wants deadline reminders, read off their Staff record. Empty =
+// both (the sensible default for money they'd otherwise lose); "None" = opted
+// out of everything.
+function notifyChannelsOf(staffFields) {
+  const raw = (staffFields && staffFields['Reminder Channels']) || [];
+  const names = raw.map((c) => (typeof c === 'string' ? c : (c && c.name) || '')).filter(Boolean);
+  if (names.includes('None')) return { email: false, push: false };
+  if (!names.length) return { email: true, push: true }; // default: both
+  return { email: names.includes('Email'), push: names.includes('Push') };
+}
+
+// Save a person's reminder-channel choice back to their Staff record.
+async function setNotifyChannels(staffId, { email, push }) {
+  let channels;
+  if (!email && !push) channels = ['None'];
+  else channels = [email ? 'Email' : null, push ? 'Push' : null].filter(Boolean);
+  await airtable.updateRecord(TABLES.STAFF, staffId, { 'Reminder Channels': channels });
+  return { email: !!email, push: !!push };
+}
+
 function isMileageExpense(fields) {
   const f = fields || {};
   return Number(f.Distance) > 0 || Number(f.Miles) > 0
@@ -989,6 +1009,8 @@ module.exports = {
   setReceiptThresholdUsd,
   getReportDeadlineDays,
   setReportDeadlineDays,
+  notifyChannelsOf,
+  setNotifyChannels,
   getCurrencyRate,
   accountMap,
   staffMap,

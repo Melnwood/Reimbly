@@ -12,7 +12,7 @@
 
 const airtable = require('./lib/airtable');
 const {
-  TABLES, STATUS, isHeldEmailReceipt, getReportDeadlineDays,
+  TABLES, STATUS, isHeldEmailReceipt, getReportDeadlineDays, notifyChannelsOf,
 } = require('./lib/domain');
 const { daysLeftFor, shouldRemind } = require('./lib/reminders');
 const notify = require('./lib/notify');
@@ -22,11 +22,19 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 exports.handler = async () => {
   try {
-    const [drafts, deadline] = await Promise.all([
+    const [drafts, deadline, staff] = await Promise.all([
       airtable.listRecords(TABLES.EXPENSES, { filterByFormula: `{Status} = '${STATUS.DRAFT}'` }),
       getReportDeadlineDays(),
+      airtable.listRecords(TABLES.STAFF, {}),
     ]);
     const now = today();
+
+    // Each person's chosen reminder channels, keyed by email (default: both).
+    const channelsByEmail = new Map();
+    for (const r of staff) {
+      const email = String((r.fields && r.fields.Email) || '').toLowerCase();
+      if (email) channelsByEmail.set(email, notifyChannelsOf(r.fields));
+    }
 
     // Per person, gather their unsubmitted drafts that are in the final stretch
     // (10 days or fewer left, or already past). Track the soonest deadline.
@@ -50,21 +58,17 @@ exports.handler = async () => {
     for (const [email, g] of byEmail) {
       const nudge = shouldRemind(g.minLeft); // gate on the soonest one
       if (!nudge) continue;
-      const n = g.count;
-      const expenses = `${n} expense${n === 1 ? '' : 's'}`;
-      let title;
-      let body;
-      if (nudge.kind === 'overdue') {
-        title = 'Past the reimbursement deadline';
-        body = `${expenses} ${n === 1 ? 'is' : 'are'} past the ${deadline}-day limit — please submit ${n === 1 ? 'it' : 'them'} soon.`;
-      } else if (nudge.kind === 'due') {
-        title = 'Due today';
-        body = `${expenses} ${n === 1 ? 'hits' : 'hit'} the ${deadline}-day limit today — submit ${n === 1 ? 'it' : 'them'} to be reimbursed.`;
-      } else {
-        title = `${g.minLeft} day${g.minLeft === 1 ? '' : 's'} left to finish your report`;
-        body = `${expenses} ${n === 1 ? 'is' : 'are'} nearing the ${deadline}-day limit — you still have ${g.minLeft} day${g.minLeft === 1 ? '' : 's'}.`;
-      }
-      const ok = await notify.sendPush({ to: email, title, body });
+      const ch = channelsByEmail.get(email) || { email: true, push: true };
+      if (!ch.email && !ch.push) continue; // opted out of everything
+      const ok = await notify.deadlineReminder({
+        to: email,
+        count: g.count,
+        kind: nudge.kind,
+        daysLeft: g.minLeft,
+        deadline,
+        wantEmail: ch.email,
+        wantPush: ch.push,
+      });
       if (ok) reminded += 1;
     }
 

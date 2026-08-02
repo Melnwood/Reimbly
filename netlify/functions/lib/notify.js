@@ -204,4 +204,41 @@ async function submitterPaid({ submitter, count = 1, totalUsd }) {
   ]);
 }
 
-module.exports = { sendEmail, sendPush, approverNewExpense, approverNewExpenses, submitterApproved, submitterSentBack, submitterPaid };
+// A gentle deadline reminder to a submitter about expenses nearing (or past)
+// the reimbursement limit — sent by whichever channels they've opted into.
+async function deadlineReminder({ to, count = 1, kind = 'approaching', daysLeft = 0, deadline = 60, wantEmail = true, wantPush = true }) {
+  if (!to || (!wantEmail && !wantPush)) return false;
+  const n = count;
+  const expenses = `${n} expense${n === 1 ? '' : 's'}`;
+  const are = n === 1 ? 'is' : 'are';
+  const them = n === 1 ? 'it' : 'them';
+  let subject; let heading; let intro; let pushTitle; let pushBody;
+  if (kind === 'overdue') {
+    subject = `${expenses} past the ${deadline}-day reimbursement limit`;
+    heading = 'Past the reimbursement deadline';
+    intro = `You have ${expenses} that ${are} now past the ${deadline}-day limit. Please submit ${them} as soon as you can — after the limit, reimbursement isn't guaranteed.`;
+    pushTitle = 'Past the reimbursement deadline';
+    pushBody = `${expenses} ${are} past the ${deadline}-day limit — please submit ${them} soon.`;
+  } else if (kind === 'due') {
+    subject = `${expenses} due today — ${deadline}-day limit`;
+    heading = 'Due today';
+    intro = `${expenses} ${n === 1 ? 'hits' : 'hit'} the ${deadline}-day reimbursement limit today. Submit ${them} today so you're reimbursed.`;
+    pushTitle = 'Due today';
+    pushBody = `${expenses} ${n === 1 ? 'hits' : 'hit'} the ${deadline}-day limit today — submit ${them} to be reimbursed.`;
+  } else {
+    const d = `${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
+    subject = `${d} left to submit ${expenses}`;
+    heading = `${d} left to finish your report`;
+    intro = `A friendly heads-up: ${expenses} ${are} nearing the ${deadline}-day reimbursement limit. You still have ${d} to get ${them} submitted.`;
+    pushTitle = `${d} left to finish your report`;
+    pushBody = `${expenses} ${are} nearing the ${deadline}-day limit — you still have ${d}.`;
+  }
+  const { html, text } = shell({ heading, intro, rows: [], cta: `${appUrl()}/#mine`, ctaLabel: 'Open Reimbly' });
+  const jobs = [];
+  if (wantEmail) jobs.push(sendEmail({ to, subject, html, text }));
+  if (wantPush) jobs.push(sendPush({ to, title: pushTitle, body: pushBody, url: `${appUrl()}/#mine` }));
+  const results = await Promise.all(jobs);
+  return results.some(Boolean);
+}
+
+module.exports = { sendEmail, sendPush, approverNewExpense, approverNewExpenses, submitterApproved, submitterSentBack, submitterPaid, deadlineReminder };

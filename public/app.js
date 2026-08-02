@@ -354,6 +354,47 @@
     btn.onclick = on ? disablePush : enablePush;
   }
 
+  // Each person chooses how they get deadline reminders: email and/or push.
+  // Default is both (missing = both). "None" only if they turn both off.
+  function reminderChannels() {
+    const c = state.me && state.me.reminderChannels;
+    return c ? { email: !!c.email, push: !!c.push } : { email: true, push: true };
+  }
+  function updateNotifyToggles() {
+    const ch = reminderChannels();
+    const eBtn = $('#notify-email-toggle');
+    const pBtn = $('#notify-push-toggle');
+    if (eBtn) { eBtn.textContent = ch.email ? '📧 Email reminders: On' : '📧 Email reminders: Off'; eBtn.onclick = () => toggleNotifyChannel('email'); }
+    if (pBtn) { pBtn.textContent = ch.push ? '📱 Push reminders: On' : '📱 Push reminders: Off'; pBtn.onclick = () => toggleNotifyChannel('push'); }
+  }
+  async function toggleNotifyChannel(which) {
+    const ch = reminderChannels();
+    ch[which] = !ch[which];
+    // optimistic
+    if (state.me) state.me.reminderChannels = ch;
+    updateNotifyToggles();
+    try {
+      const res = await api('notify-prefs', { method: 'POST', body: { email: ch.email, push: ch.push } });
+      if (state.me) state.me.reminderChannels = res.reminderChannels || ch;
+      updateNotifyToggles();
+      saveSession();
+      if (which === 'push' && ch.push && !(await hasPushSub())) {
+        toast('Turn on “Alerts” above so push reminders can reach this device.', 'bad');
+      }
+    } catch (e) {
+      if (state.me) state.me.reminderChannels = reminderChannels(); // leave as-is on failure
+      updateNotifyToggles();
+      toast(e.message, 'bad');
+    }
+  }
+  async function hasPushSub() {
+    try {
+      if (!pushSupported() || !pushConfigured()) return false;
+      const reg = await registerSW();
+      return !!(reg && (await reg.pushManager.getSubscription())) && Notification.permission === 'granted';
+    } catch { return false; }
+  }
+
   async function unlockWithFaceId() {
     const email = (safeGet(LS.last) || '').toLowerCase();
     const credId = email && safeGet(LS.cred(email));
@@ -403,6 +444,7 @@
     saveSession(); // remember this session so Face ID can restore it
     updateFaceIdToggle();
     updatePushToggle();
+    updateNotifyToggles();
     updateTopbarVar();
     el.whoName.textContent = state.me.name;
     el.whoRole.textContent = state.me.role;
@@ -5101,7 +5143,9 @@
     // The person's name opens the account menu; picking anything closes it.
     $('#acct-btn').addEventListener('click', (e) => { e.stopPropagation(); toggleAcctMenu(); });
     $('#acct-list').addEventListener('click', (e) => {
-      if (e.target.closest('.menu-item')) closeAcctMenu();
+      const item = e.target.closest('.menu-item');
+      // Reminder toggles keep the menu open so you can see On/Off flip.
+      if (item && !item.dataset.ch) closeAcctMenu();
     });
     // Close either menu when clicking anywhere outside it.
     document.addEventListener('click', (e) => {
