@@ -619,6 +619,7 @@
       state.categories8 = (data && data.categories8) || [];
       state.generalFundCode = (data && data.generalFundCode) || '010000';
       if (data && data.receiptThresholdUsd != null) RECEIPT_THRESHOLD = Number(data.receiptThresholdUsd) || 0;
+      if (data && data.reportDeadlineDays != null) REPORT_DEADLINE = Number(data.reportDeadlineDays) || 60;
       populateExpenseAccounts();
       populateCategories();
       populateRates();
@@ -693,13 +694,38 @@
     if (view === 'settings') showReceiptRules();
   }
 
-  // Receipt rules screen (Finance): the dollar limit below which no receipt is
-  // needed. The current value already rode in on /options (RECEIPT_THRESHOLD).
+  // Rules & reminders screen (Finance): the receipt-free limit and the
+  // reimbursement deadline. Both values already rode in on /options.
   function showReceiptRules() {
     const input = $('#receipt-threshold');
     if (input) input.value = String(RECEIPT_THRESHOLD);
+    const dl = $('#report-deadline');
+    if (dl) dl.value = String(REPORT_DEADLINE);
     const note = $('#receipt-rule-note');
     if (note) note.hidden = true;
+    const dnote = $('#deadline-note');
+    if (dnote) dnote.hidden = true;
+  }
+
+  async function saveReportDeadline(event) {
+    if (event) event.preventDefault();
+    const input = $('#report-deadline');
+    const btn = $('#report-deadline-save');
+    const note = $('#deadline-note');
+    const value = parseInt(input && input.value, 10);
+    if (!(value >= 1)) { toast('Enter a number of days (at least 1).', 'bad'); return; }
+    if (btn) btn.disabled = true;
+    try {
+      const res = await api('report-deadline', { method: 'POST', body: { value } });
+      REPORT_DEADLINE = Number(res.reportDeadlineDays) || 60;
+      if (input) input.value = String(REPORT_DEADLINE);
+      if (note) { note.hidden = false; note.textContent = `✓ Saved — expenses must be submitted within ${REPORT_DEADLINE} days.`; }
+      toast('Deadline saved.', 'good');
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   async function saveReceiptThreshold(event) {
@@ -1868,8 +1894,11 @@
 
   // The receipt-free limit in US dollars: expenses at or under this need no
   // receipt. Default $50; overridden by the org setting loaded from /options
-  // and editable by Finance on the Receipt rules screen.
+  // and editable by Finance on the Rules screen.
   let RECEIPT_THRESHOLD = 50;
+  // Days a person has to submit an expense before it's past the deadline. Drives
+  // the "10 days left" reminders. Default 60; overridden from /options.
+  let REPORT_DEADLINE = 60;
   function usdAmount(e) {
     return Number(e.amountUsd != null ? e.amountUsd : e.amount) || 0;
   }
@@ -2480,19 +2509,35 @@
   // A warm one-line nudge of what's outstanding, shown at the top of My reports
   // until it's all clear or dismissed for the session. This is the always-on
   // half of "gentle reminders"; the monthly push is the other half.
+  // Days left before a draft passes the reimbursement deadline (negative = past).
+  function daysLeftFor(e) {
+    if (!e || !e.date) return null;
+    const d = new Date(`${String(e.date).slice(0, 10)}T00:00:00Z`);
+    if (isNaN(d)) return null;
+    const age = Math.round((Date.now() - d.getTime()) / 86400000);
+    return REPORT_DEADLINE - age;
+  }
   function nudgeHtml() {
     if (state.nudgeDismissed) return '';
     const mine = state.mineExpenses || [];
     const drafts = mine.filter((e) => e.status === 'Draft');
     const notReady = drafts.filter((e) => expenseReadiness(e).length).length;
     const sentBack = mine.filter((e) => e.status === 'Rejected').length;
+    // Drafts drawing near (or past) the deadline — the soonest sets the urgency.
+    const nearing = drafts.map(daysLeftFor).filter((n) => n != null && n <= 10);
+    const minLeft = nearing.length ? Math.min(...nearing) : null;
     if (!drafts.length && !sentBack) return ''; // nothing to nudge about
     const bits = [];
+    if (nearing.length) {
+      bits.push(minLeft < 0
+        ? `<strong class="nudge-urgent">${nearing.length}</strong> past the ${REPORT_DEADLINE}-day limit`
+        : `<strong class="nudge-urgent">${nearing.length}</strong> due in ${minLeft} day${minLeft === 1 ? '' : 's'}`);
+    }
     if (drafts.length) bits.push(`<strong>${drafts.length}</strong> to submit`);
     if (notReady) bits.push(`<strong>${notReady}</strong> still ${notReady === 1 ? 'needs' : 'need'} a receipt or a detail`);
     if (sentBack) bits.push(`<strong>${sentBack}</strong> sent back to fix`);
-    return `<div class="nudge">
-      <span class="nudge-ico" aria-hidden="true">👋</span>
+    return `<div class="nudge${minLeft != null && minLeft <= 2 ? ' nudge-hot' : ''}">
+      <span class="nudge-ico" aria-hidden="true">${minLeft != null && minLeft <= 2 ? '⏰' : '👋'}</span>
       <span class="nudge-text">${bits.join(' · ')}.</span>
       <button type="button" class="nudge-x" data-act="nudge-dismiss" aria-label="Dismiss">✕</button>
     </div>`;
@@ -5115,6 +5160,8 @@
     $('#rate-cancel').addEventListener('click', resetRateForm);
     const rrf = $('#receipt-rule-form');
     if (rrf) rrf.addEventListener('submit', saveReceiptThreshold);
+    const ddf = $('#deadline-form');
+    if (ddf) ddf.addEventListener('submit', saveReportDeadline);
     el.ratesList.addEventListener('click', onRatesClick);
     $('#people-choose').addEventListener('click', () => el.peopleFile.click());
     $('#people-template').addEventListener('click', downloadPeopleTemplate);

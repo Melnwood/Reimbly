@@ -8,8 +8,10 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# The monthly "gentle nudge" push about unsubmitted expenses.
-# Cron is UTC. "0 15 28 * *" = the 28th of each month at 15:00 UTC.
-# Change the day/time here, or comment out to turn the monthly push off.
+# The "gentle nudge" push about expenses nearing the reimbursement deadline.
+# Runs daily and only nudges on the milestone days (10/5/2/1 days left, due day,
+# then weekly if overdue), so it never nags. Cron is UTC; "0 15 * * *" = 15:00
+# UTC daily. Change the time here, or comment out to turn the push off. The
+# deadline itself is set on the Rules screen.
 [functions."reminders"]
-  schedule = "0 15 28 * *"
+  schedule = "0 15 * * *"

@@ -41,6 +41,7 @@ const TABLES = {
 // Org-wide settings live one-per-row in the Settings table (Setting / Value).
 const SETTING = {
   RECEIPT_THRESHOLD: 'Receipt-free limit (USD)',
+  REPORT_DEADLINE: 'Report deadline (days)',
 };
 
 // Event names in the Activity Log's "Event" single-select. This is the trail
@@ -558,43 +559,52 @@ async function accountMap() {
 // declaration. Mileage claims are computed from distance × rate, so they need
 // neither. Takes raw Airtable `fields`.
 
-// Default receipt-free limit: expenses at or under this USD amount don't need a
-// receipt or a declaration. Finance can change it on the Receipt rules screen;
-// this is the fallback when nothing's been set.
-const RECEIPT_MIN_USD = 50;
+// Defaults, used when a setting hasn't been set yet.
+const RECEIPT_MIN_USD = 50;   // receipt-free limit (USD)
+const REPORT_DEADLINE_DAYS = 60; // how long staff have to submit an expense
 
-// Read the org's receipt-free limit (USD) from Settings, falling back to the
-// default. Never throws — a missing/blank row just means "use the default".
-async function getReceiptThresholdUsd() {
+// Read one numeric setting from the Settings table, falling back to `fallback`.
+// Never throws — a missing/blank/invalid row just means "use the default".
+async function getSettingNumber(name, fallback) {
   try {
     const rec = await airtable.findFirst(TABLES.SETTINGS, {
-      filterByFormula: `{Setting} = '${esc(SETTING.RECEIPT_THRESHOLD)}'`,
+      filterByFormula: `{Setting} = '${esc(name)}'`,
     });
     const v = rec && rec.fields ? Number(rec.fields.Value) : NaN;
-    return isFinite(v) && v >= 0 ? v : RECEIPT_MIN_USD;
+    return isFinite(v) && v >= 0 ? v : fallback;
   } catch (e) {
-    return RECEIPT_MIN_USD;
+    return fallback;
   }
 }
 
-// Set the org's receipt-free limit (USD). Upserts the single Settings row.
-async function setReceiptThresholdUsd(value) {
+// Set one numeric setting, upserting its single Settings row.
+async function setSettingNumber(name, value, notes) {
   const v = Number(value);
-  if (!isFinite(v) || v < 0) throw new Error('The receipt-free limit must be $0 or more.');
+  if (!isFinite(v) || v < 0) throw new Error('That value must be 0 or more.');
   const rec = await airtable.findFirst(TABLES.SETTINGS, {
-    filterByFormula: `{Setting} = '${esc(SETTING.RECEIPT_THRESHOLD)}'`,
+    filterByFormula: `{Setting} = '${esc(name)}'`,
   });
-  if (rec) {
-    await airtable.updateRecord(TABLES.SETTINGS, rec.id, { Value: v });
-  } else {
-    await airtable.createRecord(TABLES.SETTINGS, {
-      Setting: SETTING.RECEIPT_THRESHOLD,
-      Value: v,
-      Notes: 'Expenses at or under this USD amount need no receipt. Managed by Reimbly’s Receipt rules screen.',
-    });
-  }
+  if (rec) await airtable.updateRecord(TABLES.SETTINGS, rec.id, { Value: v });
+  else await airtable.createRecord(TABLES.SETTINGS, { Setting: name, Value: v, Notes: notes || 'Managed by Reimbly.' });
   return v;
 }
+
+const getReceiptThresholdUsd = () => getSettingNumber(SETTING.RECEIPT_THRESHOLD, RECEIPT_MIN_USD);
+const setReceiptThresholdUsd = (v) => {
+  if (!(Number(v) >= 0)) throw new Error('The receipt-free limit must be $0 or more.');
+  return setSettingNumber(SETTING.RECEIPT_THRESHOLD, v, 'Expenses at or under this USD amount need no receipt. Managed by Reimbly’s Rules screen.');
+};
+
+// How many days staff have to get an expense submitted (the reimbursement
+// deadline). At least 1; defaults to 60.
+async function getReportDeadlineDays() {
+  const v = await getSettingNumber(SETTING.REPORT_DEADLINE, REPORT_DEADLINE_DAYS);
+  return v >= 1 ? Math.round(v) : REPORT_DEADLINE_DAYS;
+}
+const setReportDeadlineDays = (v) => {
+  if (!(Number(v) >= 1)) throw new Error('The deadline must be at least 1 day.');
+  return setSettingNumber(SETTING.REPORT_DEADLINE, Math.round(Number(v)), 'How many days staff have to submit an expense before it’s past the reimbursement deadline. Managed by Reimbly’s Rules screen.');
+};
 
 function isMileageExpense(fields) {
   const f = fields || {};
@@ -974,8 +984,11 @@ module.exports = {
   expenseReadinessFields,
   isExpenseReady,
   RECEIPT_MIN_USD,
+  REPORT_DEADLINE_DAYS,
   getReceiptThresholdUsd,
   setReceiptThresholdUsd,
+  getReportDeadlineDays,
+  setReportDeadlineDays,
   getCurrencyRate,
   accountMap,
   staffMap,

@@ -7,7 +7,7 @@ const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const {
   ensureStaff, accountAccessFor, listMileageRates,
-  listExpenseAccounts, visibleExpenseAccounts, getReceiptThresholdUsd,
+  listExpenseAccounts, visibleExpenseAccounts, getReceiptThresholdUsd, getReportDeadlineDays,
 } = require('./lib/domain');
 const { CATEGORIES_7, CATEGORIES_8, GENERAL_FUND_CODE } = require('./lib/coding');
 
@@ -18,11 +18,12 @@ exports.handler = async (event) => {
   try {
     const user = await verifyRequest(event.headers);
     const { id: staffId, role } = await ensureStaff(user);
-    const [access, mileageRates, allExpenseAccounts, receiptThresholdUsd] = await Promise.all([
+    const [access, mileageRates, allExpenseAccounts, receiptThresholdUsd, reportDeadlineDays] = await Promise.all([
       accountAccessFor(user.email),
       listMileageRates(),
       listExpenseAccounts(),
       getReceiptThresholdUsd(),
+      getReportDeadlineDays(),
     ]);
     // The old "accounts" list is the base's GL-code table (the app's original
     // single picker). Kept for the category picker until the two-level flow lands.
@@ -41,6 +42,7 @@ exports.handler = async (event) => {
       categories8: CATEGORIES_8,
       generalFundCode: GENERAL_FUND_CODE,
       receiptThresholdUsd,
+      reportDeadlineDays,
       role,
     });
   } catch (err) {

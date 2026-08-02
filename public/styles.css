@@ -680,6 +680,9 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .nudge-text { flex: 1 1 auto; font-size: 0.92rem; color: var(--ink); }
 .nudge-x { flex: none; background: none; border: 0; color: var(--ink-soft); font-size: 0.9rem; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
 .nudge-x:hover { background: var(--bg-soft); color: var(--ink); }
+.nudge-urgent { color: var(--warn); }
+.nudge.nudge-hot { background: color-mix(in srgb, var(--danger) 8%, var(--card)); border-color: color-mix(in srgb, var(--danger) 30%, var(--line)); }
+.nudge.nudge-hot .nudge-urgent { color: var(--danger); }
 
 /* "Repeats monthly" toggle in the inline expense editor. */
 .ie-recurring { display: flex; align-items: center; gap: 9px; margin: 4px 0 2px; font-size: 0.9rem; font-weight: 700; color: var(--ink); cursor: pointer; }
