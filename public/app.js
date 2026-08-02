@@ -1649,6 +1649,12 @@
     const btn = event.target.closest('button[data-act]');
     if (!btn) return;
     const act = btn.dataset.act;
+    if (act === 'nudge-dismiss') {
+      state.nudgeDismissed = true;
+      const n = btn.closest('.nudge');
+      if (n) n.remove();
+      return;
+    }
     if (act === 'report-toggle') {
       const card = btn.closest('.report-card');
       const body = $('.rc-body', card);
@@ -2471,13 +2477,34 @@
     }
   }
 
+  // A warm one-line nudge of what's outstanding, shown at the top of My reports
+  // until it's all clear or dismissed for the session. This is the always-on
+  // half of "gentle reminders"; the monthly push is the other half.
+  function nudgeHtml() {
+    if (state.nudgeDismissed) return '';
+    const mine = state.mineExpenses || [];
+    const drafts = mine.filter((e) => e.status === 'Draft');
+    const notReady = drafts.filter((e) => expenseReadiness(e).length).length;
+    const sentBack = mine.filter((e) => e.status === 'Rejected').length;
+    if (!drafts.length && !sentBack) return ''; // nothing to nudge about
+    const bits = [];
+    if (drafts.length) bits.push(`<strong>${drafts.length}</strong> to submit`);
+    if (notReady) bits.push(`<strong>${notReady}</strong> still ${notReady === 1 ? 'needs' : 'need'} a receipt or a detail`);
+    if (sentBack) bits.push(`<strong>${sentBack}</strong> sent back to fix`);
+    return `<div class="nudge">
+      <span class="nudge-ico" aria-hidden="true">👋</span>
+      <span class="nudge-text">${bits.join(' · ')}.</span>
+      <button type="button" class="nudge-x" data-act="nudge-dismiss" aria-label="Dismiss">✕</button>
+    </div>`;
+  }
+
   function renderReports() {
     const box = el.reportsList;
     if (!box) return;
     const reports = state.reports || [];
     const unfiled = (state.mineExpenses || []).filter((e) => !e.reportId).length;
     const sentBack = (state.mineExpenses || []).filter((e) => e.status === 'Rejected');
-    let html = '';
+    let html = nudgeHtml();
     // Sent-back items float to the very top with the reviewer's note, so people
     // can fix and resubmit quickly and keep the loop moving.
     if (sentBack.length) {

@@ -7,3 +7,9 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# The monthly "gentle nudge" push about unsubmitted expenses.
+# Cron is UTC. "0 15 28 * *" = the 28th of each month at 15:00 UTC.
+# Change the day/time here, or comment out to turn the monthly push off.
+[functions."reminders"]
+  schedule = "0 15 28 * *"
