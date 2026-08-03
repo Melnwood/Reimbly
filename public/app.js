@@ -1006,7 +1006,13 @@
       const receipts = data.receipts || [];
       if (!receipts.length) { panel.hidden = true; return; }
       panel.hidden = false;
-      list.innerHTML = receipts.map(inboxRowHtml).join('');
+      const ids = receipts.map((r) => r.id);
+      const clearBar = receipts.length > 1
+        ? `<div class="inbox-clear"><button type="button" class="link-btn" data-clear-all>None of these are receipts? Clear all ${receipts.length}</button></div>`
+        : '';
+      list.innerHTML = clearBar + receipts.map(inboxRowHtml).join('');
+      const clearBtn = list.querySelector('[data-clear-all]');
+      if (clearBtn) clearBtn.onclick = () => clearAllHeld(ids);
       list.querySelectorAll('[data-discard]').forEach((btn) => {
         btn.onclick = () => discardHeld(btn.getAttribute('data-discard'));
       });
@@ -1079,6 +1085,18 @@
     } catch (e) {
       toast(e.message, 'bad');
     }
+  }
+
+  // Clear the whole email-receipt inbox in one go (for when it's all junk).
+  async function clearAllHeld(ids) {
+    if (!ids || !ids.length) return;
+    if (!window.confirm(`Discard all ${ids.length}? They leave the inbox — anything that was a real receipt can still be forwarded again.`)) return;
+    let done = 0;
+    for (const id of ids) {
+      try { await api('receipt-inbox', { method: 'POST', body: { id, action: 'discard' } }); done += 1; } catch (e) { /* skip */ }
+    }
+    toast(`Cleared ${done} from the inbox.`, 'good');
+    loadInbox();
   }
 
   // ---------- Submit ----------

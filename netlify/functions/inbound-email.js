@@ -164,6 +164,9 @@ exports.handler = async (event) => {
       try {
         const scan = await scanReceipt(att, { accounts });
         if (!scan) { skipped.push({ filename: att.filename, reason: 'Unreadable file type' }); continue; }
+        // Don't file things that aren't actually receipts (marketing images,
+        // logos, order confirmations with no price, etc.).
+        if (scan.isReceipt === false) { skipped.push({ filename: att.filename, reason: 'Not a receipt' }); continue; }
         created.push(await createFromScan(scan, { filename: att.filename || 'receipt', contentType: att.contentType, base64: att.base64 }));
       } catch (e) {
         console.error('[reimbly] attachment scan failed', e);
@@ -178,7 +181,7 @@ exports.handler = async (event) => {
       if (text) {
         try {
           const scan = await scanText(text, { accounts });
-          if (scan && (scan.amount != null || scan.merchant)) created.push(await createFromScan(scan, null));
+          if (scan && scan.isReceipt !== false && scan.amount != null) created.push(await createFromScan(scan, null));
           else skipped.push({ filename: '(email body)', reason: 'No receipt details found' });
         } catch (e) {
           console.error('[reimbly] body scan failed', e);

@@ -25,6 +25,7 @@ function receiptTool() {
     input_schema: {
       type: 'object',
       properties: {
+        isReceipt: { type: 'boolean', description: 'true ONLY if this is an actual proof of purchase — a receipt, invoice, or bill with a real amount that was (or is to be) paid. false for anything that is NOT a receipt: marketing/promotional emails, newsletters, shipping or delivery notices, order/booking confirmations with no price, statements, calendar invites, logos, signatures, screenshots, or any image that isn\'t a receipt.' },
         amount: { type: ['number', 'null'], description: 'The total amount paid, as a number (no currency symbol). null if not legible.' },
         currency: { type: ['string', 'null'], enum: [...CURRENCY_CODES, null], description: 'ISO code of the currency shown on the receipt.' },
         date: { type: ['string', 'null'], description: 'Date of purchase as YYYY-MM-DD. null if not legible.' },
@@ -35,7 +36,7 @@ function receiptTool() {
         amountBox: { type: ['object', 'null'], description: 'Where the printed TOTAL amount sits on the image, as a normalized box (fractions of image width/height, origin top-left). null if not an image or not locatable.', properties: { x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } }, required: ['x', 'y', 'w', 'h'], additionalProperties: false },
         dateBox: { type: ['object', 'null'], description: 'Where the printed DATE sits on the image, as a normalized box (fractions of image width/height, origin top-left). null if not an image or not locatable.', properties: { x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } }, required: ['x', 'y', 'w', 'h'], additionalProperties: false },
       },
-      required: ['amount', 'currency', 'date', 'time', 'merchant', 'description', 'account', 'amountBox', 'dateBox'],
+      required: ['isReceipt', 'amount', 'currency', 'date', 'time', 'merchant', 'description', 'account', 'amountBox', 'dateBox'],
       additionalProperties: false,
     },
   };
@@ -47,7 +48,15 @@ function prompt(accounts) {
     'This is a receipt for a staff expense at Josiah Venture, a ministry working across ' +
     'Central & Eastern Europe (so receipts are often in Czech, Polish, German, and other ' +
     'languages, in local currencies). Read it carefully and call record_receipt with what ' +
-    'you find. Use the total actually paid and the currency printed on the receipt. Translate ' +
+    'you find.\n\n' +
+    'FIRST decide whether this is really a receipt. Set "isReceipt" to false if it is NOT an ' +
+    'actual proof of purchase — for example a marketing or promotional email, a newsletter, a ' +
+    'shipping/delivery notice, an order or booking confirmation with no price, an account ' +
+    'statement, a calendar invite, a company logo or email banner, a signature image, or any ' +
+    'picture that simply isn\'t a receipt. Only set isReceipt=true when there is a real amount ' +
+    'that was paid (or is due to be paid). When isReceipt is false, return null for the other ' +
+    'fields, so it is not filed as an expense.\n\n' +
+    'Use the total actually paid and the currency printed on the receipt. Translate ' +
     'the description to English. If a field is not legible, return null for it rather than guessing.\n\n' +
     'IMPORTANT — dates: use the date the money was actually spent — the ' +
     'PAYMENT / TRANSACTION date (when the card was charged or cash paid). If the receipt ' +
@@ -103,6 +112,9 @@ function normalize(input = {}, { accountCodes = new Set() } = {}) {
   const tm = /^(\d{1,2}):(\d{2})/.exec(timeRaw || '');
   const time = tm && Number(tm[1]) < 24 ? `${String(tm[1]).padStart(2, '0')}:${tm[2]}` : null;
   return {
+    // Default to true when absent, so manual uploads (where the person chose the
+    // file) are never dropped; only an explicit false gates the email intake.
+    isReceipt: input.isReceipt !== false,
     amount: isFinite(amount) && amount > 0 ? amount : null,
     currency: CURRENCY_CODES.includes(String(currency || '').toUpperCase())
       ? String(currency).toUpperCase()
