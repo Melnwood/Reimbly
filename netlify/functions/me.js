@@ -5,7 +5,7 @@
 
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
-const { ensureStaff, isApprover, notifyChannelsOf } = require('./lib/domain');
+const { ensureStaff, isApprover, notifyChannelsOf, emailIntakeOn } = require('./lib/domain');
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'GET');
@@ -21,6 +21,7 @@ exports.handler = async (event) => {
       canApprove: isApprover(role),
       defaultAccount: (record && record.fields && record.fields['Default Account']) || '',
       reminderChannels: notifyChannelsOf(record && record.fields),
+      emailIntake: emailIntakeOn(record && record.fields),
     });
   } catch (err) {
     return error(err);

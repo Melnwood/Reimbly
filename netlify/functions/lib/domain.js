@@ -617,6 +617,16 @@ function notifyChannelsOf(staffFields) {
   return { email: names.includes('Email'), push: names.includes('Push') };
 }
 
+// Whether a person opted into forwarding receipts from their own email. Off by
+// default — Reimbly never touches anyone's mail until they turn this on.
+function emailIntakeOn(staffFields) {
+  return !!(staffFields && staffFields['Email Intake'] === true);
+}
+async function setEmailIntake(staffId, on) {
+  await airtable.updateRecord(TABLES.STAFF, staffId, { 'Email Intake': !!on });
+  return !!on;
+}
+
 // Save a person's reminder-channel choice back to their Staff record.
 async function setNotifyChannels(staffId, { email, push }) {
   let channels;
@@ -1011,6 +1021,8 @@ module.exports = {
   setReportDeadlineDays,
   notifyChannelsOf,
   setNotifyChannels,
+  emailIntakeOn,
+  setEmailIntake,
   getCurrencyRate,
   accountMap,
   staffMap,

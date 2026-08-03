@@ -13,7 +13,7 @@ const { pickBest } = require('./lib/matching');
 const {
   TABLES, STATUS, EVENTS, DEFAULT_PAYMENT_METHOD,
   ensureStaff, resolveCurrencyId, resolveAccountId, listAccounts, logActivity,
-  displayMaps, shapeExpense,
+  displayMaps, shapeExpense, emailIntakeOn,
 } = require('./lib/domain');
 const { scanReceipt, scanText, isScannable } = require('./lib/scanner');
 
@@ -60,7 +60,14 @@ exports.handler = async (event) => {
     const attachments = Array.isArray(body.attachments) ? body.attachments.slice(0, MAX_ATTACHMENTS) : [];
 
     const user = { email: from, name };
-    const { id: staffId } = await ensureStaff(user);
+    const { id: staffId, record: staffRec } = await ensureStaff(user);
+
+    // Opt-in gate: Reimbly only accepts email receipts for people who turned it
+    // on themselves. Everyone else's mail is never touched. Return 200 so the
+    // forwarding helper quietly stops rather than retrying.
+    if (!emailIntakeOn(staffRec && staffRec.fields)) {
+      return ok({ created: 0, held: 0, attached: 0, items: [], skipped: [], disabled: true });
+    }
 
     // In "inbox" mode (used with the YNAB flow) a receipt doesn't become an
     // expense on its own — it's held as a Draft until a YNAB row claims it, or

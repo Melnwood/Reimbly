@@ -412,6 +412,37 @@
     } catch { return false; }
   }
 
+  // Email receipts (opt-in): pull receipts from your own email. Off by default;
+  // Reimbly never touches anyone's mail until they turn this on.
+  function updateEmailIntakeToggle() {
+    const on = !!(state.me && state.me.emailIntake);
+    const btn = $('#email-intake-toggle');
+    if (btn) btn.innerHTML = `${ic('mail')} Email receipts: ${on ? 'On' : 'Off'}`;
+  }
+  async function setEmailIntakePref(on) {
+    try {
+      const res = await api('email-intake', { method: 'POST', body: { on } });
+      if (state.me) state.me.emailIntake = !!res.emailIntake;
+      updateEmailIntakeToggle();
+      saveSession();
+      if (state.me && state.me.emailIntake) loadInbox();
+      else { const p = $('#inbox-panel'); if (p) p.hidden = true; }
+      return true;
+    } catch (e) { toast(e.message, 'bad'); return false; }
+  }
+  // Tapping the toggle: turning ON opens the explainer first; turning OFF is direct.
+  function onEmailIntakeToggle() {
+    if (state.me && state.me.emailIntake) { setEmailIntakePref(false).then(() => toast('Email receipts turned off.', 'good')); }
+    else openEmailIntakeHelp();
+  }
+  function openEmailIntakeHelp() { const m = $('#emailintake-modal'); if (m) m.hidden = false; closeAcctMenu(); }
+  function closeEmailIntakeHelp() { const m = $('#emailintake-modal'); if (m) m.hidden = true; }
+  async function enableEmailIntakeFromModal() {
+    const okd = await setEmailIntakePref(true);
+    closeEmailIntakeHelp();
+    if (okd) toast('Email receipts are on. We’ll send you the quick setup steps.', 'good');
+  }
+
   async function unlockWithFaceId(auto) {
     const email = (safeGet(LS.last) || '').toLowerCase();
     const credId = email && safeGet(LS.cred(email));
@@ -466,6 +497,7 @@
     updateFaceIdToggle();
     updatePushToggle();
     updateNotifyToggles();
+    updateEmailIntakeToggle();
     updateTopbarVar();
     el.whoName.textContent = state.me.name;
     el.whoRole.textContent = state.me.role;
@@ -998,6 +1030,8 @@
     const panel = $('#inbox-panel');
     const list = $('#inbox-list');
     if (!panel || !list) return;
+    // Only for people who opted into email receipts — everyone else never sees it.
+    if (!(state.me && state.me.emailIntake)) { panel.hidden = true; return; }
     try {
       // Make sure the person's reports are loaded so the "file into a report"
       // picker on each receipt is populated.
@@ -5183,8 +5217,8 @@
     $('#acct-btn').addEventListener('click', (e) => { e.stopPropagation(); toggleAcctMenu(); });
     $('#acct-list').addEventListener('click', (e) => {
       const item = e.target.closest('.menu-item');
-      // Reminder toggles keep the menu open so you can see On/Off flip.
-      if (item && !item.dataset.ch) closeAcctMenu();
+      // Inline toggles keep the menu open so you can see On/Off flip.
+      if (item && !item.dataset.ch && item.dataset.noclose == null) closeAcctMenu();
     });
     // Close either menu when clicking anywhere outside it.
     document.addEventListener('click', (e) => {
@@ -5245,6 +5279,11 @@
     if (rrf) rrf.addEventListener('submit', saveReceiptThreshold);
     const ddf = $('#deadline-form');
     if (ddf) ddf.addEventListener('submit', saveReportDeadline);
+    $('#email-intake-toggle').addEventListener('click', onEmailIntakeToggle);
+    $('#email-intake-help').addEventListener('click', openEmailIntakeHelp);
+    $('#ei-close').addEventListener('click', closeEmailIntakeHelp);
+    $('#ei-later').addEventListener('click', closeEmailIntakeHelp);
+    $('#ei-enable').addEventListener('click', enableEmailIntakeFromModal);
     el.ratesList.addEventListener('click', onRatesClick);
     $('#people-choose').addEventListener('click', () => el.peopleFile.click());
     $('#people-template').addEventListener('click', downloadPeopleTemplate);

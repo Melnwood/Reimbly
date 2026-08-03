@@ -1,6 +1,17 @@
 # Filing receipts straight from email
 
-Rembly can find the receipts and invoices in your Gmail and file them for you —
+> **Opt-in, per person (added Aug 2026).** This feature is **off by default**.
+> Nobody's email is touched unless they turn it on themselves in Reimbly's
+> account menu → **Email receipts**. Turning it on sets an **Email Intake** flag
+> on their Staff record; `inbound-email` refuses to file anything for a person
+> whose flag is off, so a forwarded email for someone who never opted in is
+> quietly ignored. The receipt inbox is hidden for anyone who hasn't opted in.
+> Reimbly never reads a mailbox — the helper below runs inside the person's own
+> Google account and only forwards receipt-looking mail; the reader also skips
+> anything that isn't actually a receipt (marketing, order confirmations, terms
+> & conditions, etc.).
+
+Reimbly can find the receipts and invoices in your Gmail and file them for you —
 no typing. It reads each one with Claude and, within the hour, it appears under
 **My expenses** as a Submitted expense with the amount, date, merchant, and
 account already filled in (and the receipt attached).

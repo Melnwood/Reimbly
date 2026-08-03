@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Reimbly" />
-    <link rel="stylesheet" href="styles.css?v=20260802h" />
+    <link rel="stylesheet" href="styles.css?v=20260802i" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -137,6 +137,9 @@
             <div class="acct-section">Deadline reminders</div>
             <button id="notify-email-toggle" class="menu-item" data-ch="email"></button>
             <button id="notify-push-toggle" class="menu-item" data-ch="push"></button>
+            <div class="acct-section">Email receipts</div>
+            <button id="email-intake-toggle" class="menu-item" data-noclose></button>
+            <button id="email-intake-help" class="menu-item subtle">How it works</button>
             <button id="signout" class="menu-item danger">Sign out</button>
           </div>
         </div>
@@ -657,6 +660,33 @@
     <!-- Toast -->
     <!-- Modals live at the top level so they show over any screen (not trapped
          inside a view that's hidden). -->
+    <!-- Email receipts: what it is + how to set it up (opt-in, per person) -->
+    <div id="emailintake-modal" class="modal-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="ei-title">
+        <div class="detail-head">
+          <h3 id="ei-title"><svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg> Email receipts</h3>
+          <button class="link-btn" id="ei-close">✕ Close</button>
+        </div>
+        <p class="panel-sub">Optional. If you'd like, Reimbly can pull receipts straight from your email, so you don't have to snap or upload them. It's off unless you turn it on.</p>
+        <ul class="ei-points">
+          <li><strong>Reimbly never reads your inbox.</strong> A small helper runs inside <em>your own</em> Google account and only forwards emails that look like receipts or invoices.</li>
+          <li><strong>Entirely your choice.</strong> Nothing happens until you switch it on, and you can switch it off — or remove the helper — anytime.</li>
+          <li><strong>Just receipts.</strong> It looks for receipts and invoices, not your personal mail. Anything that isn't a receipt is skipped.</li>
+        </ul>
+        <h4 class="ei-h">To set it up</h4>
+        <ol class="ei-steps">
+          <li>Turn on <strong>Email receipts</strong> in this menu.</li>
+          <li>Add the one-time Gmail helper to your Google account (we'll send you the two-minute steps).</li>
+          <li>New receipts show up in your <strong>receipt inbox</strong> on the Add-expense tab, ready to file into a report.</li>
+        </ol>
+        <p class="import-note">Not interested? Just leave it off — Reimbly won't touch your email at all.</p>
+        <div class="ei-actions">
+          <button class="btn primary" id="ei-enable">Turn on email receipts</button>
+          <button class="link-btn" id="ei-later">Maybe later</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Maintenance tool, opened from Management → "Highlight receipts" -->
     <div id="rescan-modal" class="modal-overlay" hidden>
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rescan-title">
@@ -696,6 +726,6 @@
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260802h"></script>
+    <script src="app.js?v=20260802i"></script>
   </body>
 </html>
