@@ -415,7 +415,7 @@
   // Email receipts (opt-in): pull receipts from your own email. Off by default;
   // Reimbly never touches anyone's mail until they turn this on.
   function updateEmailIntakeToggle() {
-    const on = !!(state.me && state.me.emailIntake);
+    const on = !!(state.me && (state.me.gmailConnected || state.me.emailIntake));
     const btn = $('#email-intake-toggle');
     if (btn) btn.innerHTML = `${ic('mail')} Email receipts: ${on ? 'On' : 'Off'}`;
   }
@@ -430,17 +430,90 @@
       return true;
     } catch (e) { toast(e.message, 'bad'); return false; }
   }
-  // Tapping the toggle: turning ON opens the explainer first; turning OFF is direct.
-  function onEmailIntakeToggle() {
-    if (state.me && state.me.emailIntake) { setEmailIntakePref(false).then(() => toast('Email receipts turned off.', 'good')); }
-    else openEmailIntakeHelp();
-  }
-  function openEmailIntakeHelp() { const m = $('#emailintake-modal'); if (m) m.hidden = false; closeAcctMenu(); }
+  // Tapping the toggle always opens the panel — it's the one place people connect,
+  // check status, or disconnect. (Turning it fully off happens via Disconnect.)
+  function onEmailIntakeToggle() { openEmailIntakeHelp(); }
+  function openEmailIntakeHelp() { const m = $('#emailintake-modal'); if (m) { renderEmailIntakeModal(); m.hidden = false; } closeAcctMenu(); }
   function closeEmailIntakeHelp() { const m = $('#emailintake-modal'); if (m) m.hidden = true; }
+
+  // Show the right section of the panel for this person's situation:
+  //   • already connected      → status + Disconnect
+  //   • one-tap set up on server → the Connect Gmail button
+  //   • not set up yet          → manual fallback
+  function renderEmailIntakeModal() {
+    const me = state.me || {};
+    const show = (id, on) => { const s = $(id); if (s) s.hidden = !on; };
+    const connected = !!me.gmailConnected;
+    const oneTap = !!me.gmailAvailable;
+    show('#ei-connected', connected);
+    show('#ei-connect-wrap', !connected && oneTap);
+    show('#ei-manual', !connected && !oneTap);
+  }
+
+  // Kick off Google's approval screen. The server hands back the URL to send them
+  // to; the browser leaves Reimbly and comes back to /?gmail=... (see boot).
+  async function connectGmail() {
+    const btn = $('#ei-connect');
+    if (btn) { btn.disabled = true; btn.innerHTML = `${ic('mail')} Opening Google…`; }
+    try {
+      const r = await api('gmail-connect', { method: 'POST' });
+      if (r && r.url) { window.location = r.url; return; }
+      throw new Error('Could not start the Google connection.');
+    } catch (e) {
+      toast(e.message || 'Could not start the Google connection.', 'bad');
+      if (btn) { btn.disabled = false; btn.innerHTML = `${ic('mail')} Connect Gmail`; }
+    }
+  }
+  async function disconnectGmail() {
+    const btn = $('#ei-disconnect');
+    if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting…'; }
+    try {
+      await api('gmail-disconnect', { method: 'POST' });
+      if (state.me) { state.me.gmailConnected = false; state.me.emailIntake = false; }
+      saveSession();
+      updateEmailIntakeToggle();
+      renderEmailIntakeModal();
+      const p = $('#inbox-panel'); if (p) p.hidden = true;
+      toast('Gmail disconnected. Reimbly can no longer read your mail.', 'good');
+    } catch (e) {
+      toast(e.message || 'Could not disconnect.', 'bad');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Disconnect Gmail'; }
+    }
+  }
   async function enableEmailIntakeFromModal() {
     const okd = await setEmailIntakePref(true);
     closeEmailIntakeHelp();
     if (okd) toast('Email receipts are on. We’ll send you the quick setup steps.', 'good');
+  }
+  // When Google bounces the browser back to /?gmail=<status>, say how it went and
+  // refresh who-am-I so the panel and toggle reflect the new connection.
+  async function handleGmailReturn() {
+    const params = new URLSearchParams(location.search);
+    const status = params.get('gmail');
+    if (!status) return;
+    // Clean the URL so a refresh doesn't re-toast.
+    params.delete('gmail');
+    const qs = params.toString();
+    history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+    const messages = {
+      connected: ['Gmail connected. Receipts will start arriving in your inbox.', 'good'],
+      denied: ['No problem — Gmail wasn’t connected.', 'warn'],
+      mismatch: ['That was a different Google account. Please connect with your JV email.', 'bad'],
+      noretry: ['Google didn’t return a lasting permission. Try connecting again.', 'bad'],
+      failed: ['Something went wrong connecting Gmail. Please try again.', 'bad'],
+    };
+    const [msg, kind] = messages[status] || ['Gmail: ' + status, 'warn'];
+    toast(msg, kind);
+    try {
+      if (state.token) {
+        state.me = await api('me');
+        saveSession();
+        updateEmailIntakeToggle();
+        renderEmailIntakeModal();
+        if (status === 'connected' && state.me && state.me.emailIntake) loadInbox();
+      }
+    } catch { /* non-fatal */ }
   }
 
   async function unlockWithFaceId(auto) {
@@ -519,6 +592,8 @@
     // Quietly pre-load the person's reports so the "sent back" tab badge shows on
     // open, before they visit My reports.
     ensureReportsData().then(updateMineBadge).catch(() => {});
+    // If we just came back from Google's "Connect Gmail" screen, report how it went.
+    handleGmailReturn();
   }
 
   // Per-person account usage, kept on this device — the app "learns" which
@@ -5283,7 +5358,10 @@
     $('#email-intake-help').addEventListener('click', openEmailIntakeHelp);
     $('#ei-close').addEventListener('click', closeEmailIntakeHelp);
     $('#ei-later').addEventListener('click', closeEmailIntakeHelp);
+    ['#ei-later2', '#ei-later3'].forEach((id) => { const b = $(id); if (b) b.addEventListener('click', closeEmailIntakeHelp); });
     $('#ei-enable').addEventListener('click', enableEmailIntakeFromModal);
+    { const b = $('#ei-connect'); if (b) b.addEventListener('click', connectGmail); }
+    { const b = $('#ei-disconnect'); if (b) b.addEventListener('click', disconnectGmail); }
     el.ratesList.addEventListener('click', onRatesClick);
     $('#people-choose').addEventListener('click', () => el.peopleFile.click());
     $('#people-template').addEventListener('click', downloadPeopleTemplate);

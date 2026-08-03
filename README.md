@@ -188,11 +188,14 @@ email never blocks the expense from going through.
 ### Filing receipts from your email (optional)
 
 Rembly can find the receipts and invoices already in your Gmail — and new ones
-as they arrive — and file them for you as Submitted expenses, with the amount,
-date, merchant, and account read off each receipt by Claude. It runs from a
-small script in your own Google account, so nothing else sees your mail. Full
-setup (about 10 minutes) is in **[docs/EMAIL-RECEIPTS.md](docs/EMAIL-RECEIPTS.md)**;
-it needs `INBOUND_EMAIL_SECRET` set in Netlify alongside `ANTHROPIC_API_KEY`.
+as they arrive — and file them for you, with the amount, date, merchant, and
+account read off each receipt by Claude. The easy way is the one-tap **Connect
+Gmail** button in the account menu: each person connects their own mail (read-only,
+receipts only) and can disconnect anytime. Setting that up for the org one time is
+in **[docs/CONNECT-GMAIL-SETUP.md](docs/CONNECT-GMAIL-SETUP.md)** (Gmail API + an
+Internal OAuth client → `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET` in
+Netlify). There's also an older Apps-Script way (needs `INBOUND_EMAIL_SECRET`) —
+both are covered in **[docs/EMAIL-RECEIPTS.md](docs/EMAIL-RECEIPTS.md)**.
 
 ### iPhone / phone push alerts (optional)
 

@@ -12,11 +12,41 @@
 > & conditions, etc.).
 
 Reimbly can find the receipts and invoices in your Gmail and file them for you —
-no typing. It reads each one with Claude and, within the hour, it appears under
-**My expenses** as a Submitted expense with the amount, date, merchant, and
-account already filled in (and the receipt attached).
+no typing. It reads each one with Claude and, within the hour, it appears in your
+**Receipts waiting from email** box on the Add-expense tab, with the amount, date,
+merchant, and account already read off it (and the receipt attached).
 
-## How it works
+## The easy way: the one-tap "Connect Gmail" button
+
+Once an admin has set this up one time (see
+**[CONNECT-GMAIL-SETUP.md](CONNECT-GMAIL-SETUP.md)**), there's nothing to install.
+Each person just:
+
+1. Opens the account menu → **Email receipts**.
+2. Taps **Connect Gmail** and approves on Google's own screen (read-only, receipts
+   only).
+3. Done — receipts start filing themselves within the hour.
+
+They can tap **Disconnect Gmail** in the same place anytime, and Reimbly instantly
+stops reading their mail. This is **opt-in per person** — nobody's mailbox is
+touched until they connect it themselves.
+
+Under the hood this uses Google OAuth (`gmail-connect` → Google's consent screen →
+`gmail-callback`), stores each person's permission **encrypted** on their Staff
+record, and a scheduled `gmail-poll` worker reads new receipt-looking mail hourly.
+The admin setup (Gmail API, an Internal OAuth client, and two Netlify env vars —
+`GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET`) is in
+[CONNECT-GMAIL-SETUP.md](CONNECT-GMAIL-SETUP.md).
+
+---
+
+## The older way: a Google Apps Script (still supported)
+
+Everything below describes the original forward-from-a-script setup. It still
+works and is the fallback if the one-tap button hasn't been configured on the
+server yet — but for most people the **Connect Gmail** button above is simpler.
+
+## How the script version works
 
 ```
 Your Gmail  ──▶  Apps Script (finds receipts, hourly)  ──▶  /api/inbound-email  ──▶  Claude reads it  ──▶  Expense in Rembly

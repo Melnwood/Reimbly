@@ -44,6 +44,12 @@ right now. That's fine — leaving them enabled costs nothing and means they're 
 if we ever add, say, "export a report to Google Sheets" or "match receipts from a
 Drive folder." No action needed.
 
+**If you've turned on the one-tap "Connect Gmail" receipts button**, this same
+project also has the **Gmail API** enabled and a second OAuth client (a *Web
+application* one, with a client **secret**). That setup — and the two Netlify
+variables it needs (`GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET`) — has its
+own step-by-step page: **[CONNECT-GMAIL-SETUP.md](CONNECT-GMAIL-SETUP.md)**.
+
 ---
 
 ## Where the keys live (important)

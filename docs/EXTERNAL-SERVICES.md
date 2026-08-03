@@ -39,9 +39,21 @@ live in Netlify's environment variables, kept secret and out of the code.
 - **Netlify variable:** `GOOGLE_CLIENT_ID`
 - **Full details & how to rotate:** **[docs/GOOGLE-CLOUD.md](GOOGLE-CLOUD.md)**
 
-### 5. Google Apps Script — receipts from Gmail
-- **What:** a small script in your Google Workspace that finds receipts in Gmail
-  and sends them into Reimbly, hourly.
+### 5. Google — "Connect Gmail" receipts (one-tap OAuth)
+- **What:** the one-tap **Connect Gmail** button in Reimbly. Each person connects
+  their own Gmail; a scheduled worker reads receipt-looking mail hourly and files
+  it. No scripts to install. Set up once for the whole org.
+- **Sign in:** https://console.cloud.google.com/ → the JV Reimbly project
+  (Gmail API + an **Internal** OAuth "Web application" client)
+- **Netlify variables:** `GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET`
+  (the secret also encrypts each person's stored permission)
+- **Redirect URI to register:** `https://reimbly.netlify.app/api/gmail-callback`
+- **Admin setup, step by step:** **[docs/CONNECT-GMAIL-SETUP.md](CONNECT-GMAIL-SETUP.md)**
+- **How it works for people:** **[docs/EMAIL-RECEIPTS.md](EMAIL-RECEIPTS.md)**
+
+### 5b. Google Apps Script — receipts from Gmail (older fallback)
+- **What:** the original small script in your Google Workspace that forwards
+  receipts into Reimbly, hourly. Still works; the one-tap button above is simpler.
 - **Sign in:** https://script.google.com → the `gmail-to-rembly` project
 - **Netlify variable:** `INBOUND_EMAIL_SECRET` (must match `SECRET` in the script)
 - **Full details:** **[docs/EMAIL-RECEIPTS.md](EMAIL-RECEIPTS.md)**

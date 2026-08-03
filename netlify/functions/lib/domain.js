@@ -627,6 +627,18 @@ async function setEmailIntake(staffId, on) {
   return !!on;
 }
 
+// Whether this person connected their Gmail (one-tap intake). Has a stored token.
+function gmailConnected(staffFields) {
+  return !!(staffFields && String(staffFields['Gmail Token'] || '').trim());
+}
+// Everyone with a live Gmail connection — for the poller.
+async function listGmailConnectedStaff() {
+  const records = await airtable.listRecords(TABLES.STAFF, {
+    filterByFormula: '{Gmail Token} != ""',
+  });
+  return records;
+}
+
 // Save a person's reminder-channel choice back to their Staff record.
 async function setNotifyChannels(staffId, { email, push }) {
   let channels;
@@ -1023,6 +1035,8 @@ module.exports = {
   setNotifyChannels,
   emailIntakeOn,
   setEmailIntake,
+  gmailConnected,
+  listGmailConnectedStaff,
   getCurrencyRate,
   accountMap,
   staffMap,

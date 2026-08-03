@@ -190,7 +190,10 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 .ei-points li::marker { color: var(--accent); }
 .ei-h { margin: 6px 0 6px; font-size: 0.95rem; }
 .ei-steps { margin: 0 0 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--ink); font-size: 0.92rem; line-height: 1.45; }
-.ei-actions { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+.ei-actions { display: flex; align-items: center; gap: 14px; margin-top: 6px; flex-wrap: wrap; }
+.ei-state[hidden] { display: none; }
+.ei-connected-line { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; padding: 10px 12px; border-radius: 10px; background: var(--brand-soft); color: var(--brand-ink); font-size: 0.92rem; line-height: 1.4; }
+.ei-connected-line .icon { flex: none; color: var(--ok, var(--accent)); }
 .pill {
   font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--brand-ink); background: var(--brand-soft);
