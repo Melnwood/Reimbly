@@ -159,7 +159,7 @@
     const last = (safeGet(LS.last) || '').toLowerCase();
     if (webauthnOK() && last && faceIdEnrolled(last)) {
       el.lock.hidden = false;
-      setTimeout(unlockWithFaceId, 350); // auto-prompt Face ID
+      setTimeout(() => unlockWithFaceId(true), 350); // try to auto-prompt Face ID
     } else {
       el.signin.hidden = false;
     }
@@ -195,12 +195,25 @@
     el.signinHint.textContent = 'Signing you in…';
     try {
       state.me = await api('me');
+      // Trade the short-lived Google token for a long-lived Reimbly session
+      // token, so Face ID can get back in later without a fresh Google sign-in.
+      await exchangeSession();
       enterApp();
     } catch (e) {
       state.token = null;
       el.signinHint.className = 'hint error';
       el.signinHint.textContent = e.message;
     }
+  }
+
+  // Swap whatever token we have (Google, or an older Reimbly token) for a fresh
+  // 30-day Reimbly token. Best-effort: if it fails we just keep the current
+  // token (the app still works until it expires).
+  async function exchangeSession() {
+    try {
+      const res = await api('session', { method: 'POST', body: {} });
+      if (res && res.token) { state.token = res.token; saveSession(); }
+    } catch (e) { /* keep the current token */ }
   }
 
   function signOut(message) {
@@ -399,12 +412,12 @@
     } catch { return false; }
   }
 
-  async function unlockWithFaceId() {
+  async function unlockWithFaceId(auto) {
     const email = (safeGet(LS.last) || '').toLowerCase();
     const credId = email && safeGet(LS.cred(email));
     if (!credId) return showSignin();
     const hint = $('#lock-hint');
-    hint.textContent = 'Reading your face…';
+    if (!auto) hint.textContent = 'Reading your face…';
     try {
       await navigator.credentials.get({ publicKey: {
         challenge: rand(16),
@@ -414,7 +427,10 @@
         timeout: 60000,
       } });
     } catch (e) {
-      hint.textContent = 'Face ID didn’t match. Try again, or use Google.';
+      // The auto-prompt on load has no tap behind it, so some browsers (iOS
+      // Safari) block it — that's not a real failure, just tap Unlock. Only show
+      // the retry message when they actually tapped and it didn't match.
+      hint.textContent = auto ? 'Tap Unlock to open with Face ID.' : 'Face ID didn’t match. Try again, or use Google.';
       return;
     }
     // Biometric passed — restore the session if the Google token is still valid.
@@ -425,6 +441,7 @@
         state.me = s.me || await api('me');
         el.lock.hidden = true;
         enterApp();
+        exchangeSession(); // slide the 30-day window forward on each unlock
         return;
       } catch { /* token rejected — fall through to Google */ }
     }

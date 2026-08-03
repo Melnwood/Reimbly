@@ -1,6 +1,7 @@
 'use strict';
 
 const { OAuth2Client } = require('google-auth-library');
+const { looksLikeAppToken, verifyAppToken } = require('./session');
 
 let client;
 function getClient() {
@@ -29,6 +30,22 @@ function bearerToken(headers = {}) {
  * @param {object} headers - request headers containing the Authorization bearer.
  * @returns {Promise<{email: string, name: string, sub: string}>}
  */
+// Enforce the Workspace-domain (or explicit allow-list) rule on an email.
+function assertAllowed(email) {
+  const domain = email.split('@')[1];
+  const expected = (process.env.ALLOWED_DOMAIN || '').toLowerCase();
+  const extra = (process.env.ALLOWED_EMAILS || '')
+    .toLowerCase()
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (expected && domain !== expected && !extra.includes(email)) {
+    const err = new Error(`Only ${expected} accounts can use Reimbly.`);
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
 async function verifyRequest(headers) {
   const token = bearerToken(headers);
   if (!token) {
@@ -37,8 +54,15 @@ async function verifyRequest(headers) {
     throw err;
   }
 
+  // A Reimbly session token (minted after Google sign-in, long-lived) — this is
+  // what a Face-ID unlock restores, so the app doesn't need Google every hour.
+  if (looksLikeAppToken(token)) {
+    const who = verifyAppToken(token); // throws 401 if bad/expired
+    assertAllowed(who.email);
+    return who;
+  }
+
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const allowedDomain = process.env.ALLOWED_DOMAIN;
   if (!clientId) {
     const err = new Error('Server is missing GOOGLE_CLIENT_ID.');
     err.statusCode = 500;
@@ -65,20 +89,7 @@ async function verifyRequest(headers) {
   }
 
   const email = String(payload.email).toLowerCase();
-  const domain = email.split('@')[1];
-  const expected = (allowedDomain || '').toLowerCase();
-  // A short allow-list (ALLOWED_EMAILS, comma-separated) lets specific outside
-  // accounts in — e.g. a tester — without opening the whole app to their domain.
-  const extra = (process.env.ALLOWED_EMAILS || '')
-    .toLowerCase()
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (expected && domain !== expected && !extra.includes(email)) {
-    const err = new Error(`Only ${expected} accounts can use Rembly.`);
-    err.statusCode = 403;
-    throw err;
-  }
+  assertAllowed(email);
 
   return {
     email,
