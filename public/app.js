@@ -3952,6 +3952,10 @@
         <span class="pay-count">${groups.length} report${groups.length === 1 ? '' : 's'} · ${escapeHtml(money(totalUsd, 'USD'))} approved</span>
         <span class="grow"></span>
         <button class="btn ghost small" data-act="export-csv">⤓ Plain CSV</button>
+        <label class="pay-fee" title="The bank/wire fee for this payment run, if any. Adds the 7111100 fee line so the batch matches what leaves the bank. Leave blank if there's no fee.">
+          <span>Wire fee $</span>
+          <input type="number" id="wire-fee" min="0" step="0.01" placeholder="0.00" inputmode="decimal" />
+        </label>
         <button class="btn primary small" data-act="export-intacct">⤓ Download for Intacct &amp; start paying</button>
       </div>`;
     el.archiveReady.innerHTML = toolbar + groups.map((g) => `
@@ -4107,7 +4111,9 @@
   async function exportIntacctJe(btn) {
     if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
     try {
-      const res = await api('export-intacct', { method: 'POST' });
+      const feeInput = $('#wire-fee');
+      const fee = feeInput ? Math.max(0, Number(feeInput.value) || 0) : 0;
+      const res = await api('export-intacct', { method: 'POST', body: { fee } });
       if (!res.count) { toast('Nothing approved to export.', 'bad'); return; }
       const bin = atob(res.base64);
       const bytes = new Uint8Array(bin.length);
@@ -4125,7 +4131,8 @@
       if (miss) {
         toast(`Downloaded ${res.count} line${res.count === 1 ? '' : 's'} — but ${miss} still need a fund/class before Intacct will accept them.`, 'bad');
       } else {
-        toast(`Downloaded ${res.count} line${res.count === 1 ? '' : 's'} — this batch is now waiting to be paid.`, 'good');
+        const feeNote = res.fee ? ` (incl. ${money(res.fee, 'USD')} wire fee)` : '';
+        toast(`Downloaded ${res.count} line${res.count === 1 ? '' : 's'}${feeNote} — this batch is now waiting to be paid.`, 'good');
       }
       // These moved to "Waiting to be paid" — refresh so the new download shows.
       state.loaded.dashboard = false;

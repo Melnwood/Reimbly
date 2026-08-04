@@ -915,6 +915,8 @@ body.modal-open { overflow: hidden; }
 .pay-selall input { width: 17px; height: 17px; }
 .pay-count { color: var(--ink-soft); font-size: 0.86rem; font-weight: 700; }
 .pay-toolbar .grow { flex: 1 1 auto; }
+.pay-fee { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: var(--ink-soft); }
+.pay-fee input { width: 76px; padding: 5px 8px; font-size: 0.86rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); color: var(--ink); }
 .pay-check { display: inline-flex; align-items: center; flex: none; }
 .pay-check input { width: 18px; height: 18px; cursor: pointer; }
 
