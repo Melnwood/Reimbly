@@ -67,12 +67,17 @@ exports.handler = async (event) => {
       };
     });
 
+    // Optional bank/wire fee for this pay run (adds the balancing 7111100 line).
+    // Finance can pass it in; default 0 → no fee line, credit = the expense total.
+    let fee = 0;
+    try { fee = Number((JSON.parse(event.body || '{}') || {}).fee) || 0; } catch (e) { fee = 0; }
+
     const date = today();
     const stamp = date.replace(/-/g, '');
     const batchId = makeBatchId();
     const exportedOn = new Date().toISOString();
     const batchLabel = `Reimbly ${batchId}`;
-    const je = buildJournalEntry(expenses, { batchLabel, date });
+    const je = buildJournalEntry(expenses, { batchLabel, date, fee });
 
     // Build the .xlsx (CedarStone's preferred upload format).
     const ws = XLSX.utils.aoa_to_sheet(je.rows);
@@ -103,6 +108,9 @@ exports.handler = async (event) => {
       base64,
       count: je.count,
       totalDebit: je.totalDebit,
+      totalCredit: je.totalCredit,
+      balanced: je.balanced,
+      fee: je.fee,
       missing: je.missing,
       batchId,
       exportedOn,

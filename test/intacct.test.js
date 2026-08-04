@@ -5,9 +5,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { buildJournalEntry, COLUMNS, mdY, leadingCode, usd } = require('../netlify/functions/lib/intacct');
+const {
+  buildJournalEntry, COLUMNS, mdY, leadingCode, usd, resolveDims,
+  BANK_ACCT, FEE_ACCT,
+} = require('../netlify/functions/lib/intacct');
 
 const idx = (name) => COLUMNS.indexOf(name);
+// Find the single data row whose ACCT_NO matches (skips the header at row 0).
+const rowByAcct = (je, acct) => je.rows.slice(1).find((r) => r[idx('ACCT_NO')] === acct);
 
 test('mdY: YYYY-MM-DD → M/D/YYYY', () => {
   assert.equal(mdY('2026-08-01'), '8/1/2026');
@@ -26,20 +31,41 @@ test('usd rounds to cents', () => {
   assert.equal(usd('abc'), 0);
 });
 
-const fullyCoded = {
+test('resolveDims: derives DEPT/CLASS/PROJECT from the fund it is booked to', () => {
+  const d = resolveDims({ expenseAccount: '210730 – Garrett & Brittney Haas' });
+  assert.equal(d.dept, '110-USA Staff');
+  assert.equal(d.classId, '07-Estonia');
+  assert.equal(d.project, '210730');
+});
+
+test('resolveDims: an explicit value on the expense overrides the fund lookup', () => {
+  const d = resolveDims({ expenseAccount: '210730 – Garrett & Brittney Haas', classId: '99-Special' });
+  assert.equal(d.classId, '99-Special');
+  assert.equal(d.dept, '110-USA Staff'); // still from the fund
+});
+
+const camps = {
   id: 'r1', amountUsd: 668.21, description: 'Cash for EU camps',
-  expenseAccount: '430028 – Ukraine European Partner Ministry',
-  glCode: '8490000', deptId: '132-National Projs', projectId: '430028', classId: '08-Ukraine',
+  expenseAccount: '430028 – Ukraine European Initiatives', glCode: '8490000',
 };
 
-test('buildJournalEntry: header + a fully-coded line maps to the right columns', () => {
-  const je = buildJournalEntry([fullyCoded], { batchLabel: 'Rembly Batch 20260801', date: '2026-08-01' });
+test('buildJournalEntry: header, then a bank credit line, then the expense', () => {
+  const je = buildJournalEntry([camps], { batchLabel: 'EW Batch 146', date: '2026-08-01' });
   assert.deepEqual(je.rows[0], COLUMNS); // header first
-  const line = je.rows[1];
+
+  const bank = je.rows[1];
+  assert.equal(bank[idx('ACCT_NO')], BANK_ACCT);
+  assert.equal(bank[idx('CREDIT')], 668.21);
+  assert.equal(bank[idx('DEBIT')], '');
+  assert.equal(bank[idx('DEPT_ID')], '710-General Fund');
+  assert.equal(bank[idx('GLENTRY_PROJECTID')], '10000');
+  assert.equal(bank[idx('GLENTRY_CLASSID')], '00-JV Wide and USA');
+  assert.equal(bank[idx('MEMO')], 'EW Batch 146');
+
+  const line = je.rows[2];
   assert.equal(line[idx('JOURNAL')], 'EE');
   assert.equal(line[idx('DATE')], '8/1/2026');
-  assert.equal(line[idx('DESCRIPTION')], 'Rembly Batch 20260801');
-  assert.equal(line[idx('LINE_NO')], 1);
+  assert.equal(line[idx('LINE_NO')], 2);
   assert.equal(line[idx('ACCT_NO')], '8490000');
   assert.equal(line[idx('LOCATION_ID')], 'JV NFP--Josiah Venture');
   assert.equal(line[idx('DEPT_ID')], '132-National Projs');
@@ -47,25 +73,57 @@ test('buildJournalEntry: header + a fully-coded line maps to the right columns',
   assert.equal(line[idx('DEBIT')], 668.21);
   assert.equal(line[idx('GLENTRY_PROJECTID')], '430028');
   assert.equal(line[idx('GLENTRY_CLASSID')], '08-Ukraine');
+
   assert.equal(je.missing.length, 0);
+  assert.equal(je.count, 1);
   assert.equal(je.totalDebit, 668.21);
+  assert.equal(je.totalCredit, 668.21);
+  assert.equal(je.balanced, true);
 });
 
-test('buildJournalEntry: project falls back to the account code; missing fund/class flagged', () => {
-  const personal = {
+test('buildJournalEntry: a wire fee adds the 7111100 debit line and stays balanced', () => {
+  const je = buildJournalEntry([camps], { batchLabel: 'EW Batch 146', date: '2026-08-01', fee: 2.5 });
+  const bank = rowByAcct(je, BANK_ACCT);
+  const feeLine = rowByAcct(je, FEE_ACCT);
+  assert.ok(feeLine, 'fee line present');
+  assert.equal(feeLine[idx('DEBIT')], 2.5);
+  assert.equal(feeLine[idx('MEMO')], 'Fee for EW Batch 146');
+  assert.equal(feeLine[idx('LINE_NO')], 2);
+  // Bank credit now covers expenses + fee.
+  assert.equal(bank[idx('CREDIT')], 668.21 + 2.5);
+  assert.equal(je.totalDebit, 670.71);
+  assert.equal(je.totalCredit, 670.71);
+  assert.equal(je.balanced, true);
+  // Expense line follows the two bank lines.
+  assert.equal(je.rows[3][idx('LINE_NO')], 3);
+});
+
+test('buildJournalEntry: no fee → no fee line, credit equals the expense total', () => {
+  const je = buildJournalEntry([camps, camps], { batchLabel: 'B', date: '2026-08-01' });
+  assert.equal(rowByAcct(je, FEE_ACCT), undefined);
+  assert.equal(je.totalCredit, usd(668.21 * 2));
+  assert.equal(je.balanced, true);
+  // header + bank + 2 expenses
+  assert.equal(je.rows.length, 4);
+});
+
+test('buildJournalEntry: unknown fund with no GL is flagged as missing', () => {
+  const orphan = {
     id: 'r2', amountUsd: 20, description: 'Taxi',
-    expenseAccount: '002060 – Mel & Amy Ellenwood', glCode: '8395000',
-    deptId: '', projectId: '', classId: '',
+    expenseAccount: '999999 – Not a real fund', glCode: '',
   };
-  const je = buildJournalEntry([personal], { batchLabel: 'B', date: '2026-08-01' });
-  const line = je.rows[1];
-  assert.equal(line[idx('GLENTRY_PROJECTID')], '002060'); // derived from the account
+  const je = buildJournalEntry([orphan], { batchLabel: 'B', date: '2026-08-01' });
   assert.equal(je.missing.length, 1);
-  assert.deepEqual(je.missing[0].needs, ['fund', 'class']);
+  assert.deepEqual(je.missing[0].needs, ['GL account', 'fund', 'class']);
+  // Project still falls back to the code they typed.
+  const line = je.rows[2];
+  assert.equal(line[idx('GLENTRY_PROJECTID')], '999999');
 });
 
-test('buildJournalEntry: line numbers are sequential across the batch', () => {
-  const je = buildJournalEntry([fullyCoded, fullyCoded, fullyCoded], { batchLabel: 'B', date: '2026-08-01' });
+test('buildJournalEntry: line numbers are sequential across bank + expense lines', () => {
+  const je = buildJournalEntry([camps, camps, camps], { batchLabel: 'B', date: '2026-08-01', fee: 1 });
+  // bank(1), fee(2), then expenses 3,4,5
+  const nums = je.rows.slice(1).map((r) => r[idx('LINE_NO')]);
+  assert.deepEqual(nums, [1, 2, 3, 4, 5]);
   assert.equal(je.count, 3);
-  assert.deepEqual([je.rows[1][idx('LINE_NO')], je.rows[2][idx('LINE_NO')], je.rows[3][idx('LINE_NO')]], [1, 2, 3]);
 });

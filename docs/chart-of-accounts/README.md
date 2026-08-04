@@ -34,6 +34,32 @@ Intacct work needs — see [`../INTACCT-INTEGRATION.md`](../INTACCT-INTEGRATION.
 [`../CEDARSTONE-QUESTIONS.md`](../CEDARSTONE-QUESTIONS.md). Until then, these CSVs are the
 working source; correct any code here and it flows into Rembly on the next load.
 
+## Fund → Intacct dimensions (from CedarStone, Aug 2026)
+
+Olivia Lightner (CedarStone) sent the **authoritative listing of all active funds
+with their Intacct dimensions** — required for the JE upload. It's captured here:
+
+- [`fund-dimensions.csv`](fund-dimensions.csv) — 1,033 funds, human-readable.
+- [`source/JV-Intacct-Fund-listing-with-Dimensions.xlsx`](source/) — Olivia's original.
+- Generated into code as [`../../netlify/functions/lib/fund-dimensions.js`](../../netlify/functions/lib/fund-dimensions.js)
+  (regenerate from the CSV; don't hand-edit).
+
+Each **Fund ID** (the support/project account a person spends from — the same code
+as the Accounts/Expense Type list above) carries the dimensions the upload needs:
+
+| Listing column | Becomes (Intacct upload) |
+|---|---|
+| Fund ID | `GLENTRY_PROJECTID` (the General Fund shows as `10000`, others keep 6 digits) |
+| Ministry Type ID | `DEPT_ID` (e.g. `110-USA Staff`, `132-National Projs`) |
+| Country ID | `GLENTRY_CLASSID` (e.g. `07-Estonia`, `00-JV Wide and USA`) |
+| Entity ID | `LOCATION` (`JV NFP` → `JV NFP--Josiah Venture`) |
+
+This closes the old "each expense still needs its fund/project/class" gap: the
+export now fills all three dimensions straight from the fund. See
+[`../INTACCT-UPLOAD-FORMAT.md`](../INTACCT-UPLOAD-FORMAT.md). Also in `source/` is
+**JV-ExpenseWire-example-2.xlsx** — Olivia's corrected sample upload the exporter
+is validated against.
+
 ## How this maps into Rembly
 
 - Rembly already has **Accounts** (= Expense Type, code + name) and **Categories**

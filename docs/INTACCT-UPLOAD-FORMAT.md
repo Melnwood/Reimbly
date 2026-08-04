@@ -14,20 +14,33 @@ attachments, now saved in Mel's Google Drive:
 Cedarstone owns and maintains the chart of accounts. Keep this doc in step if they
 send a revised template. This is the master reference for building the export.
 
-> **Status — export built (v1), live.** Management → **Paid** has an **"Export for
-> Intacct (JE)"** button (Finance only). It builds the .xlsx in this exact column
-> format from the payable batch (Approved + Waiting-to-be-paid), one debit line per
-> expense. `lib/intacct.js` maps the fields; `export-intacct.js` reads Airtable and
-> writes the workbook with the `xlsx` package. It fills everything Rembly reliably
-> has — `JOURNAL`, `DATE`, `DESCRIPTION`, `LINE_NO`, `ACCT_NO` (GL code),
-> `LOCATION_ID`, `MEMO`, `DEBIT` (USD), and `GLENTRY_PROJECTID` (the account code)
-> — and pulls `DEPT_ID` / `GLENTRY_PROJECTID` / `GLENTRY_CLASSID` from the
-> expense's Fund/Project links when present. Lines still missing a **fund** or
-> **class** are reported back on export instead of shipping half-coded.
+> **Status — export built (v3), balanced & fully coded.** Management → **Paid** has
+> a **"Download for Intacct & start paying"** button (Finance only). It builds the
+> .xlsx in this exact column format from the payable batch. `lib/intacct.js` maps
+> the fields; `export-intacct.js` reads Airtable and writes the workbook with the
+> `xlsx` package.
 >
-> **Still to finish** (needs the two open questions below answered): (a) populate
-> Fund/Project/Class per expense so `DEPT_ID` and `GLENTRY_CLASSID` fill in for
-> every line, and (b) add the balancing **credit line(s)** so the JE nets to zero.
+> **Now complete (Aug 2026), from Olivia's example_2 + fund listing):**
+> - **Balances.** The JE opens with a **credit to bank clearing `1100000`** for the
+>   whole batch total, then a **debit to bank fee `7111100`** for the wire fee (only
+>   when there is one), then one **debit line per expense**. Total debit = total
+>   credit, every time (`je.balanced`).
+> - **Every dimension filled.** `DEPT_ID`, `GLENTRY_PROJECTID`, and
+>   `GLENTRY_CLASSID` are derived from the **fund** each expense is booked to, via
+>   CedarStone's fund→dimensions listing (`lib/fund-dimensions.js`, generated from
+>   [chart-of-accounts/fund-dimensions.csv](chart-of-accounts/fund-dimensions.csv)).
+>   The bank/fee lines use the General Fund's dimensions (`710-General Fund` /
+>   project `10000` / `00-JV Wide and USA`), matching Olivia's file.
+> - **Validated** against Olivia's `JV-ExpenseWire-example-2.xlsx` — the builder
+>   reproduces all 47 rows of batch 146 (accounts, depts, projects, classes) and the
+>   $2,269.09 balance exactly. See `test/intacct.test.js`.
+>
+> Any line still missing a GL account / fund / class (e.g. an unknown fund code) is
+> reported back on export instead of shipping half-coded.
+>
+> **The wire fee** is passed to the export (`fee` in the request body); default `0`
+> means no fee line and the credit equals the expense total. A small "wire fee for
+> this run" box on the export can feed it once Mel confirms he wants to capture it.
 >
 > **Download = one payment batch (v2).** Downloading the Intacct file is now the
 > hand-off, not just a read. It takes every **Approved** expense, stamps them with
@@ -101,20 +114,32 @@ From the **AnalyticsOutput** tab → the JE:
 - **Have already:** amount (USD + original), description, date, and the **GL
   category code** (`ACCT_NO`). The **Expense Account** a person picks is usually
   the **Project** number (`GLENTRY_PROJECTID`).
-- **Gap:** each expense also needs its **Fund** (`DEPT_ID`), **Project**
-  (`GLENTRY_PROJECTID`), and **Class** (`GLENTRY_CLASSID`). The base already has
-  Funds/Projects tables and Intacct dimension lookups (from the merge work); the
-  live submit flow doesn't populate Fund/Project per expense yet. Closing that is
-  the main build for a correct export.
+- **Gap — now closed.** Each expense's **Fund** (`DEPT_ID`), **Project**
+  (`GLENTRY_PROJECTID`), and **Class** (`GLENTRY_CLASSID`) are derived from the
+  fund it's booked to, using CedarStone's fund→dimensions listing
+  (`lib/fund-dimensions.js`). The account a person picks *is* the fund, so no extra
+  data entry is needed. An explicit Fund/Class on the expense still overrides the
+  lookup if CedarStone ever recodes one.
 
-## Open questions to confirm with Olivia (or from a real, non-sample batch)
+## Open questions — answered by Olivia (email + example_2, Aug 2026)
 
-1. **The credit side.** The sample shows only expense **debits** (plus a
-   `1100000` line and a `7111100` fee line). Confirm the offsetting **CREDIT**
-   (AP/cash clearing account `1100000` for the batch total?) and how the **bank
-   fee** (`7111100`) is represented, so the JE balances.
-2. **DEBIT currency** — confirm it's always **USD** (the sample amounts look USD).
-3. **MEMO convention** — confirm the `EW<report#> -<description>` prefix.
+1. **The credit side. ✅ Confirmed.** The whole batch total is **credited to bank
+   clearing `1100000`** (line 1). The bank/wire **fee is debited to `7111100`**
+   (line 2), memo `Fee for <batch>`. In example_2, batch 146 = $2,269.09 credit,
+   $2.50 fee + $2,266.59 of expense debits. The JE nets to zero.
+2. **DEBIT currency. ✅** Amounts are **USD**.
+3. **MEMO convention. ✅** `EW<report#> -<description>` (e.g. `EW2722 -Driving from…`).
+4. **Fund listing → dimensions. ✅** Olivia sent the full active-fund listing with
+   dimensions (required for import). Each Fund ID's **Ministry Type → `DEPT_ID`** and
+   **Country → `GLENTRY_CLASSID`**; the Fund ID itself is the `GLENTRY_PROJECTID`.
+   Captured in [chart-of-accounts/fund-dimensions.csv](chart-of-accounts/fund-dimensions.csv)
+   and `lib/fund-dimensions.js`.
 
-A short Zoom with Olivia (she offered Wed Aug 5 / Thu Aug 6 AM MST) would settle
-these; then the export can be built to load cleanly on the first try.
+**One nuance to confirm with Olivia:** the General Fund's project shows as **`10000`**
+(no leading zero) in her upload file, while the fund listing writes it **`010000`**.
+The exporter emits `10000` to match the file that imports cleanly; worth a one-line
+confirmation that Intacct keys the General Fund project on `10000`.
+
+**Sources** (Olivia Lightner, CedarStone), saved in [chart-of-accounts/source/](chart-of-accounts/source/):
+`JV-ExpenseWire-example-2.xlsx` (the corrected sample upload) and
+`JV-Intacct-Fund-listing-with-Dimensions.xlsx` (all active funds + dimensions).

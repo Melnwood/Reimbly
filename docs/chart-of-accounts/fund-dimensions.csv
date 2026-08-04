@@ -1,0 +1,1034 @@
+Fund ID,Fund name,Fund type,Ministry Type ID (DEPT_ID),Country ID (CLASS),Entity ID
+001101,JV Opportunity Fund,1101 - JV General,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+001106,Camp General Fund,1151 - Camps,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001108,JV Women's Retreat,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001110,JV Staff Conference,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001111,Comm. Center Design Order,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001114,JV Kids Min Sponsorship,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001116,Travel Fund,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001117,Summer Intern Training,1510 - Interns,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001119,JV Selah (Beskydy Ret),1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001121,General National Support Raising,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001122,Matching Fund,1101 - JV General,710-General Fund,00-JV Wide and USA,JV NFP
+001125,Romania Team Buiilding-BD,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001126,Dual Lang Bible - Camp,1151 - Camps,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001127,Eng. Camp Followup Resour,1151 - Camps,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001129,ELF - Youth Min Network,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001131,Web Resources,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001134,JV Marriage Retreat,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001136,Research & Evaluation,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001137,MIT,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001140,JV Spring Conference,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001141,JV Fall Conference,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001145,JV Council Accommodations,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001146,JV Thanksgiving Conf.,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001180,Fusion,1170 - Music,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001219,Selah Hospitality,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001400,Where Most Needed,1101 - JV General,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001500,General intern Fund,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+001610,JV Advance Conference,1160 - Advance,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001611,Advance Churches,1160 - Advance,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001620,Exit General Fund,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001810,Loans,1101 - JV General,950-KAM SRO Loan,00-JV Wide and USA,JV NFP
+001820,Website,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+001830,Facilities and Property,1180 - Facilities,153-Facilities,00-JV Wide and USA,JV NFP
+002010,Gord & Brenda Nickerson,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+002017,"Nickerson, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+002020,Theresa Kerns,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+002050,Mike Sullivan,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+002053,"M. Sullivan, Repatriation",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+002054,"M. Sullivan, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+002055,"M. Sullivan, Home Assignm",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+002057,"Sullivan, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+002060,Mel & Amy Ellenwood,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+002063,M Ellenwood-Repatriation,1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+002064,"M Ellenwood, Special Proj",1018 - Staff - Project 1,110-USA Staff,00-JV Wide and USA,JV NFP
+002090,John & Erin Kloosterhuis,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+002093,"J. Kloosterhuis, Repatriation",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+002094,"J. Kloosterhuis, Conferen",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+002095,"J. Kloosterhuis, Home",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+002097,"J. Kloosterhuis, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+002160,Jim & Lina Miller,1010 - Staff - General,110-USA Staff,13-Germany,JV NFP
+002163,"J & L Miller, Repatriation",1013 - Staff - Repatriation,110-USA Staff,13-Germany,JV NFP
+002164,"J & L Miller, Conference",1014 - Staff - Conferences,110-USA Staff,13-Germany,JV NFP
+002165,"J & L Miller, Home Assign",1015 - Staff - Home Assignment,110-USA Staff,13-Germany,JV NFP
+002167,"J. Miller, Medical",1017 - Staff - Medical,110-USA Staff,13-Germany,JV NFP
+002168,Jim & Lina Miller Proj 1,1018 - Staff - Project 1,110-USA Staff,13-Germany,JV NFP
+002200,Casey & Kristin Yorman,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+002203,"C. Yorman, Repatriation",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+002204,"C. Yorman, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+002205,"C. Yorman, Home Assignmen",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+002206,"C. Yorman, CZ Health Ins",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+002210,Shelby Flowers,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+002213,"S. Flowers, Repatriation",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+002214,"S. Flowers, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+002215,"S. Flowers, Home Assignme",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+002217,"S. Flowers, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+010000,JV General Fund,1101 - JV General,710-General Fund,00-JV Wide and USA,JV NFP
+011000,Czech Team Ministry,1103 - JV General Programs,110-USA Staff,01-Czech,JV NFP
+012090,Petr & Lauren Bozon,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+012098,Petr & Lauren Bozon Proj1,1020 - Housing Project,110-USA Staff,01-Czech,JV NFP
+012100,David & Connie Patty,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+012103,David & Connie Patty - Repatriation,1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+012120,Mark Krupa,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+012123,"Mark Krupa, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+012150,Brad Kaspar,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+012153,"B. Kaspar, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+012154,"B. Kaspar, Conferences",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+012170,Greg Strock,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+012173,"G. Strock, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+012174,"G. Strock, Conferences",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+012175,"G. Strock, Home Assignmen",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+012177,"G. Strock, Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+012300,Rob & Audrey Chestnut,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+012303,"R & A Chestnut, Repatriat",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+012304,"R & A Chestnut, Conferenc",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+012305,"R & A Chestnut, Home",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+012307,"R & A Chestnut, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+012308,"R & A Chestnut, Proj 1",1018 - Staff - Project 1,110-USA Staff,00-JV Wide and USA,JV NFP
+012310,Kevin Dickson,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+012313,"K. Dickson, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+012314,"K. Dickson, Conference",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+012315,"K. Dickson, Home Assignme",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+012317,"K. Dickson, Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+012318,"K. Dickson, Project 1",1018 - Staff - Project 1,110-USA Staff,01-Czech,JV NFP
+012320,Josh Nelson,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+012323,"J. Nelson, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+012324,"J. Nelson, Conference",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+012325,"J. Nelson, Home Assignmen",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+012327,"J. Nelson, Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+012340,Dave & Geri Fuehring,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+012344,"D&G Fuehring, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+012347,"D & G Fuehring, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+012350,Jonathan & Veronika Rosen,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+012353,"J & V Rosen, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+012354,"J & V Rosen, Conference",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+012355,"J & V Rosen, Home Assignm",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+012357,"J & V Rosen, Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+012358,"J & V Rosen, Project 1",1020 - Housing Project,110-USA Staff,01-Czech,JV NFP
+012390,Brian Bothwell,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+012393,"B. Bothwell, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+012394,"B. Bothwell, Conference",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+012397,"B. Bothwell, Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+012398,"B. Bothwell, Project 1",1018 - Staff - Project 1,110-USA Staff,01-Czech,JV NFP
+012400,Landen & Jenny Llamas,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+012403,"L & J Llamas, Repatriation",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+012404,"L & J Llamas, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+012405,"L & J Llamas, Home Assign",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+012407,"L & J Llamas, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+012408,"L & J Llamas, Project 1",1020 - Housing Project,110-USA Staff,00-JV Wide and USA,JV NFP
+015007,Samuel Hust,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015016,Bogdan & Martina Lach,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015017,Dusan Drabina,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015020,Jan (Honza) Kuklinek,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015022,Tomas & Lucka Nevrela,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015027,Terry & Hana English,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015036,Milan Szturc,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015037,Zuzka Vyvialova,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015039,Jan Pospisil,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015041,Ryszard & Noemi Bednarz,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015044,Rachael Davison,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015045,Pavel Schwarz,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015046,Miriam Paszova,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015047,Martina Pixova,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+015048,Jiri Jedlicka,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+016030,Camps - Czech,1151 - Camps,152-Camps,01-Czech,JV NFP
+016151,KAM-Trfrs from other fund,1103 - JV General Programs,132-National Projs,01-Czech,JV NFP
+016152,KAM - Czech Youth Mnstry,1103 - JV General Programs,132-National Projs,01-Czech,JV NFP
+016153,NBK Project,1103 - JV General Programs,132-National Projs,01-Czech,JV NFP
+016170,internship Program (Staz),1103 - JV General Programs,132-National Projs,01-Czech,JV NFP
+016180,Training Conferences,1155 - Training,132-National Projs,01-Czech,JV NFP
+016420,Malenovice Projects,1180 - Facilities,153-Facilities,01-Czech,JV NFP
+016430,Exit Tour - Czech,1175 - Schools,132-National Projs,01-Czech,JV NFP
+016450,School of Leaders,1155 - Training,132-National Projs,01-Czech,JV NFP
+016480,Music Ministry Fusion,1170 - Music,132-National Projs,01-Czech,JV NFP
+016520,Divine Attraction,1175 - Schools,132-National Projs,01-Czech,JV NFP
+021000,Romania Team Ministry,1103 - JV General Programs,110-USA Staff,02-Romania,JV NFP
+025003,Diana Anton,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+026010,Camps - Romania,1151 - Camps,152-Camps,02-Romania,JV NFP
+026040,Vital - Romania,1103 - JV General Programs,132-National Projs,02-Romania,JV NFP
+026120,Training Conferences,1155 - Training,132-National Projs,02-Romania,JV NFP
+026130,Healthy Reproducing Chrch,1160 - Advance,132-National Projs,02-Romania,JV NFP
+031000,Slovakia Team Ministry,1103 - JV General Programs,110-USA Staff,03-Slovakia,JV NFP
+032160,Josh Howard,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+032163,"J. Howard, Repatriation",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+032164,"J. Howard, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+032165,"J. Howard, Home Assignmen",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+032167,"J. Howard, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+032170,Mark & Amy Chase,1010 - Staff - General,110-USA Staff,03-Slovakia,JV NFP
+032173,"M & A Chase, Repatriation",1013 - Staff - Repatriation,110-USA Staff,03-Slovakia,JV NFP
+032174,"M & A Chase, Conference",1014 - Staff - Conferences,110-USA Staff,03-Slovakia,JV NFP
+032175,"M & A Chase, Home Assignm",1015 - Staff - Home Assignment,110-USA Staff,03-Slovakia,JV NFP
+032177,"M & A Chase, Medical",1017 - Staff - Medical,110-USA Staff,03-Slovakia,JV NFP
+035003,Peter & Eva Hrubo,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+035008,Peter Michalcik,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+035012,Jany Simocko,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+035013,Eva Suchacova,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+035014,Darina Mala,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+036010,Kompas - technical,1103 - JV General Programs,132-National Projs,03-Slovakia,JV NFP
+036040,Camps - Slovakia,1151 - Camps,152-Camps,03-Slovakia,JV NFP
+036060,Training Center Kompas,1180 - Facilities,153-Facilities,03-Slovakia,JV NFP
+036080,Kompas Davka Web Project,1103 - JV General Programs,132-National Projs,03-Slovakia,JV NFP
+036090,Exit Tour - Slovakia,1175 - Schools,132-National Projs,03-Slovakia,JV NFP
+036110,General Natl Support Rais,1103 - JV General Programs,132-National Projs,03-Slovakia,JV NFP
+036120,School of Leaders,1155 - Training,132-National Projs,03-Slovakia,JV NFP
+036130,Training Conferences,1155 - Training,132-National Projs,03-Slovakia,JV NFP
+036140,Fusion - Slovakia,1170 - Music,132-National Projs,03-Slovakia,JV NFP
+041000,Slovenia Team Ministry,1103 - JV General Programs,110-USA Staff,04-Slovenia,JV NFP
+042010,David & Katka Bordner,1010 - Staff - General,110-USA Staff,04-Slovenia,JV NFP
+042017,"David & Katka Bordner, Medical",1017 - Staff - Medical,110-USA Staff,04-Slovenia,JV NFP
+042018,"D. Bordner, Project 1",1020 - Housing Project,110-USA Staff,04-Slovenia,JV NFP
+042020,Josh & Kristi Patty,1010 - Staff - General,110-USA Staff,04-Slovenia,JV NFP
+042023,"Josh & Kristi Patty, Repatriation",1013 - Staff - Repatriation,110-USA Staff,04-Slovenia,JV NFP
+042026,"Josh & Kristi Patty, Project 1",1018 - Staff - Project 1,110-USA Staff,04-Slovenia,JV NFP
+042080,John & Brooke Stevens,1010 - Staff - General,110-USA Staff,04-Slovenia,JV NFP
+042083,"J. Stevens, Repatriation",1013 - Staff - Repatriation,110-USA Staff,04-Slovenia,JV NFP
+042084,"J. Stevens, Conference",1014 - Staff - Conferences,110-USA Staff,04-Slovenia,JV NFP
+042085,"J. Stevens, Home Assignme",1015 - Staff - Home Assignment,110-USA Staff,04-Slovenia,JV NFP
+042087,"J. Stevens, Medical",1017 - Staff - Medical,110-USA Staff,04-Slovenia,JV NFP
+042140,Bryan(Hondo)& Trisha Wynn,1010 - Staff - General,110-USA Staff,04-Slovenia,JV NFP
+042143,"H. Wynn, Repatriation",1013 - Staff - Repatriation,110-USA Staff,04-Slovenia,JV NFP
+042144,"H. Wynn, Conference",1014 - Staff - Conferences,110-USA Staff,04-Slovenia,JV NFP
+042145,"H. Wynn, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,04-Slovenia,JV NFP
+042148,"H. Wynn, Project 1",1020 - Housing Project,110-USA Staff,04-Slovenia,JV NFP
+042200,Shawn & Ch. Werdebaugh,1010 - Staff - General,110-USA Staff,04-Slovenia,JV NFP
+042210,Gwynne Turner (Gardner),1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+042213,"G. Turner (Gardner), Repatriation",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+042214,"G. Turner (Gardner), Conferences",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+042215,"G. Turner (Gardner), Home Assignme",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+042217,"G. Turner (Gardner), Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+045002,Andrej Lovse,1051 - National Staff,130-National Staff,04-Slovenia,JV NFP
+045003,Mateja Jagodic,1051 - National Staff,130-National Staff,04-Slovenia,JV NFP
+046000,Slovenia Projects,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+046001,Slovenia Projects - Gener,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+046010,Camps - Slovenia,1151 - Camps,152-Camps,04-Slovenia,JV NFP
+046020,Youth Ministry - Slovenia,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+046030,Facility Research Project,1180 - Facilities,132-National Projs,04-Slovenia,JV NFP
+046040,Strategic Devel. - SN,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+046060,SN National Summer Interns,1152 - Other National Pgms,132-National Projs,04-Slovenia,JV NFP
+046070,General Natl Support Rais,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+046100,Advance - Slovenia,1160 - Advance,132-National Projs,04-Slovenia,JV NFP
+046120,Literature & Printing,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+051000,Poland Team Ministry Fund,1103 - JV General Programs,110-USA Staff,05-Poland,JV NFP
+052040,Daniel & Iwona Eifling,1010 - Staff - General,110-USA Staff,05-Poland,JV NFP
+052043,"Eifling, Repatriation",1013 - Staff - Repatriation,110-USA Staff,05-Poland,JV NFP
+052044,"Eifling, Conference",1014 - Staff - Conferences,110-USA Staff,05-Poland,JV NFP
+052045,"Eifling, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,05-Poland,JV NFP
+052046,"Eifling, Project 1",1018 - Staff - Project 1,110-USA Staff,05-Poland,JV NFP
+052047,"Eifling, Medical",1017 - Staff - Medical,110-USA Staff,05-Poland,JV NFP
+052049,"Eifling, Project 2",1019 - Staff - Project 2,110-USA Staff,05-Poland,JV NFP
+052050,Dan & Laura Hash,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+052053,Dan & Laura Hash - Repatriation,1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+052141,Chris & Kelly Lillpop,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+052143,"C. Lillpop, Repatriation",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+052144,"C. Lillpop, Conferences",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+052145,"C. Lillpop, Home Assignme",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+052147,"C. Lillpop, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+052149,"C. Lillpop, Project 2",1020 - Housing Project,110-USA Staff,00-JV Wide and USA,JV NFP
+052161,Korban & Tanya Miller,1010 - Staff - General,110-USA Staff,05-Poland,JV NFP
+052163,"K & T Miller, Repatriation",1013 - Staff - Repatriation,110-USA Staff,05-Poland,JV NFP
+052164,"K & T Miller, Conferences",1014 - Staff - Conferences,110-USA Staff,05-Poland,JV NFP
+052165,"K & T Miller, Home Assign",1015 - Staff - Home Assignment,110-USA Staff,05-Poland,JV NFP
+052167,"K & T Miller, Medical",1017 - Staff - Medical,110-USA Staff,05-Poland,JV NFP
+055003,Michal Skiba,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+056010,Fala - General,1103 - JV General Programs,132-National Projs,05-Poland,JV NFP
+056020,Fala - H20,1180 - Facilities,153-Facilities,05-Poland,JV NFP
+056030,Fala - Camps - Poland,1151 - Camps,152-Camps,05-Poland,JV NFP
+056080,Fala - Equip,1103 - JV General Programs,132-National Projs,05-Poland,JV NFP
+056090,Fala - El Dorado Jr Hi Mn,1103 - JV General Programs,132-National Projs,05-Poland,JV NFP
+056140,Exit Tour - Poland,1175 - Schools,132-National Projs,05-Poland,JV NFP
+061000,Latvia Team Ministry Fund,1103 - JV General Programs,132-National Projs,06-Latvia,JV NFP
+062070,Joe Brooks,1010 - Staff - General,110-USA Staff,06-Latvia,JV NFP
+062073,"J. Brooks, Repatriation",1013 - Staff - Repatriation,110-USA Staff,06-Latvia,JV NFP
+062074,"J. Brooks, Home Assignmen",1015 - Staff - Home Assignment,110-USA Staff,06-Latvia,JV NFP
+062075,"J. Brooks, Conferences",1014 - Staff - Conferences,110-USA Staff,06-Latvia,JV NFP
+062100,Kelly & Donna Hargan,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+062107,"Hargan, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+062108,"Hargan, Project 1",1018 - Staff - Project 1,110-USA Staff,00-JV Wide and USA,JV NFP
+062120,David & Katka Roney,1010 - Staff - General,110-USA Staff,06-Latvia,JV NFP
+062123,"D & K Roney, Repatriation",1013 - Staff - Repatriation,110-USA Staff,06-Latvia,JV NFP
+062124,"D & K Roney, Home Assignm",1015 - Staff - Home Assignment,110-USA Staff,06-Latvia,JV NFP
+062125,"D & K Roney, Conference",1014 - Staff - Conferences,110-USA Staff,06-Latvia,JV NFP
+062127,"D & K Roney, Medical",1017 - Staff - Medical,110-USA Staff,06-Latvia,JV NFP
+062128,"D & K Roney, Project 1",1020 - Housing Project,110-USA Staff,06-Latvia,JV NFP
+065007,Raimonds Logins,1051 - National Staff,130-National Staff,06-Latvia,JV NFP
+066010,Latvia Projects & Program,1103 - JV General Programs,132-National Projs,06-Latvia,JV NFP
+066030,Summer Ministry - Latvia,1103 - JV General Programs,132-National Projs,06-Latvia,JV NFP
+066060,Latvia Opportunity Fund,1103 - JV General Programs,132-National Projs,06-Latvia,JV NFP
+066070,Training Latvia,1155 - Training,132-National Projs,06-Latvia,JV NFP
+066090,General Natl Support Rais,1103 - JV General Programs,132-National Projs,06-Latvia,JV NFP
+066100,Sela,1103 - JV General Programs,132-National Projs,06-Latvia,JV NFP
+066120,Dvlpmt of Evangelist Camp,1151 - Camps,152-Camps,06-Latvia,JV NFP
+066130,Latvia Fusion,1170 - Music,132-National Projs,06-Latvia,JV NFP
+075010,Kuldar Kaljuste,1051 - National Staff,130-National Staff,07-Estonia,JV NFP
+075012,Vahur Kobin,1051 - National Staff,130-National Staff,07-Estonia,JV NFP
+076010,English Camps - Estonia,1151 - Camps,152-Camps,07-Estonia,JV NFP
+076020,Estonia Koma Ministry,1103 - JV General Programs,132-National Projs,07-Estonia,JV NFP
+076030,Crossroad's Church,1103 - JV General Programs,132-National Projs,07-Estonia,JV NFP
+076050,Festival Evangelism,1103 - JV General Programs,132-National Projs,07-Estonia,JV NFP
+076060,Training Conferences,1155 - Training,132-National Projs,07-Estonia,JV NFP
+076070,Healthy Reproducing Chrch,1160 - Advance,132-National Projs,07-Estonia,JV NFP
+076080,Estonia Team Care,1103 - JV General Programs,132-National Projs,07-Estonia,JV NFP
+081000,Ukraine Team Ministry,1103 - JV General Programs,110-USA Staff,08-Ukraine,JV NFP
+082020,Ben & Kristy Williams,1010 - Staff - General,110-USA Staff,08-Ukraine,JV NFP
+082023,"B. Williams, Repatriation",1013 - Staff - Repatriation,110-USA Staff,08-Ukraine,JV NFP
+082027,"B. Williams, Medical",1017 - Staff - Medical,110-USA Staff,08-Ukraine,JV NFP
+082040,Tomasz & Miriam Chmiel,1010 - Staff - General,110-USA Staff,08-Ukraine,JV NFP
+082048,"T & M Chmiel, Project 1",1018 - Staff - Project 1,110-USA Staff,08-Ukraine,JV NFP
+082049,"T & M Chmiel, Project 2",1020 - Housing Project,110-USA Staff,08-Ukraine,JV NFP
+082050,Juliana Law,1010 - Staff - General,110-USA Staff,08-Ukraine,JV NFP
+082053,"J Law, Repatriation",1013 - Staff - Repatriation,110-USA Staff,08-Ukraine,JV NFP
+082054,"J Law, Conference",1014 - Staff - Conferences,110-USA Staff,08-Ukraine,JV NFP
+082055,"J Law, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,08-Ukraine,JV NFP
+082057,"J Law, Medical",1017 - Staff - Medical,110-USA Staff,08-Ukraine,JV NFP
+085002,Svyatoslav Garvas,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+086010,Ukraine Camps and Summer Min,1151 - Camps,152-Camps,08-Ukraine,JV NFP
+086020,Ukraine Communications Team,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+086030,Ukraine Materials Account,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+086050,Ukraine School of Leaders/NEXT,1155 - Training,132-National Projs,08-Ukraine,JV NFP
+086060,Team Expansion,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+091000,Serbia Team Ministry Fund,1103 - JV General Programs,110-USA Staff,09-Serbia,JV NFP
+095002,Bojan Ostojic,1051 - National Staff,130-National Staff,09-Serbia,JV NFP
+096000,Serbia Projects,1152 - Other National Pgms,132-National Projs,09-Serbia,JV NFP
+096010,MREZA - Serbia Tning Ntwk,1155 - Training,132-National Projs,09-Serbia,JV NFP
+096020,Summer Camps - Serbia,1151 - Camps,152-Camps,09-Serbia,JV NFP
+096030,Serbia-School of Youth Leaders,1155 - Training,132-National Projs,09-Serbia,JV NFP
+096040,Serbia-Conf for Youth Ldr,1155 - Training,132-National Projs,09-Serbia,JV NFP
+096060,MREZA - Materials,1155 - Training,132-National Projs,09-Serbia,JV NFP
+106011,Concentric Proj & Forums,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+106016,Israel Study Tour,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+106021,Steve Hudson,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+106031,Dann Spader,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+111000,Croatia Team Ministry,1103 - JV General Programs,132-National Projs,11-Croatia,JV NFP
+116020,Summer Camps - Croatia,1151 - Camps,152-Camps,11-Croatia,JV NFP
+116040,Youth Outreach Center,1103 - JV General Programs,132-National Projs,11-Croatia,JV NFP
+121000,Albania Team Ministry,1103 - JV General Programs,110-USA Staff,12-Albania,JV NFP
+126010,Albania Youth Ministry,1103 - JV General Programs,132-National Projs,12-Albania,JV NFP
+126020,Albania Camps,1151 - Camps,152-Camps,12-Albania,JV NFP
+126030,Albania Conf-Training,1155 - Training,132-National Projs,12-Albania,JV NFP
+126050,Albania Church Building Project,1152 - Other National Pgms,132-National Projs,12-Albania,JV NFP
+131000,East Germany Team,1103 - JV General Programs,110-USA Staff,13-Germany,JV NFP
+141000,Hungary Team,1103 - JV General Programs,110-USA Staff,15-Hungary,JV NFP
+142010,Marc & Olya Meland,1010 - Staff - General,110-USA Staff,08-Ukraine,JV NFP
+142013,"M & O Meland, Repatriati",1013 - Staff - Repatriation,110-USA Staff,08-Ukraine,JV NFP
+142014,"M & O Meland, Conference",1014 - Staff - Conferences,110-USA Staff,08-Ukraine,JV NFP
+142015,"M & O Meland, Home Assig",1015 - Staff - Home Assignment,110-USA Staff,08-Ukraine,JV NFP
+142017,"M & O Meland, Medical",1017 - Staff - Medical,110-USA Staff,08-Ukraine,JV NFP
+142018,"M & O Meland, Project 1",1020 - Housing Project,110-USA Staff,08-Ukraine,JV NFP
+142020,Eric & Lindsay Meland,1010 - Staff - General,110-USA Staff,15-Hungary,JV NFP
+142023,"E&L Meland, Repatriation",1013 - Staff - Repatriation,110-USA Staff,15-Hungary,JV NFP
+142024,"E & L Meland, Conference",1014 - Staff - Conferences,110-USA Staff,15-Hungary,JV NFP
+142025,"E&LMeland, Home Assignme",1015 - Staff - Home Assignment,110-USA Staff,15-Hungary,JV NFP
+142027,"E & L Meland, Medical",1017 - Staff - Medical,110-USA Staff,15-Hungary,JV NFP
+142028,"E & L Meland, Project 1",1020 - Housing Project,110-USA Staff,15-Hungary,JV NFP
+146010,Hungary Camps,1151 - Camps,152-Camps,15-Hungary,JV NFP
+161000,Bulgaria Team Ministry,1103 - JV General Programs,132-National Projs,16-Bulgaria,JV NFP
+181000,Moldova Team Ministry,1103 - JV General Programs,132-National Projs,18-Moldova,JV NFP
+201000,Montenegro Team Ministry,1103 - JV General Programs,132-National Projs,20-Montenegro,JV NFP
+210190,Josh Dietz,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+210193,"J. Dietz, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+210194,"J. Dietz, Conference",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+210195,"J. Dietz, Home Assignmen",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+210197,"J. Dietz, Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+210198,"J. Dietz, Project 1",1020 - Housing Project,110-USA Staff,01-Czech,JV NFP
+210210,Ruthanne Chadd,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210217,"R Chadd, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+210290,Amanda Snyder,1010 - Staff - General,110-USA Staff,04-Slovenia,JV NFP
+210293,"A. Snyder, Repatriation",1013 - Staff - Repatriation,110-USA Staff,04-Slovenia,JV NFP
+210294,"A. Snyder, Conference",1014 - Staff - Conferences,110-USA Staff,04-Slovenia,JV NFP
+210295,"A. Snyder, Home Assignme",1015 - Staff - Home Assignment,110-USA Staff,04-Slovenia,JV NFP
+210297,"A. Snyder, Medical",1017 - Staff - Medical,110-USA Staff,04-Slovenia,JV NFP
+210330,Jacob & Rebecca Hash,1010 - Staff - General,110-USA Staff,05-Poland,JV NFP
+210333,"J & R Hash, Repatriation",1013 - Staff - Repatriation,110-USA Staff,05-Poland,JV NFP
+210334,"J & R Hash, Conference",1014 - Staff - Conferences,110-USA Staff,05-Poland,JV NFP
+210335,"J & R Hash, Home Assignm",1015 - Staff - Home Assignment,110-USA Staff,05-Poland,JV NFP
+210337,"J & R Hash, Medical",1017 - Staff - Medical,110-USA Staff,05-Poland,JV NFP
+210350,Faith Russell,1010 - Staff - General,110-USA Staff,09-Serbia,JV NFP
+210353,"F. Russell, Repatriation",1013 - Staff - Repatriation,110-USA Staff,09-Serbia,JV NFP
+210354,"F. Russell, Conference",1014 - Staff - Conferences,110-USA Staff,09-Serbia,JV NFP
+210355,"F. Russell, Home Assignm",1015 - Staff - Home Assignment,110-USA Staff,09-Serbia,JV NFP
+210357,"F. Russell, Medical",1017 - Staff - Medical,110-USA Staff,09-Serbia,JV NFP
+210358,"F. Russell, Project 1",1018 - Staff - Project 1,110-USA Staff,09-Serbia,JV NFP
+210370,Tyler & Lara Patty,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210373,"T & L Patty, Repatriatio",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+210374,"T & L Patty, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+210375,"T & L Patty, Home Assign",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+210377,"T & L Patty, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+210378,"T & L Patty, Project 1",1018 - Staff - Project 1,110-USA Staff,00-JV Wide and USA,JV NFP
+210379,"T & L Patty, Project 2",1019 - Staff - Project 2,110-USA Staff,00-JV Wide and USA,JV NFP
+210380,Lee & Katie Humerian,1010 - Staff - General,110-USA Staff,08-Ukraine,JV NFP
+210383,"L & K Humerian, Repatria",1013 - Staff - Repatriation,110-USA Staff,08-Ukraine,JV NFP
+210384,"L & K Humerian, Conferen",1014 - Staff - Conferences,110-USA Staff,08-Ukraine,JV NFP
+210385,"L & K Humerian, Home A",1015 - Staff - Home Assignment,110-USA Staff,08-Ukraine,JV NFP
+210387,"L & K Humerian, Medical",1017 - Staff - Medical,110-USA Staff,08-Ukraine,JV NFP
+210388,"L & K Humerian, Project1",1020 - Housing Project,110-USA Staff,08-Ukraine,JV NFP
+210420,Claire Patty,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210460,Ben & Sarah Robertson,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+210463,"B & S Robertson, Repatri",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+210464,"B & S Robertson, Confere",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+210465,"B & S Robertson, Home As",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+210467,"B & S Robertson, Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+210468,"B&S Robertson, Project 1",1020 - Housing Project,110-USA Staff,01-Czech,JV NFP
+210470,Mike Harder,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+210530,Geoff Hammond,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+210533,"G. Hammond, Repatriat",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+210534,"G. Hammond, Conferenc",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+210535,"G. Hammond, Home A",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+210537,"G. Hammond, Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+210538,"G. Hammond, Project 1",1020 - Housing Project,110-USA Staff,01-Czech,JV NFP
+210550,Jacob Adent,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210553,"J. Adent, Repatriation",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+210554,"J. Adent, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+210555,"J. Adent, Home Assignmen",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+210557,"J. Adent, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+210558,"J. Adent, Project 1",1020 - Housing Project,110-USA Staff,00-JV Wide and USA,JV NFP
+210610,Noah & Jill Ellenwood,1010 - Staff - General,110-USA Staff,20-Montenegro,JV NFP
+210613,"N & J Ellenwood, Repatri",1013 - Staff - Repatriation,110-USA Staff,20-Montenegro,JV NFP
+210614,"N & J Ellenwood, Confere",1014 - Staff - Conferences,110-USA Staff,20-Montenegro,JV NFP
+210615,"N & J Ellenwood, Home A",1015 - Staff - Home Assignment,110-USA Staff,20-Montenegro,JV NFP
+210617,"N & J Ellenwood, Medical",1017 - Staff - Medical,110-USA Staff,20-Montenegro,JV NFP
+210618,"N&J Ellenwood, Project 1",1020 - Housing Project,110-USA Staff,20-Montenegro,JV NFP
+210630,Sean & Sarah Smith,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210633,"S & S Smith, Repatriatio",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+210634,"S & S Smith, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+210635,"S & S Smith, Home Assign",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+210637,"S & S Smith, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+210638,"S & Smith, Project 1",1020 - Housing Project,110-USA Staff,00-JV Wide and USA,JV NFP
+210639,"S & S Smith, Project 2",1019 - Staff - Project 2,110-USA Staff,00-JV Wide and USA,JV NFP
+210640,Tiffany Short,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+210643,"T. Short, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+210644,"T. Short, Conference",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+210645,"T. Short, Home Assignmen",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+210647,"T. Short, Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+210650,Marcus & Gwen Mitchell,1010 - Staff - General,110-USA Staff,15-Hungary,JV NFP
+210653,"M & G Mitchell, Repatria",1013 - Staff - Repatriation,110-USA Staff,15-Hungary,JV NFP
+210654,"M&G Mitchell, Conference",1014 - Staff - Conferences,110-USA Staff,15-Hungary,JV NFP
+210655,"M&G Mitchell, Home Assig",1015 - Staff - Home Assignment,110-USA Staff,15-Hungary,JV NFP
+210657,"M&G Mitchell, Medical",1017 - Staff - Medical,110-USA Staff,15-Hungary,JV NFP
+210670,Alex King,1010 - Staff - General,110-USA Staff,03-Slovakia,JV NFP
+210673,"A. King, Repatriation",1013 - Staff - Repatriation,110-USA Staff,03-Slovakia,JV NFP
+210674,"A. King, Conference",1014 - Staff - Conferences,110-USA Staff,03-Slovakia,JV NFP
+210675,"A. King, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,03-Slovakia,JV NFP
+210677,"A. King, Medical",1017 - Staff - Medical,110-USA Staff,03-Slovakia,JV NFP
+210680,Paul & Molli Williams,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210683,"P & M Williams, Repatria",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+210684,"P & M Williams, Conferen",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+210685,"P & M Williams, Home A",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+210687,"P & M Williams, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+210690,Julia Lopez (Budd),1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210693,"Julia Lopez, Repatriation",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+210694,"Julia Lopez, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+210695,"Julia Lopez, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+210697,"Julia Lopez, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+210710,Kingsley Hunnicutt,1010 - Staff - General,110-USA Staff,04-Slovenia,JV NFP
+210713,"K. Hunnicutt, Repatriati",1013 - Staff - Repatriation,110-USA Staff,04-Slovenia,JV NFP
+210714,"K. Hunnicutt, Conference",1014 - Staff - Conferences,110-USA Staff,04-Slovenia,JV NFP
+210715,"K. Hunnicutt, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,04-Slovenia,JV NFP
+210717,K. Hunnicutt Medical,1017 - Staff - Medical,110-USA Staff,04-Slovenia,JV NFP
+210720,Justin Holden,1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+210723,"J Holden, Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+210724,"J Holden, Conferences",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+210725,"J Holden, Home Assignmen",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+210728,"J Holden, Project 1",1020 - Housing Project,110-USA Staff,01-Czech,JV NFP
+210730,Garrett & Brittney Haas,1010 - Staff - General,110-USA Staff,07-Estonia,JV NFP
+210733,"G & B Haas, Repatriation",1013 - Staff - Repatriation,110-USA Staff,07-Estonia,JV NFP
+210734,"G & B Haas, Conference",1014 - Staff - Conferences,110-USA Staff,07-Estonia,JV NFP
+210735,"G & B Haas, Home Assignm",1015 - Staff - Home Assignment,110-USA Staff,07-Estonia,JV NFP
+210737,"G & B Haas, Medical",1017 - Staff - Medical,110-USA Staff,07-Estonia,JV NFP
+210750,"Kanters, Killyn",1010 - Staff - General,110-USA Staff,02-Romania,JV NFP
+210753,"K. Kanters, Repatriatio",1013 - Staff - Repatriation,110-USA Staff,02-Romania,JV NFP
+210754,"K. Kanters, Conference",1014 - Staff - Conferences,110-USA Staff,02-Romania,JV NFP
+210755,"K. Kanters, Home Assign",1015 - Staff - Home Assignment,110-USA Staff,02-Romania,JV NFP
+210757,"K. Kanters, Medical",1017 - Staff - Medical,110-USA Staff,02-Romania,JV NFP
+210758,"Kanters K, Project 1",1018 - Staff - Project 1,110-USA Staff,02-Romania,JV NFP
+210760,Josh & Katie Yates,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210764,"J & K Yates, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+210767,"J & K Yates, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+210770,Eric Schmitt,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210774,"E. Schmitt, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+210777,"E. Schmitt, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+210780,Valerie O'Brien,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210790,Brian & Aubrey Kroeker,1010 - Staff - General,110-USA Staff,15-Hungary,JV NFP
+210793,"B & A Kroeker, Repatriat",1013 - Staff - Repatriation,110-USA Staff,15-Hungary,JV NFP
+210794,"B & A Kroeker, Conferenc",1014 - Staff - Conferences,110-USA Staff,15-Hungary,JV NFP
+210795,"B & A Kroeker, Home As",1015 - Staff - Home Assignment,110-USA Staff,15-Hungary,JV NFP
+210797,"B & A Kroeker, Medical",1017 - Staff - Medical,110-USA Staff,15-Hungary,JV NFP
+210800,Ross Nielsen,1010 - Staff - General,110-USA Staff,16-Bulgaria,JV NFP
+210803,"R. Nielsen, Repatriation",1013 - Staff - Repatriation,110-USA Staff,16-Bulgaria,JV NFP
+210804,"R. Nielsen, Conference",1014 - Staff - Conferences,110-USA Staff,16-Bulgaria,JV NFP
+210805,"R. Nielsen, Home Assingm",1015 - Staff - Home Assignment,110-USA Staff,16-Bulgaria,JV NFP
+210807,"R. Nielsen, Medical",1017 - Staff - Medical,110-USA Staff,16-Bulgaria,JV NFP
+210808,"R. Nielsen, Project 1",1018 - Staff - Project 1,110-USA Staff,16-Bulgaria,JV NFP
+210820,Spencer Tuominen,1010 - Staff - General,110-USA Staff,00-JV Wide and USA,JV NFP
+210823,"S. Tuominen, Repatriatio",1013 - Staff - Repatriation,110-USA Staff,00-JV Wide and USA,JV NFP
+210824,"S. Tuominen, Conference",1014 - Staff - Conferences,110-USA Staff,00-JV Wide and USA,JV NFP
+210825,"S. Tuominen, Home Assign",1015 - Staff - Home Assignment,110-USA Staff,00-JV Wide and USA,JV NFP
+210827,"S. Tuominen, Medical",1017 - Staff - Medical,110-USA Staff,00-JV Wide and USA,JV NFP
+210830,Jim Culbertson,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+210840,Caleb & Cassie Tedder,1010 - Staff - General,110-USA Staff,05-Poland,JV NFP
+210843,"C & C Tedder, Repatriation",1013 - Staff - Repatriation,110-USA Staff,05-Poland,JV NFP
+210844,"C & C Tedder, Conference",1014 - Staff - Conferences,110-USA Staff,05-Poland,JV NFP
+210845,"C & C Tedder, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,05-Poland,JV NFP
+210847,"C & C Tedder, Medical",1017 - Staff - Medical,110-USA Staff,05-Poland,JV NFP
+210850,"Bradford, Mitchell",1010 - Staff - General,110-USA Staff,04-Slovenia,JV NFP
+210853,"M & R Bradford, Repatriation",1013 - Staff - Repatriation,110-USA Staff,04-Slovenia,JV NFP
+210854,"M & R Bradford, Conference",1014 - Staff - Conferences,110-USA Staff,04-Slovenia,JV NFP
+210855,"M & R Bradford, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,04-Slovenia,JV NFP
+210857,"M & R Bradford, Medical",1017 - Staff - Medical,110-USA Staff,04-Slovenia,JV NFP
+210860,"Patty, Kendra",1010 - Staff - General,110-USA Staff,08-Ukraine,JV NFP
+210863,"K. Patty, Repatriation",1013 - Staff - Repatriation,110-USA Staff,08-Ukraine,JV NFP
+210864,"K. Patty, Conference",1014 - Staff - Conferences,110-USA Staff,08-Ukraine,JV NFP
+210865,"K. Patty, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,08-Ukraine,JV NFP
+210867,"K. Patty, Medical",1017 - Staff - Medical,110-USA Staff,08-Ukraine,JV NFP
+210870,"Hinrichs, Peter & Khrystyna",1010 - Staff - General,110-USA Staff,08-Ukraine,JV NFP
+210873,"Hinrichs, P & K Repatriation",1013 - Staff - Repatriation,110-USA Staff,08-Ukraine,JV NFP
+210874,"Hinrichs, P & K Conference",1014 - Staff - Conferences,110-USA Staff,08-Ukraine,JV NFP
+210875,"Hinrichs, P & K Home Assignement",1015 - Staff - Home Assignment,110-USA Staff,08-Ukraine,JV NFP
+210877,"Hinrichs, P & K Medical",1017 - Staff - Medical,110-USA Staff,08-Ukraine,JV NFP
+210880,"H. Arnold, Ministry",1010 - Staff - General,110-USA Staff,08-Ukraine,JV NFP
+210883,"H. Arnold, Repatriation",1013 - Staff - Repatriation,110-USA Staff,08-Ukraine,JV NFP
+210884,"H. Arnold, Conference",1014 - Staff - Conferences,110-USA Staff,08-Ukraine,JV NFP
+210885,"H. Arnold, Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,08-Ukraine,JV NFP
+210887,"H. Arnold, Medical",1017 - Staff - Medical,110-USA Staff,08-Ukraine,JV NFP
+210890,"Stamper, Claire",1010 - Staff - General,110-USA Staff,15-Hungary,JV NFP
+210893,"Stamper, Claire - Repatriation",1013 - Staff - Repatriation,110-USA Staff,15-Hungary,JV NFP
+210894,"Stamper, Claire - Conference",1014 - Staff - Conferences,110-USA Staff,15-Hungary,JV NFP
+210895,"Stamper, Claire - Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,15-Hungary,JV NFP
+210897,"Stamper, Claire - Medical",1017 - Staff - Medical,110-USA Staff,15-Hungary,JV NFP
+210900,"Janiszewski, Brad",1010 - Staff - General,110-USA Staff,05-Poland,JV NFP
+210903,"Janiszewski, Brad Repatriation",1013 - Staff - Repatriation,110-USA Staff,05-Poland,JV NFP
+210904,"Janiszewski, Brad Conferences",1014 - Staff - Conferences,110-USA Staff,05-Poland,JV NFP
+210905,"Janiszewski, Brad Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,05-Poland,JV NFP
+210907,"Janiszewski, Brad Medical",1017 - Staff - Medical,110-USA Staff,05-Poland,JV NFP
+210910,"Stimson, Kate",1010 - Staff - General,110-USA Staff,01-Czech,JV NFP
+210913,"Stimson, Kate Repatriation",1013 - Staff - Repatriation,110-USA Staff,01-Czech,JV NFP
+210914,"Stimson, Kate Conference",1014 - Staff - Conferences,110-USA Staff,01-Czech,JV NFP
+210915,"Stimson, Cate Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,01-Czech,JV NFP
+210917,"Stimson, Kate Medical",1017 - Staff - Medical,110-USA Staff,01-Czech,JV NFP
+210920,"Denenberg, NIck & Jessica",1010 - Staff - General,110-USA Staff,05-Poland,JV NFP
+210923,"Denenberg, N&J Repatriation",1013 - Staff - Repatriation,110-USA Staff,05-Poland,JV NFP
+210924,"Denenberg, N&J Conference",1014 - Staff - Conferences,110-USA Staff,05-Poland,JV NFP
+210925,"Denenberg, N & J Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,05-Poland,JV NFP
+210927,"Denenberg, N&J Medical",1017 - Staff - Medical,110-USA Staff,05-Poland,JV NFP
+210930,"Cook, Catherine",1010 - Staff - General,110-USA Staff,03-Slovakia,JV NFP
+210933,"Cook, Catherine Repatriation",1013 - Staff - Repatriation,110-USA Staff,03-Slovakia,JV NFP
+210934,"Cook, Catherine Conference",1014 - Staff - Conferences,110-USA Staff,03-Slovakia,JV NFP
+210935,"Cook, Catherine Home Assignment",1015 - Staff - Home Assignment,110-USA Staff,03-Slovakia,JV NFP
+210937,"Cook, Catherine Medical",1017 - Staff - Medical,110-USA Staff,03-Slovakia,JV NFP
+210940,"Jackson, Nathan & Kendra",1010 - Staff - General,110-USA Staff,02-Romania,JV NFP
+210943,"Jackson,N & K, Repatriation",1013 - Staff - Repatriation,110-USA Staff,02-Romania,JV NFP
+210944,"Jackson, N & K, Conference",1014 - Staff - Conferences,110-USA Staff,02-Romania,JV NFP
+210945,"Jackson, N & K, Home Assign",1015 - Staff - Home Assignment,110-USA Staff,02-Romania,JV NFP
+210947,"Jackson, N & K, Medical",1017 - Staff - Medical,110-USA Staff,02-Romania,JV NFP
+410001,Denisa Harcarova,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410002,Stojce Nikolov,1051 - National Staff,130-National Staff,09-Serbia,JV NFP
+410004,David Kingdon,1051 - National Staff,130-National Staff,06-Latvia,JV NFP
+410006,Yulia Pasichna,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410007,Dawid Werner,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410012,Indrek Tambek,1051 - National Staff,130-National Staff,07-Estonia,JV NFP
+410013,Mladen Kocis,1051 - National Staff,130-National Staff,11-Croatia,JV NFP
+410017,Sara Kominek,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410019,Ondrej Szturc,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410021,Andrii Polonnikov,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410022,Peter Tatarsky,1051 - National Staff,130-National Staff,16-Bulgaria,JV NFP
+410025,Karl Hennhofer,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410032,Szczepan Cackowski,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410034,Darius Bocsa,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410035,Zala Cempre,1051 - National Staff,130-National Staff,04-Slovenia,JV NFP
+410036,Tsvetan Stoitsev,1051 - National Staff,130-National Staff,16-Bulgaria,JV NFP
+410037,Eduard Kurat,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410039,Miriam Simockova,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410040,Katarina & Michal Poncak,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410041,Flavius Coman,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410044,Oleksandr Dubovyk,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410045,Baiba Kenigsvalde,1051 - National Staff,130-National Staff,06-Latvia,JV NFP
+410046,Inguna Raudina,1051 - National Staff,130-National Staff,06-Latvia,JV NFP
+410047,Urh & Doroteja Kolar,1051 - National Staff,130-National Staff,04-Slovenia,JV NFP
+410048,Bartek Tesluk,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410051,Nadiya Vorobyova,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410055,Honza & Kaca Kabut,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410056,Ranno Seppel,1051 - National Staff,130-National Staff,07-Estonia,JV NFP
+410058,Olena Slobodnychenko,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410059,Katerina Ticha,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410060,Tomas Zaricky,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410061,Juljan Muhameti,1051 - National Staff,130-National Staff,12-Albania,JV NFP
+410062,Ema Lee (Kreko),1051 - National Staff,130-National Staff,11-Croatia,JV NFP
+410063,Mykola Semenov,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410069,Dorin Dumitrascu,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410071,Adam Loffler,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410072,Natalia Starkowska,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410073,Jakub Vejmelka,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410074,Pavlina Bujokova,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410075,Ermal Bimaj,1051 - National Staff,130-National Staff,12-Albania,JV NFP
+410078,Timotej Mahrik,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410079,Lelde Keice,1051 - National Staff,130-National Staff,06-Latvia,JV NFP
+410081,Milos Myjavec,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410083,Tino & Christiana Peste,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410084,Paula Zveja,1051 - National Staff,130-National Staff,06-Latvia,JV NFP
+410086,Marek Linkesch,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410087,Andelko Trninic,1051 - National Staff,130-National Staff,09-Serbia,JV NFP
+410089,Michal Soukup,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410090,Elisaveta Stoitseva,1051 - National Staff,130-National Staff,16-Bulgaria,JV NFP
+410091,Weronika Kusmider,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410094,Agata Jankowska,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410095,Ivana Pollakova,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410096,Peter Linkesch,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410097,Yoan Tsonchev,1051 - National Staff,130-National Staff,16-Bulgaria,JV NFP
+410099,Tomas Tousek,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410100,Sebastian Michalski,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410101,Ion Matei,1051 - National Staff,130-National Staff,18-Moldova,JV NFP
+410102,Lyubov Zhelevaas,1051 - National Staff,130-National Staff,16-Bulgaria,JV NFP
+410105,Jan Rokosz,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410106,Alicja Rynska,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410107,Barbora Tomeckova (Benesova),1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410109,Fred Lausvee,1051 - National Staff,130-National Staff,07-Estonia,JV NFP
+410111,Salomon Krok,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410112,Adrian & Petra Sulka,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410113,"Dusan Drabina, Project 1",1020 - Housing Project,130-National Staff,01-Czech,JV NFP
+410114,"Vahur Kobin, Project 1",1020 - Housing Project,130-National Staff,07-Estonia,JV NFP
+410116,"Flavius Coman, Project 1",1020 - Housing Project,130-National Staff,02-Romania,JV NFP
+410117,Bartek Wilkosz,1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410118,Zuzana Dzubakovski (Bozikova),1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410119,Henryk Molin,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410120,Alexandru Capverde,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410121,Cristian Cazacu,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410122,Viktor Valentini,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410124,Vitalii Andriiets,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410125,Lucie Meszaros,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410126,Zuzana Kittlova,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410127,Ermal Gjermeni,1051 - National Staff,130-National Staff,12-Albania,JV NFP
+410128,Vlad & Liza Tsupik,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410132,Gabriel & Naomi Nicolae,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410133,Zvedzdan Jumerovic,1051 - National Staff,130-National Staff,09-Serbia,JV NFP
+410134,Marian Cabadaj,1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410135,Dominik Danciu,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410136,Kadri-Kristel Saagim,1051 - National Staff,130-National Staff,07-Estonia,JV NFP
+410138,Balint Szabados,1051 - National Staff,130-National Staff,15-Hungary,JV NFP
+410139,"Logins, Raimonds Proj 1",1020 - Housing Project,130-National Staff,06-Latvia,JV NFP
+410140,"Kuldar Kaljuste, Proj 1",1020 - Housing Project,130-National Staff,07-Estonia,JV NFP
+410141,Barbora Drabkova (Hujdusova),1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410143,Ruben-Marius Moldovan,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410144,"Tomas Zaricky, Project 1",1020 - Housing Project,130-National Staff,01-Czech,JV NFP
+410146,Urh & Doroteja Kolar Pr1,1053 - National Staff Special Project,130-National Staff,04-Slovenia,JV NFP
+410147,Hana Motlochova,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410148,Lukas Macura,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410149,Oleksandr Dubovyk Proj 1,1020 - Housing Project,130-National Staff,08-Ukraine,JV NFP
+410150,Serhii Skyba,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410151,Andrii Polonnikov Proj 1,1020 - Housing Project,130-National Staff,08-Ukraine,JV NFP
+410152,Iva Boszczykova,1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410153,Kilian Spiess,1051 - National Staff,130-National Staff,13-Germany,JV NFP
+410154,Damaris Iordache,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410155,Ioan Dhima,1051 - National Staff,130-National Staff,12-Albania,JV NFP
+410157,Serhii Bielov,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410158,Liudmyla Rubtsova,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410159,Yulia Yablonska,1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410161,Sajimir Brazhdi,1051 - National Staff,130-National Staff,12-Albania,JV NFP
+410162,Gabriel Boldura,1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410163,"Vecerik, Lukas",1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410164,"Kolesar, Simon",1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410165,"Vauhnik, Grega",1051 - National Staff,130-National Staff,04-Slovenia,JV NFP
+410166,"Jagar Todorovska, Mateja",1051 - National Staff,130-National Staff,04-Slovenia,JV NFP
+410167,"Kovalov, Oleksandr",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410168,"Pham, Pavel",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410169,"Smolarczyk, Zuzanna",1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410170,"Taracinska, Karina",1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410171,"Muller, Sven",1051 - National Staff,130-National Staff,11-Croatia,JV NFP
+410172,"Moldovan, Timotei",1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410173,"Szloboda, Viktor",1051 - National Staff,130-National Staff,09-Serbia,JV NFP
+410174,"Sramo, Benjamin",1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410175,"Tokarska, Zuzanna",1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410177,"Smyckova, Zuzana",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410178,"Senigl, Samuel & Marketa",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410179,"Kabut, Honza & Kaca Project 1",1020 - Housing Project,130-National Staff,01-Czech,JV NFP
+410180,"Bella, Szabolcs & Maggie",1051 - National Staff,130-National Staff,15-Hungary,JV NFP
+410181,"Kubelka, David",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410182,"Ciorescu, Dorin",1051 - National Staff,130-National Staff,18-Moldova,JV NFP
+410183,"Oaie, Adina-Emanuela",1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410184,"Szafran, Karolina",1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410185,"Herghelegiu, Alexandru",1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410186,"Lachmanova, Ester",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410187,Adam Loffler Project 1,1053 - National Staff Special Project,130-National Staff,05-Poland,JV NFP
+410188,"Sucha, Veronika",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410189,"Tomanek, Alex",1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410191,"Furlan, Klemen",1051 - National Staff,130-National Staff,04-Slovenia,JV NFP
+410192,"Borkowski, Radoslaw",1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410193,"Bimaj, Ermal Project 1",1020 - Housing Project,130-National Staff,12-Albania,JV NFP
+410194,"Semenov, Mykola - Project 1",1020 - Housing Project,130-National Staff,08-Ukraine,JV NFP
+410195,"Krockova, Anna",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410196,"Badau, Francis",1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410197,"Stoitseva, Evgenia",1051 - National Staff,130-National Staff,16-Bulgaria,JV NFP
+410198,"Velebir, Adam",1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410199,"Lerca, Ionut & Nicoleta",1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410200,"Milevski, Janis & Emija",1051 - National Staff,130-National Staff,06-Latvia,JV NFP
+410201,"Fronius, Andy",1051 - National Staff,130-National Staff,13-Germany,JV NFP
+410202,"Gasior, Patryk",1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410203,"Krajnik, Matous",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410204,"Dyka, Anna",1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410205,"Sniezek, Kayla",1051 - National Staff,130-National Staff,05-Poland,JV NFP
+410206,"Bejan, Daniel",1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410207,"Belancova, Zuzanna",1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410208,"Vercimakova, Vanesa",1051 - National Staff,130-National Staff,03-Slovakia,JV NFP
+410209,"Lovse, Andrej & Nina - Proj 1",1053 - National Staff Special Project,130-National Staff,04-Slovenia,JV NFP
+410210,"Trush, Khrystyna",1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410211,"Ventsislavov, Danail",1051 - National Staff,130-National Staff,16-Bulgaria,JV NFP
+410212,"Cires, Oana",1051 - National Staff,130-National Staff,02-Romania,JV NFP
+410213,"Polgui, Ben",1051 - National Staff,130-National Staff,08-Ukraine,JV NFP
+410214,"Cvejn, Petr",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410215,"Paulus, Ondrej",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+410216,"Chlebek, Stanislav & Debora",1051 - National Staff,130-National Staff,01-Czech,JV NFP
+430001,Fusion - Ukraine,1170 - Music,132-National Projs,08-Ukraine,JV NFP
+430002,Edge - Ukraine,1165 - Sports,132-National Projs,08-Ukraine,JV NFP
+430003,Training Conferences - Hungary,1102 - JV Conferences,132-National Projs,15-Hungary,JV NFP
+430004,Disciplemaking Resources,1103 - JV General Programs,132-National Projs,15-Hungary,JV NFP
+430005,Football Club Ministry,1165 - Sports,132-National Projs,07-Estonia,JV NFP
+430006,Edge - Poland,1165 - Sports,132-National Projs,05-Poland,JV NFP
+430007,LV National Staff Funds,1103 - JV General Programs,132-National Projs,06-Latvia,JV NFP
+430008,Edge - Slovenia,1165 - Sports,132-National Projs,04-Slovenia,JV NFP
+430010,Fusion - Estonia,1170 - Music,132-National Projs,07-Estonia,JV NFP
+430011,Next M,1103 - JV General Programs,132-National Projs,05-Poland,JV NFP
+430012,Fusion - Slovenia,1170 - Music,132-National Projs,04-Slovenia,JV NFP
+430014,Missionary for SK Natl,1103 - JV General Programs,132-National Projs,03-Slovakia,JV NFP
+430015,Exit Tour - Estonia,1175 - Schools,132-National Projs,07-Estonia,JV NFP
+430016,Fusion - Poland,1170 - Music,132-National Projs,05-Poland,JV NFP
+430017,Josiah House,1180 - Facilities,153-Facilities,06-Latvia,JV NFP
+430018,Gospel to Schools,1175 - Schools,132-National Projs,01-Czech,JV NFP
+430019,Edge - Slovakia,1165 - Sports,132-National Projs,03-Slovakia,JV NFP
+430020,H20 JV Payment,1103 - JV General Programs,132-National Projs,05-Poland,JV NFP
+430021,Malenovice Event Center,1180 - Facilities,153-Facilities,01-Czech,JV NFP
+430022,Edge - Bulgaria,1165 - Sports,132-National Projs,16-Bulgaria,JV NFP
+430023,Edge - Hungary,1165 - Sports,132-National Projs,15-Hungary,JV NFP
+430024,Support to CZ Churches,1160 - Advance,132-National Projs,01-Czech,JV NFP
+430025,Hungary Project Fund,1103 - JV General Programs,132-National Projs,15-Hungary,JV NFP
+430026,Leadership Training - Ukraine,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+430027,Outdoor Ministry Ukraine,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+430028,Ukraine European Initiatives,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+430029,Ukraine New Churches,1160 - Advance,132-National Projs,08-Ukraine,JV NFP
+430030,T.i.M.,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+430031,SK National Internship,1510 - Interns,132-National Projs,03-Slovakia,JV NFP
+430034,Project 29.11,1103 - JV General Programs,132-National Projs,05-Poland,JV NFP
+430035,Camps - Bulgaria,1151 - Camps,132-National Projs,16-Bulgaria,JV NFP
+430036,Roma Pastor Training,1155 - Training,132-National Projs,16-Bulgaria,JV NFP
+430041,Camps - Germany,1151 - Camps,132-National Projs,13-Germany,JV NFP
+430042,Fusion - Bulgaria,1170 - Music,132-National Projs,16-Bulgaria,JV NFP
+430043,Ukraine Exit Tour/Schools,1175 - Schools,132-National Projs,08-Ukraine,JV NFP
+430044,Fusion - Romania,1170 - Music,132-National Projs,02-Romania,JV NFP
+430045,Edge - Romania,1165 - Sports,132-National Projs,02-Romania,JV NFP
+430046,Edge - Czech,1165 - Sports,132-National Projs,01-Czech,JV NFP
+430047,Albania Launch,1103 - JV General Programs,132-National Projs,12-Albania,JV NFP
+430048,Exit Tour - Romania,1175 - Schools,132-National Projs,02-Romania,JV NFP
+430049,Bulgaria Wilderness Mini,1165 - Sports,132-National Projs,16-Bulgaria,JV NFP
+430050,Bulgaria Expansion,1103 - JV General Programs,132-National Projs,16-Bulgaria,JV NFP
+430051,Edge - Latvia,1165 - Sports,132-National Projs,06-Latvia,JV NFP
+430052,Media Ministry-Slovenia,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+430053,Scholarship-Slovene Volu,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+430054,Edge - Albania,1165 - Sports,132-National Projs,12-Albania,JV NFP
+430056,Communications Romania,1103 - JV General Programs,132-National Projs,02-Romania,JV NFP
+430057,Worship Team - Slovenia,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+430058,Comm Team - Slovenia,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+430062,University Tree House Pr,1175 - Schools,132-National Projs,03-Slovakia,JV NFP
+430063,Josiah House Expansion,1180 - Facilities,153-Facilities,06-Latvia,JV NFP
+430064,Fala- Regions,1103 - JV General Programs,132-National Projs,05-Poland,JV NFP
+430065,Ukraine Crisis Fund,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+430066,Fala - Communications,1103 - JV General Programs,132-National Projs,05-Poland,JV NFP
+430068,Edge - Montenegro,1165 - Sports,132-National Projs,20-Montenegro,JV NFP
+430069,Camps - Moldova,1151 - Camps,152-Camps,18-Moldova,JV NFP
+430070,Edge Moldova,1165 - Sports,132-National Projs,18-Moldova,JV NFP
+430071,Vlore Training Center,1180 - Facilities,153-Facilities,12-Albania,JV NFP
+430072,Ukraine Training Center,1180 - Facilities,153-Facilities,08-Ukraine,JV NFP
+430073,MREZA-Media Ministry Ser,1103 - JV General Programs,132-National Projs,09-Serbia,JV NFP
+430074,Albania Facility - Youth,1180 - Facilities,153-Facilities,12-Albania,JV NFP
+430075,TC Kompas Building Proje,1180 - Facilities,153-Facilities,03-Slovakia,JV NFP
+430076,Ukraine Eastern Initiatives,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+430077,Estonia Intern Mobilzin,1510 - Interns,132-National Projs,07-Estonia,JV NFP
+430078,Ukraine Response and Aid,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+430079,Mobitel,1103 - JV General Programs,132-National Projs,04-Slovenia,JV NFP
+430080,Ukraine War Summer Outreach,1103 - JV General Programs,132-National Projs,08-Ukraine,JV NFP
+430081,Ukraine Diaspora Support,1103 - JV General Programs,132-National Projs,01-Czech,JV NFP
+430082,Fusion - Serbia,1170 - Music,132-National Projs,09-Serbia,JV NFP
+430083,Fusion - Albania,1170 - Music,132-National Projs,12-Albania,JV NFP
+430085,Staz Project - Montenegr,1103 - JV General Programs,132-National Projs,20-Montenegro,JV NFP
+430087,Springboard Projects - Montenegro,1103 - JV General Programs,132-National Projs,20-Montenegro,JV NFP
+430088,Ukraine Girls Discipleship,1155 - Training,132-National Projs,08-Ukraine,JV NFP
+430089,Ukraine Selah,1152 - Other National Pgms,132-National Projs,08-Ukraine,JV NFP
+430090,Croatia Church Building Fund,1180 - Facilities,153-Facilities,11-Croatia,JV NFP
+430091,Ukraine Diaspora in Slovenia,1152 - Other National Pgms,132-National Projs,04-Slovenia,JV NFP
+430092,Croatia National Organization,1152 - Other National Pgms,132-National Projs,11-Croatia,JV NFP
+430093,H20 Facility& Building Projects,1180 - Facilities,153-Facilities,05-Poland,JV NFP
+430094,Fundraising,1152 - Other National Pgms,132-National Projs,11-Croatia,JV NFP
+430095,S-Team Ukraine,1152 - Other National Pgms,132-National Projs,08-Ukraine,JV NFP
+430096,Wise Carpenter Ukraine,1152 - Other National Pgms,132-National Projs,08-Ukraine,JV NFP
+430097,Project 29.11 Operations,1103 - JV General Programs,132-National Projs,05-Poland,JV NFP
+430098,Slovakia Camp Ministry in Ukraine,1151 - Camps,152-Camps,03-Slovakia,JV NFP
+430100,Fusiondary Travel - Albania,1152 - Other National Pgms,132-National Projs,12-Albania,JV NFP
+430101,Fusiondary Travel - Bulgaria,1152 - Other National Pgms,132-National Projs,16-Bulgaria,JV NFP
+430102,Fusiondary Travel - Czech,1152 - Other National Pgms,132-National Projs,01-Czech,JV NFP
+430103,Fusiondary Travel - Estonia,1152 - Other National Pgms,132-National Projs,07-Estonia,JV NFP
+430104,Fusiondary Travel - Latvia,1152 - Other National Pgms,132-National Projs,06-Latvia,JV NFP
+430105,Fusiondary Travel - Poland,1152 - Other National Pgms,132-National Projs,05-Poland,JV NFP
+430106,Fusiondary Travel - Romania,1152 - Other National Pgms,132-National Projs,02-Romania,JV NFP
+430107,Fusiondary Travel - Serbia,1152 - Other National Pgms,132-National Projs,09-Serbia,JV NFP
+430108,Fusiondary Travel - Slovenia,1152 - Other National Pgms,132-National Projs,04-Slovenia,JV NFP
+430109,Fusiondary Travel - Ukraine,1152 - Other National Pgms,132-National Projs,08-Ukraine,JV NFP
+430110,Ukraine Executive Team,1152 - Other National Pgms,132-National Projs,08-Ukraine,JV NFP
+430111,Ukraine Administration/Ops,1152 - Other National Pgms,132-National Projs,08-Ukraine,JV NFP
+430112,KAM - JV Camp Frydlant,1152 - Other National Pgms,132-National Projs,01-Czech,JV NFP
+460001,Czech Intern Fund,1510 - Interns,151-Interns,01-Czech,JV NFP
+460003,Romania Intern Fund,1510 - Interns,151-Interns,02-Romania,JV NFP
+460004,Slovakia Intern Fund,1510 - Interns,151-Interns,03-Slovakia,JV NFP
+460006,Slovenia Intern Fund,1510 - Interns,151-Interns,04-Slovenia,JV NFP
+460007,Poland Intern Fund,1510 - Interns,151-Interns,05-Poland,JV NFP
+460008,Latvia Intern Fund,1510 - Interns,151-Interns,06-Latvia,JV NFP
+460009,Estonia Intern Fund,1510 - Interns,151-Interns,07-Estonia,JV NFP
+460010,Ukraine Intern Fund,1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460011,Serbia Intern Fund,1510 - Interns,151-Interns,09-Serbia,JV NFP
+460012,Croatia Intern Fund,1510 - Interns,151-Interns,11-Croatia,JV NFP
+460013,Albania Intern Fund,1510 - Interns,151-Interns,12-Albania,JV NFP
+460014,Hungary Intern Fund,1510 - Interns,151-Interns,15-Hungary,JV NFP
+460046,Non-Traditional Intern F,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+460135,Bulgaria Intern Fund,1510 - Interns,151-Interns,16-Bulgaria,JV NFP
+460205,Exit Tour Intern Fund,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+460224,Fusion Intl Intern Fund,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+460241,East Germany Intern Fund,1510 - Interns,151-Interns,13-Germany,JV NFP
+460454,Edge Intl Intern Fund,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+460460,C-Team Intern Fund,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+460786,Eric Mayer,1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460881,"Neebes, Mallory",1510 - Interns,151-Interns,05-Poland,JV NFP
+460883,"Carson, Aidan",1510 - Interns,151-Interns,01-Czech,JV NFP
+460900,"Williams, Noah",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460904,"Kaminski, Rosie",1510 - Interns,151-Interns,01-Czech,JV NFP
+460916,"Schoenborn, Natalie",1510 - Interns,151-Interns,07-Estonia,JV NFP
+460919,"Howard, Christian",1510 - Interns,151-Interns,01-Czech,JV NFP
+460922,"Johnson, Vince",1510 - Interns,151-Interns,01-Czech,JV NFP
+460925,"Langley, Rachel",1510 - Interns,151-Interns,04-Slovenia,JV NFP
+460926,"McCaskill, Hunter",1510 - Interns,151-Interns,06-Latvia,JV NFP
+460927,"Sandy, Levi",1510 - Interns,151-Interns,01-Czech,JV NFP
+460928,"Ennis, Shaina",1510 - Interns,151-Interns,06-Latvia,JV NFP
+460929,"Martin, Isaiah",1510 - Interns,151-Interns,06-Latvia,JV NFP
+460934,"Van Hoecke, Levi",1510 - Interns,151-Interns,07-Estonia,JV NFP
+460935,"Kasa, Ange",1510 - Interns,151-Interns,06-Latvia,JV NFP
+460936,"Kotiesen, Katre Kristiine",1510 - Interns,151-Interns,07-Estonia,JV NFP
+460937,"Tolkachova, Emiliia",1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+460938,"Gutmane, Inita",1510 - Interns,151-Interns,15-Hungary,JV NFP
+460939,"Tatar, Jamina",1510 - Interns,151-Interns,15-Hungary,JV NFP
+460941,"Greshko, Aletheia",1510 - Interns,151-Interns,01-Czech,JV NFP
+460942,"Cerda, Emilia",1510 - Interns,151-Interns,03-Slovakia,JV NFP
+460943,"Pryor, Myla",1510 - Interns,151-Interns,15-Hungary,JV NFP
+460944,"Williams, Levi",1510 - Interns,151-Interns,15-Hungary,JV NFP
+460945,"Trush, Khrystyna",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460946,"Holub, Roman",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460947,"Harchenko, Anton",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460948,"Zhurakivska, Svitlana",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460949,"Baurda, Illia",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460951,"Tamberg, Adele",1510 - Interns,151-Interns,07-Estonia,JV NFP
+460952,"Alling, Cate Averie",1510 - Interns,151-Interns,07-Estonia,JV NFP
+460953,"Jackson, Isaiah",1510 - Interns,151-Interns,06-Latvia,JV NFP
+460954,"Robinson, Kelly",1510 - Interns,151-Interns,16-Bulgaria,JV NFP
+460955,"Ilmjarv, Martin",1510 - Interns,151-Interns,07-Estonia,JV NFP
+460956,"Kepler, Ryan",1510 - Interns,151-Interns,07-Estonia,JV NFP
+460957,"Mediakovska, Anna",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460958,"Yung, Hana",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460959,"Allison, Abigail",1510 - Interns,151-Interns,01-Czech,JV NFP
+460960,"Brost, Alaiyah Nicole",1510 - Interns,151-Interns,02-Romania,JV NFP
+460961,"Clare, Joseph",1510 - Interns,151-Interns,01-Czech,JV NFP
+460962,"Bowman, Talitha Grace",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460963,"Lunakova, Nikola",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460964,"Schuetz, Andrew Richard",1510 - Interns,151-Interns,16-Bulgaria,JV NFP
+460965,"Kucheruk, Yevhenii",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460966,"Bernatikova, Hana",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460967,"Huddleston, Grace",1510 - Interns,151-Interns,02-Romania,JV NFP
+460968,"Beach, Erika",1510 - Interns,151-Interns,15-Hungary,JV NFP
+460969,"Dalager, Ellen",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460970,"Horova, Mariia",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460971,"Vigh, Daniel",1510 - Interns,151-Interns,15-Hungary,JV NFP
+460972,"Fouks, Cameron",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460973,"Kochubei, Alina",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460974,"Rezoliuta, Liubomyr",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460975,"Rumbold, Gage",1510 - Interns,151-Interns,03-Slovakia,JV NFP
+460976,"Connors, Aaron Jeffrey",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460977,"Kadlecova, Sarah",1510 - Interns,151-Interns,08-Ukraine,JV NFP
+460978,"Smith, Abigail",1510 - Interns,151-Interns,15-Hungary,JV NFP
+510001,Edge General Fund,1165 - Sports,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510002,JV Country Coaching-J Pa,1101 - JV General,154-Other Projs,00-JV Wide and USA,JV NFP
+510003,Summer Intern Deposit,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+510004,Theological Education Pr,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510005,New Country Fund,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510006,Fusiondary,1170 - Music,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510007,Exit Int. - Czech,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510008,Exit Int. - Slovakia,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510009,Exit Int. - Poland,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510010,Exit Int. - Estonia,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510011,Fusion International,1170 - Music,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510012,Fusion Int. - Equipment,1170 - Music,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510013,FusionInt-Trn Churches,1170 - Music,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510014,FusionInt Trg Res/Events,1170 - Music,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510015,FusionInt LaunchCrntCoun,1170 - Music,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510016,FusionInt NewCountryLaun,1170 - Music,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510018,European Summer Interns,1510 - Interns,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510019,Exit Int. - Director,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510020,Edge International,1165 - Sports,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510021,Edge Training & Leadersh,1165 - Sports,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510022,Edge Launch,1165 - Sports,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510023,Edge Care & Ongoing Supp,1165 - Sports,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510024,JV Singles Retreat,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510025,JV A-Team General Fund,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510028,Amazing Race,1510 - Interns,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510029,Jack Webster,1103 - JV General Programs,113-A-Team,00-JV Wide and USA,JV NFP
+510030,JV A-Team,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510031,Prayer Room Website,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510034,Camp Materials,1151 - Camps,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510035,Neal & Kathy Gaalswyk,1103 - JV General Programs,113-A-Team,00-JV Wide and USA,JV NFP
+510036,Exit Int. - Development,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510037,Paul & Barb Belcher,1103 - JV General Programs,113-A-Team,00-JV Wide and USA,JV NFP
+510038,JV Israel Retreat,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510039,78 Press,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510040,No Less Than Yes,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510041,Father God,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510042,Exit Int. - Research Pro,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510043,Media International,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510049,Exit Int. - Ukraine,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510050,Moorlands,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510051,Susan Ellis,1103 - JV General Programs,113-A-Team,00-JV Wide and USA,JV NFP
+510052,Marriage Coaching,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510054,Czech Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510055,Romania Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510056,Slovakia Opportunity Fun,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510057,Slovenia Opportunity Fun,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510058,Poland Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510059,Latvia Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510060,Estonia Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510061,Ukraine Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510063,Croatia Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510064,Albania Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510065,Germany Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510066,Hungary Opportunity Fund,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510067,Bulgaria Opportunity Fun,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510068,Empowerment Opportunity,1103 - JV General Programs,321-OpportunityFunds,00-JV Wide and USA,JV NFP
+510069,JV UK General Fund,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510070,Training International,1155 - Training,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510072,USA Materials Inventory,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510073,European Materials Inven,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510074,Intern Airfare,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+510075,Exit Int. - Slovenia,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510076,JV Winter Academy,1102 - JV Conferences,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510077,Exit Int. - Romania,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510078,Training Int Travel,1155 - Training,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510079,EMS Development,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510081,JV Council Summer Summit,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510082,Evangelism & Discipleshi,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510083,78 Press - General,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510084,Communications Projects,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510085,Media Academy,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510086,Financial System Develop,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510087,HR Development,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510088,IT Leader,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510089,Support Raising Projects,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510090,English Resources for Sc,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510091,New Country - Moldova,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510092,New Country - Georgia,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510093,New Country - Bosnia,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510094,New Country - Lithuania,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510095,JV UK Development,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510096,Disciple Making Intensiv,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510107,EDP - Fusion Program,1170 - Music,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510108,EDP - Exit Program,1175 - Schools,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510109,EDP - Edge Program,1165 - Sports,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510110,Tom & Mary Palumbo,1103 - JV General Programs,113-A-Team,00-JV Wide and USA,JV NFP
+510111,CRM Development,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510112,Digital Missions,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510113,Edge Acceleration,1165 - Sports,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510114,Leadership Team Capacity,1155 - Training,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510115,Intern Credit Card Fee,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+510116,Moorlands - General,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510119,FM - Pavel Melotik,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510123,Moorlands-Boza Lach,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510124,Moorlands-Tomas Zaricky,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510125,FM-Fanny Dinh Minh,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510126,Moorlands-Petar Tatarski,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510127,Moorlands-Kata Ticha,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510128,Team Development Projec,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510129,On Display,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510130,Under the Hood,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510131,JV Wide Malenovice Pro,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510132,Moorlands-Scholarship Fund,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510133,Edge Games,1165 - Sports,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510134,Intern Insurance,1510 - Interns,151-Interns,00-JV Wide and USA,JV NFP
+510135,Undesignated Gift JVWide,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510136,JV Emergency Support Fun,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510137,COVID-19 Gospel Response,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510140,Moorlands - Dora Klauz,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510141,Moorlands - Nikola Sekulova,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510142,Moorlands - Szabolz Bella,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510144,Moorlands - Matej Bela,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510145,Materials Translations,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510146,Good News Project,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510148,John Deedrick,1103 - JV General Programs,113-A-Team,00-JV Wide and USA,JV NFP
+510149,E-Learning,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510150,Mobile Apps,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510151,Dick Patty Memorial Proj,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510153,Staff Learning and Devel,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510155,Training Center Expansio,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510156,Moorlands - Nikola Svarcova,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510157,JV Recharge,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510159,Gary & Tammy Hewitt,1103 - JV General Programs,113-A-Team,00-JV Wide and USA,JV NFP
+510161,Leadership Lab Events,1155 - Training,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510162,Leadership Challenge,1155 - Training,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510164,S-Team General,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510165,S-Team Training & E-Lear,1155 - Training,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510166,S-Team Shepherding,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510168,New Staff Accel - Salary,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510169,New Staff Accel - Develo,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510170,New Staff Pipeline,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510171,Team USA,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510172,Mart Saar Memorial Fund,1103 - JV General Programs,154-Other Projs,00-JV Wide and USA,JV NFP
+510173,People & Culture,1103 - JV General Programs,154-Other Projs,00-JV Wide and USA,JV NFP
+510175,JVW I-Team Meetings,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510176,JVW I-Team Care Account,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510177,JVW I-Team Supplies,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510178,JVW I-Team Office Maintenance,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510179,JVW I-Team Furniture & Equip,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510180,National Training Projects,1155 - Training,132-National Projs,00-JV Wide and USA,JV NFP
+510181,National Expansion Projects,1103 - JV General Programs,132-National Projs,00-JV Wide and USA,JV NFP
+510182,"Schultz, Russ",1103 - JV General Programs,113-A-Team,00-JV Wide and USA,JV NFP
+510183,JV Strategic Projects,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510184,Grow With God,1103 - JV General Programs,154-Other Projs,00-JV Wide and USA,JV NFP
+510185,Moorlands - Octavian Iordache,1152 - Other National Pgms,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510186,HQ Building Fund,1180 - Facilities,153-Facilities,00-JV Wide and USA,JV NFP
+510188,Counseling Support,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510189,Selah Garage Upgrades,1180 - Facilities,153-Facilities,00-JV Wide and USA,JV NFP
+510190,The Switzer Fund,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510191,JV Lead Team,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510192,Lepsa Camp in Romania,1180 - Facilities,153-Facilities,00-JV Wide and USA,JV NFP
+510193,The Chosen Evangelistic Campaign,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510194,Donor Relations,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510195,Moorlands - Mateja Jager Todorovska,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510196,Moorlands - Diana Dubovyk,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510197,Staff Development Moldova,1103 - JV General Programs,132-National Projs,00-JV Wide and USA,JV NFP
+510198,Pulse Digital Ministry,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510199,Concentric Participation,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510200,Partner Network Investment,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510201,Denominational leaders scholarships,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510202,CFO Europe,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510203,"Severe, Mike",1103 - JV General Programs,113-A-Team,00-JV Wide and USA,JV NFP
+510204,Finance Europe Projects,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510205,Office of the President Projects,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510206,President - Shepherding and Care,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510207,Albania Land Reserve,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510208,Council - Strategic Planning Retreats,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510209,Schools Ministry Projects,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510210,Travel to Concentric Events,1103 - JV General Programs,112-JV Wide Projects,00-JV Wide and USA,JV NFP
+510211,Lepsa Camp in Romania - Mega Grant,1180 - Facilities,153-Facilities,00-JV Wide and USA,JV NFP
+530002,Tim & Sue Cheshire,1052 - Sending Country Staff,181- UK Projects,72-UK,JV NFP
+530003,Training Resources,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+530004,Concentr Leadership Mtgs,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+530005,Ministry Opportunities,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+530007,Elyse Jackson,1052 - Sending Country Staff,171-Canadian Projs,71-Canada,JV NFP
+530009,Archippus Project,1323 - Concentric,322-Concentric,89-Concentric,JV NFP
+530010,Liam Gaspar,1052 - Sending Country Staff,181- UK Projects,72-UK,JV NFP
+530011,Paul Bowman,1052 - Sending Country Staff,181- UK Projects,72-UK,JV NFP
+530012,Catherine Leech,1103 - JV General Programs,181- UK Projects,00-JV Wide and USA,JV NFP
+710021,Uncategorized,1101 - JV General,940-Miscellaneous,00-JV Wide and USA,JV NFP
+990190,Conversion-Personal Funds,9910 - Conversion,990-Conversion,99-Conversion,JV NFP
+990199,Conversion Fund,9910 - Conversion,990-Conversion,99-Conversion,JV NFP
+991300,Ministry and Salary Advance Clearing Funds,1101 - JV General,940-Miscellaneous,00-JV Wide and USA,JV NFP
+991800,Donor Refund Clearing Funds,1101 - JV General,940-Miscellaneous,00-JV Wide and USA,JV NFP
+999000,Program Budget,1152 - Other National Pgms,154-Other Projs,00-JV Wide and USA,JV NFP
