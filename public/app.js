@@ -104,7 +104,7 @@
   // so it matches whatever text it sits in.
   function ic(name) { return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"></use></svg>`; }
 
-  function toast(message, kind = '') {
+  function toast(message, kind = '', ms = 3200) {
     clearTimeout(toastTimer);
     el.toast.textContent = message;
     el.toast.className = `toast show ${kind}`;
@@ -112,7 +112,7 @@
     toastTimer = setTimeout(() => {
       el.toast.className = 'toast';
       setTimeout(() => { el.toast.hidden = true; }, 200);
-    }, 3200);
+    }, ms);
   }
 
   async function api(path, { method = 'GET', body, auth = true } = {}) {
@@ -3957,7 +3957,8 @@
           <input type="number" id="wire-fee" min="0" step="0.01" placeholder="0.00" inputmode="decimal" />
         </label>
         <button class="btn primary small" data-act="export-intacct">⤓ Download for Intacct &amp; start paying</button>
-      </div>`;
+      </div>
+      <div id="export-blocked" class="export-blocked" hidden></div>`;
     el.archiveReady.innerHTML = toolbar + groups.map((g) => `
       <div class="report" data-group="${escapeHtml(g.key)}">
         <div class="report-head">
@@ -4021,7 +4022,10 @@
             <div class="pay-batch-title">⤓ ${title}</div>
             <div class="pay-batch-sub">${people.length} report${people.length === 1 ? '' : 's'} · ${b.items.length} expense${b.items.length === 1 ? '' : 's'} · ${escapeHtml(money(b.total, 'USD'))}</div>
           </div>
-          <button class="btn primary small" data-act="pay-batch">Mark this download paid</button>
+          <div class="pay-batch-actions">
+            ${tracked ? '<button class="btn ghost small" data-act="redownload-batch">⤓ Download again</button>' : ''}
+            <button class="btn primary small" data-act="pay-batch">Mark this download paid</button>
+          </div>
         </div>
         <div class="pay-batch-body">${people.map((g) => `
           <div class="report" data-group="${escapeHtml(g.key)}">
@@ -4104,36 +4108,56 @@
   }
 
   // Download the approved batch as a CSV (CedarStone's hand-off into its own
-  // Download the payable batch as Cedarstone's Intacct Journal-Entry .xlsx (the
-  // "ExpWire batch" format). Built server-side so it carries the coding. Read-
-  // only — it makes the file, it doesn't move anything. If some lines still need
-  // a fund/class, we say so rather than shipping a half-coded batch silently.
+  // Turn a base64 .xlsx into a file download in the browser.
+  function downloadXlsx(base64, filename) {
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'reimbly-intacct-je.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Show what still needs coding before a batch can go out — a real list, not just
+  // a count, so Finance knows exactly whose expense to fix. Persists in a panel by
+  // the export button until it's resolved.
+  function showExportBlocked(missing) {
+    const panel = $('#export-blocked');
+    const n = (missing || []).length;
+    const items = (missing || []).map((m) => {
+      const who = m.who ? ` · ${escapeHtml(m.who)}` : '';
+      const desc = m.desc ? escapeHtml(m.desc) : 'an expense';
+      return `<li><strong>${desc}</strong>${who} — needs <em>${escapeHtml((m.needs || []).join(' & '))}</em></li>`;
+    }).join('');
+    if (panel) {
+      panel.innerHTML = `<p class="eb-head">${ic('alert')} Can’t download yet — ${n} expense${n === 1 ? '' : 's'} still need coding. Fix these, then try again:</p><ul class="eb-list">${items}</ul>`;
+      panel.hidden = false;
+    }
+    toast(`Can’t download yet — ${n} expense${n === 1 ? '' : 's'} need a fund or code. See the list.`, 'bad', 6000);
+  }
+  function clearExportBlocked() { const p = $('#export-blocked'); if (p) { p.hidden = true; p.innerHTML = ''; } }
+
+  // Download the payable batch as Cedarstone's Intacct Journal-Entry .xlsx (JE +
+  // Summary sheets). Built server-side so it carries the coding — and only ships if
+  // every line is fully coded. A blocked batch moves nothing.
   async function exportIntacctJe(btn) {
     if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
+    clearExportBlocked();
     try {
       const feeInput = $('#wire-fee');
       const fee = feeInput ? Math.max(0, Number(feeInput.value) || 0) : 0;
       const res = await api('export-intacct', { method: 'POST', body: { fee } });
+      if (res.blocked) { showExportBlocked(res.missing || []); return; }
       if (!res.count) { toast('Nothing approved to export.', 'bad'); return; }
-      const bin = atob(res.base64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = res.filename || 'reimbly-intacct-je.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      const miss = (res.missing || []).length;
-      if (miss) {
-        toast(`Downloaded ${res.count} line${res.count === 1 ? '' : 's'} — but ${miss} still need a fund/class before Intacct will accept them.`, 'bad');
-      } else {
-        const feeNote = res.fee ? ` (incl. ${money(res.fee, 'USD')} wire fee)` : '';
-        toast(`Downloaded ${res.count} line${res.count === 1 ? '' : 's'}${feeNote} — this batch is now waiting to be paid.`, 'good');
-      }
+      downloadXlsx(res.base64, res.filename);
+      const feeNote = res.fee ? ` (incl. ${money(res.fee, 'USD')} wire fee)` : '';
+      toast(`Downloaded ${res.count} line${res.count === 1 ? '' : 's'}${feeNote} — this batch is now waiting to be paid.`, 'good');
       // These moved to "Waiting to be paid" — refresh so the new download shows.
       state.loaded.dashboard = false;
       state.loaded.timing = false;
@@ -4143,6 +4167,21 @@
       toast(e.message, 'bad');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '⤓ Download for Intacct & start paying'; }
+    }
+  }
+
+  // Re-download a past batch's file, exactly as first issued. Changes nothing.
+  async function redownloadBatch(batchId, btn) {
+    if (!batchId || batchId === '__none__') return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
+    try {
+      const res = await api('redownload-intacct', { method: 'POST', body: { batchId } });
+      downloadXlsx(res.base64, res.filename);
+      toast(`Re-downloaded ${res.count} line${res.count === 1 ? '' : 's'}. Nothing changed.`, 'good');
+    } catch (e) {
+      toast(e.message, 'bad');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '⤓ Download again'; }
     }
   }
 
@@ -4266,6 +4305,12 @@
     if (act === 'export-csv') { exportApprovedCsv(); return; }
     if (act === 'export-intacct') { exportIntacctJe(event.target.closest('button')); return; }
     if (act === 'mark-selected') { markSelectedPaid(); return; }
+
+    if (act === 'redownload-batch') {
+      const box = event.target.closest('.pay-batch');
+      if (box) redownloadBatch(box.dataset.batch, btn);
+      return;
+    }
 
     if (act === 'pay-batch') {
       const box = event.target.closest('.pay-batch');

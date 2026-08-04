@@ -929,6 +929,12 @@ body.modal-open { overflow: hidden; }
 .pay-batch-title { font-weight: 800; font-size: 1rem; color: var(--ink); }
 .pay-batch-sub { font-size: 0.85rem; color: var(--ink-soft); margin-top: 2px; }
 .pay-batch-head .btn { flex: none; }
+.pay-batch-actions { display: flex; gap: 8px; flex: none; flex-wrap: wrap; }
+.export-blocked { margin: -4px 0 14px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--danger) 34%, var(--line)); border-left: 3px solid var(--danger); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--danger) 7%, var(--card)); }
+.export-blocked .eb-head { margin: 0 0 8px; font-weight: 700; font-size: 0.9rem; color: var(--ink); display: flex; align-items: center; gap: 7px; }
+.export-blocked .eb-head .icon { color: var(--danger); flex: none; }
+.export-blocked .eb-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; font-size: 0.86rem; color: var(--ink-soft); line-height: 1.4; }
+.export-blocked .eb-list em { font-style: normal; font-weight: 700; color: var(--danger); }
 .pay-batch-body { padding: 6px 12px 12px; }
 .pay-batch-body .report { box-shadow: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; margin: 0; }
 .pay-batch-body .report:last-child { border-bottom: 0; }

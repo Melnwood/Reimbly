@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "netlify dev",
     "check": "for f in netlify/functions/*.js netlify/functions/lib/*.js; do node --check \"$f\" || exit 1; done",
-    "test": "node --test"
+    "test": "node --test",
+    "gen:funds": "node scripts/generate-fund-dimensions.mjs",
+    "check:funds": "node scripts/check-fund-coverage.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.3",

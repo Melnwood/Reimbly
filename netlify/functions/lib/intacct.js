@@ -150,7 +150,29 @@ function buildJournalEntry(expenses, { batchLabel, date, fee = 0 } = {}) {
   };
 }
 
+// A human-readable summary of a batch, as rows for a "Summary" sheet — so CedarStone
+// can open the file and see at a glance it's complete and balanced.
+function summaryRows({ batchId, dateLabel, je, reportCount, peopleCount }) {
+  const expensesTotal = usd(je.totalDebit - je.fee);
+  return [
+    ['Reimbly → Intacct — batch summary'],
+    [],
+    ['Batch', batchId || ''],
+    ['Downloaded', dateLabel || ''],
+    ['Reports', reportCount != null ? reportCount : ''],
+    ['People', peopleCount != null ? peopleCount : ''],
+    ['Expense lines', je.count],
+    ['Expenses total (USD)', expensesTotal],
+    ['Wire fee (USD)', je.fee],
+    ['Total credited to bank (USD)', je.totalCredit],
+    [],
+    ['Total debit (USD)', je.totalDebit],
+    ['Total credit (USD)', je.totalCredit],
+    ['Balanced', je.balanced ? 'Yes' : 'NO — do not import'],
+  ];
+}
+
 module.exports = {
   COLUMNS, JOURNAL, LOCATION_ID, BANK_ACCT, FEE_ACCT,
-  usd, mdY, leadingCode, resolveDims, jeLine, bankLine, rowToArray, buildJournalEntry,
+  usd, mdY, leadingCode, resolveDims, jeLine, bankLine, rowToArray, buildJournalEntry, summaryRows,
 };

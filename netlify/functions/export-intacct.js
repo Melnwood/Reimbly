@@ -1,23 +1,20 @@
 'use strict';
 
-// Generate the Intacct Journal-Entry upload (.xlsx) for CedarStone and record
-// the download as one payment batch. Finance only. This is the hand-off: it
-// takes every Approved expense, stamps them with a batch id + the download
-// time, moves them into "Waiting to be paid", and hands back the file. Later,
-// the one-click "Mark this download paid" button reimburses the whole batch.
-// Format + field mapping: docs/INTACCT-UPLOAD-FORMAT.md.
+// Generate the Intacct Journal-Entry upload (.xlsx) for CedarStone and record the
+// download as one payment batch. Finance only. This is the hand-off: it takes every
+// Approved expense, builds the file, and — only if every line is fully coded —
+// stamps them with a batch id + the download time, moves them into "Waiting to be
+// paid", and hands back the file. If anything is missing a fund / GL code, it stops
+// and reports exactly what to fix; nothing is committed. Format: docs/INTACCT-UPLOAD-FORMAT.md.
 
-const XLSX = require('xlsx');
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const {
   TABLES, STATUS, EVENTS, ensureStaff, accountMap, makeBatchId, logActivity,
 } = require('./lib/domain');
-const { buildJournalEntry } = require('./lib/intacct');
+const { buildWorkbook } = require('./lib/intacct-export');
 
-const firstLink = (v) => (Array.isArray(v) && v.length ? v[0] : null);
-const firstLookup = (v) => (Array.isArray(v) ? (v.length ? v[0] : '') : (v == null ? '' : v));
 const today = () => new Date().toISOString().slice(0, 10);
 
 exports.handler = async (event) => {
@@ -32,6 +29,11 @@ exports.handler = async (event) => {
       err.statusCode = 403;
       throw err;
     }
+
+    // Optional bank/wire fee for this pay run (adds the balancing 7111100 line).
+    // Finance can pass it in; default 0 → no fee line, credit = the expense total.
+    let fee = 0;
+    try { fee = Number((JSON.parse(event.body || '{}') || {}).fee) || 0; } catch (e) { fee = 0; }
 
     // Only fresh Approved expenses form a new download. Anything already
     // "Waiting to be paid" belongs to a previous download and is left alone.
@@ -50,44 +52,26 @@ exports.handler = async (event) => {
       throw err;
     }
 
-    // Normalize each expense into the shape the JE builder expects.
-    const expenses = records.map((r) => {
-      const f = r.fields || {};
-      const acct = accounts[firstLink(f.Account)] || {};
-      return {
-        id: r.id,
-        amountUsd: f['Amount (USD)'],
-        description: f.Description || '',
-        expenseAccount: f['Expense Account'] || '',
-        glCode: acct.code || '',
-        deptId: firstLookup(f['Fund Code']),      // Intacct DEPT_ID
-        projectId: firstLookup(f['Project Code']), // Intacct GLENTRY_PROJECTID
-        classId: firstLookup(f['Class']),          // Intacct GLENTRY_CLASSID
-        person: firstLookup(f['Submitter Email']) || '',
-      };
-    });
-
-    // Optional bank/wire fee for this pay run (adds the balancing 7111100 line).
-    // Finance can pass it in; default 0 → no fee line, credit = the expense total.
-    let fee = 0;
-    try { fee = Number((JSON.parse(event.body || '{}') || {}).fee) || 0; } catch (e) { fee = 0; }
-
     const date = today();
     const stamp = date.replace(/-/g, '');
     const batchId = makeBatchId();
     const exportedOn = new Date().toISOString();
     const batchLabel = `Reimbly ${batchId}`;
-    const je = buildJournalEntry(expenses, { batchLabel, date, fee });
 
-    // Build the .xlsx (CedarStone's preferred upload format).
-    const ws = XLSX.utils.aoa_to_sheet(je.rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `Reimbly JE ${stamp}`.slice(0, 31));
-    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    // Build the file first — no side effects yet.
+    const { base64, je } = buildWorkbook(records, accounts, {
+      batchId, batchLabel, date, dateLabel: date, fee, sheetName: `Reimbly JE ${stamp}`,
+    });
 
-    // Record the download: stamp every line with the batch + time and move it
-    // into "Waiting to be paid". Best-effort per row so one bad record doesn't
-    // sink the batch — but report how many actually moved.
+    // Guard rail: never ship — or commit — a half-coded batch. If any line is
+    // missing its GL account / fund / class, stop and say exactly what to fix.
+    if (je.missing.length) {
+      return ok({ blocked: true, missing: je.missing, count: je.count });
+    }
+
+    // All clean — record the download: stamp every line with the batch, fee, and
+    // time, and move it into "Waiting to be paid". Best-effort per row so one bad
+    // record doesn't sink the batch — but report how many actually moved.
     let queued = 0;
     for (const r of records) {
       try {
@@ -95,6 +79,7 @@ exports.handler = async (event) => {
           Status: STATUS.WAITING_TO_PAY,
           'Payment Batch': batchId,
           'Exported On': exportedOn,
+          'Batch Fee': fee,
         });
         await logActivity({ expenseId: r.id, event: EVENTS.QUEUED_FOR_PAYMENT, user, note: `Exported in ${batchId}` });
         queued += 1;

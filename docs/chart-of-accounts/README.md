@@ -44,6 +44,20 @@ with their Intacct dimensions** — required for the JE upload. It's captured he
 - Generated into code as [`../../netlify/functions/lib/fund-dimensions.js`](../../netlify/functions/lib/fund-dimensions.js)
   (regenerate from the CSV; don't hand-edit).
 
+**When CedarStone sends an updated listing:** save it as `fund-dimensions.csv` here
+(columns: Fund ID, Fund name, Fund type, Ministry Type ID, Country ID, Entity ID),
+then run:
+
+```
+npm run gen:funds     # rebuild lib/fund-dimensions.js from the CSV
+npm run check:funds   # list any accounts people can pick that the listing doesn't cover
+```
+
+`check:funds` is the safety net: it names any pickable account with no dimensions
+(as of this listing, 4 — e.g. "JV HR", "Emils Rolavs"). Those are exactly the lines
+the Intacct download will refuse to ship half-coded, so send the list back to
+CedarStone to get their dimensions (or retire the account).
+
 Each **Fund ID** (the support/project account a person spends from — the same code
 as the Accounts/Expense Type list above) carries the dimensions the upload needs:
 

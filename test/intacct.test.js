@@ -6,9 +6,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  buildJournalEntry, COLUMNS, mdY, leadingCode, usd, resolveDims,
+  buildJournalEntry, COLUMNS, mdY, leadingCode, usd, resolveDims, summaryRows,
   BANK_ACCT, FEE_ACCT,
 } = require('../netlify/functions/lib/intacct');
+const { buildWorkbook } = require('../netlify/functions/lib/intacct-export');
 
 const idx = (name) => COLUMNS.indexOf(name);
 // Find the single data row whose ACCT_NO matches (skips the header at row 0).
@@ -126,4 +127,39 @@ test('buildJournalEntry: line numbers are sequential across bank + expense lines
   const nums = je.rows.slice(1).map((r) => r[idx('LINE_NO')]);
   assert.deepEqual(nums, [1, 2, 3, 4, 5]);
   assert.equal(je.count, 3);
+});
+
+test('summaryRows: reports totals and the balance verdict', () => {
+  const je = buildJournalEntry([camps], { batchLabel: 'EW Batch 146', date: '2026-08-01', fee: 2.5 });
+  const rows = summaryRows({ batchId: 'batch-x', dateLabel: '8/1/2026', je, reportCount: 1, peopleCount: 1 });
+  const map = new Map(rows.filter((r) => r.length === 2).map((r) => [r[0], r[1]]));
+  assert.equal(map.get('Batch'), 'batch-x');
+  assert.equal(map.get('Expense lines'), 1);
+  assert.equal(map.get('Wire fee (USD)'), 2.5);
+  assert.equal(map.get('Expenses total (USD)'), 668.21);
+  assert.equal(map.get('Total credited to bank (USD)'), 670.71);
+  assert.equal(map.get('Balanced'), 'Yes');
+});
+
+// --- shared workbook builder (JE + Summary sheets), used by export & re-download ---
+const XLSX = require('xlsx');
+const rec = (id, fields) => ({ id, fields });
+
+test('buildWorkbook: two sheets, balances, and reports coding gaps', () => {
+  const records = [
+    rec('r1', { 'Amount (USD)': 668.21, Description: 'Camps', 'Expense Account': '430028 – Ukraine', Account: ['accGL'], Report: ['rep1'], 'Submitter Email': ['a@jv.org'] }),
+    rec('r2', { 'Amount (USD)': 10, Description: 'Orphan', 'Expense Account': '999999 – nope', Report: ['rep1'], 'Submitter Email': ['a@jv.org'] }),
+  ];
+  const accounts = { accGL: { code: '8490000' } };
+  const { base64, je, reportCount, peopleCount } = buildWorkbook(records, accounts, {
+    batchId: 'b1', batchLabel: 'Reimbly b1', date: '2026-08-01', dateLabel: '8/1/2026', fee: 2.5,
+  });
+  const wb = XLSX.read(base64, { type: 'base64' });
+  assert.deepEqual(wb.SheetNames, ['Journal Entry', 'Summary']);
+  assert.equal(reportCount, 1);
+  assert.equal(peopleCount, 1);
+  // r2 has no GL code and an unknown fund → flagged, so the caller can block.
+  assert.equal(je.missing.length, 1);
+  assert.equal(je.missing[0].id, 'r2');
+  assert.equal(je.balanced, true);
 });

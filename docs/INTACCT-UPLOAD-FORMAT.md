@@ -38,9 +38,26 @@ send a revised template. This is the master reference for building the export.
 > Any line still missing a GL account / fund / class (e.g. an unknown fund code) is
 > reported back on export instead of shipping half-coded.
 >
-> **The wire fee** is passed to the export (`fee` in the request body); default `0`
-> means no fee line and the credit equals the expense total. A small "wire fee for
-> this run" box on the export can feed it once Mel confirms he wants to capture it.
+> **The wire fee** is entered in a "Wire fee $" box next to the download button and
+> passed to the export (`fee`); default `0` means no fee line and the credit equals
+> the expense total. It's saved on the batch (Expenses → **Batch Fee**) so a
+> re-download reproduces the file exactly.
+>
+> **Won't ship half-coded (v4).** The download builds the file first and, if any line
+> is missing its GL account / fund / class, it **stops and lists exactly which
+> expense (and whose) to fix — nothing is committed** (no batch id, nothing moved to
+> "waiting to be paid"). Only a fully-coded batch goes out. `lib/fund-dimensions.js`
+> covers 252 of 256 pickable accounts; `npm run check:funds` names the rest.
+>
+> **A Summary sheet** rides along in the workbook (second tab): batch, date, #
+> reports/people, expense total, wire fee, total credited, and **Balanced: Yes** — so
+> CedarStone can eyeball completeness and balance on open. `Journal Entry` stays the
+> first tab (the one they import).
+>
+> **Re-download a past batch.** The Paid screen's waiting cards have a **Download
+> again** button (`redownload-intacct`) that rebuilds the exact file for that batch —
+> same label, date, and saved wire fee — without changing anything. For a lost file
+> or a second copy for CedarStone.
 >
 > **Download = one payment batch (v2).** Downloading the Intacct file is now the
 > hand-off, not just a read. It takes every **Approved** expense, stamps them with
