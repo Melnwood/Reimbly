@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Reimbly" />
-    <link rel="stylesheet" href="styles.css?v=20260803d" />
+    <link rel="stylesheet" href="styles.css?v=20260805a" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -251,6 +251,13 @@
                   <span>Date</span>
                   <input id="f-date" name="date" type="date" required />
                 </label>
+              </div>
+
+              <!-- "We filled the account & category from your past visits here" -->
+              <div id="coding-suggest" class="coding-suggest" hidden>
+                <svg class="icon" aria-hidden="true"><use href="#i-sparkle"></use></svg>
+                <span class="cs-text"></span>
+                <button type="button" id="coding-confirm" class="cs-ok">Looks right</button>
               </div>
 
               <label class="field mode-receipt">
@@ -746,6 +753,6 @@
 
     <!-- Bump ?v= whenever app.js/styles.css change so browsers never serve a stale
          copy (index.html itself is always revalidated, so the new links take hold). -->
-    <script src="app.js?v=20260803d"></script>
+    <script src="app.js?v=20260805a"></script>
   </body>
 </html>

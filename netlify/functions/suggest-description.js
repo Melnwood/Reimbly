@@ -11,7 +11,10 @@
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, ensureStaff } = require('./lib/domain');
+const { TABLES, ensureStaff, accountMap } = require('./lib/domain');
+
+const firstLink = (v) => (Array.isArray(v) && v.length ? v[0] : null);
+const leadingCode = (s) => (String(s || '').match(/^\s*(\S+)/) || [])[1] || '';
 
 const SDK = require('@anthropic-ai/sdk');
 const Anthropic = SDK.Anthropic || SDK.default || SDK;
@@ -24,15 +27,11 @@ function badRequest(message) {
   return err;
 }
 
-// The distinct descriptions this person has used before at this merchant,
-// most-recent first. This is the "learning" — pulled straight from their history.
-async function rememberedFor(email, merchant) {
-  if (!merchant) return [];
+// This person's past expenses, newest first — the raw material for "learning."
+async function historyFor(email) {
   const em = String(email).toLowerCase().replace(/'/g, "\\'");
-  const want = String(merchant).trim().toLowerCase();
-  let records;
   try {
-    records = await airtable.listRecords(TABLES.EXPENSES, {
+    return await airtable.listRecords(TABLES.EXPENSES, {
       filterByFormula: `LOWER(ARRAYJOIN({Submitter Email})) = '${em}'`,
       'sort[0][field]': 'Submitted On',
       'sort[0][direction]': 'desc',
@@ -40,17 +39,55 @@ async function rememberedFor(email, merchant) {
   } catch (e) {
     return [];
   }
+}
+
+const sameMerchant = (f, want) => String(f.Merchant || '').trim().toLowerCase() === want;
+
+// The distinct descriptions this person has used before at this merchant,
+// most-recent first. Pulled straight from their history.
+function rememberedFrom(records, merchant) {
+  if (!merchant) return [];
+  const want = String(merchant).trim().toLowerCase();
   const seen = new Set();
   const out = [];
   for (const r of records) {
     const f = r.fields || {};
-    if (String(f.Merchant || '').trim().toLowerCase() !== want) continue; // same merchant only
+    if (!sameMerchant(f, want)) continue;
     const d = String(f.Description || '').trim();
     const key = d.toLowerCase();
     if (d && !seen.has(key)) { seen.add(key); out.push(d); }
     if (out.length >= MAX_REMEMBERED) break;
   }
   return out;
+}
+
+// The account (fund) + category this person usually codes THIS merchant to — so a
+// regular coffee run comes back already coded, ready to confirm. Most-used pairing
+// wins (ties broken by most recent). Only pairs they actually used, so the two
+// always go together (a valid category for that fund).
+function codingFrom(records, merchant, accounts) {
+  if (!merchant) return null;
+  const want = String(merchant).trim().toLowerCase();
+  const tally = new Map();
+  let order = 0;
+  for (const r of records) {
+    const f = r.fields || {};
+    if (!sameMerchant(f, want)) continue;
+    const expenseAccount = leadingCode(f['Expense Account']);
+    const acct = accounts[firstLink(f.Account)] || {};
+    const accountCode = acct.code || '';
+    if (!expenseAccount && !accountCode) continue;
+    const key = `${expenseAccount}|${accountCode}`;
+    const cur = tally.get(key) || { expenseAccount, accountCode, n: 0, order: order++ };
+    cur.n += 1;
+    tally.set(key, cur);
+  }
+  if (!tally.size) return null;
+  const best = [...tally.values()].sort((a, b) => (b.n - a.n) || (a.order - b.order))[0];
+  const out = {};
+  if (best.expenseAccount) out.expenseAccount = best.expenseAccount;
+  if (best.accountCode) out.accountCode = best.accountCode;
+  return Object.keys(out).length ? out : null;
 }
 
 function describeTool() {
@@ -124,10 +161,16 @@ exports.handler = async (event) => {
     const date = String(body.date || '').trim().slice(0, 10);
     const recallOnly = body.recallOnly === true;
 
-    const remembered = await rememberedFor(user.email, merchant);
+    const records = merchant ? await historyFor(user.email) : [];
+    const remembered = rememberedFrom(records, merchant);
+    // The usual coding at this merchant (needs the accounts map to read GL codes).
+    let coding = null;
+    if (merchant) {
+      try { coding = codingFrom(records, merchant, await accountMap()); } catch (e) { coding = null; }
+    }
 
     // Recall is just history — no AI needed, so it works even with the key unset.
-    if (recallOnly) return ok({ remembered, options: [] });
+    if (recallOnly) return ok({ remembered, options: [], coding });
 
     if (!merchant && !hint && !account) throw badRequest('Add where you spent it (or a couple of words) first.');
 
@@ -140,7 +183,7 @@ exports.handler = async (event) => {
     const have = new Set(remembered.map((d) => d.toLowerCase()));
     options = options.filter((o) => !have.has(o.toLowerCase()));
 
-    return ok({ remembered, options });
+    return ok({ remembered, options, coding });
   } catch (err) {
     return error(err);
   }

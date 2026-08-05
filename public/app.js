@@ -1294,6 +1294,8 @@
     // Where the total & date sit on the image — carried through so approvers see
     // them highlighted on the receipt.
     state.scanMarks = (s.amountBox || s.dateBox) ? { amount: s.amountBox || null, date: s.dateBox || null } : null;
+    // A scanned merchant is set here (no change event), so recall its usual coding.
+    if (s.merchant) recallDescriptions();
   }
 
   function currentReceipt() {
@@ -1347,18 +1349,60 @@
   // overwrite a fuller result the person just asked for with the ✨ button.
   let describeSeq = 0;
 
-  // Auto-memory: when the merchant is filled in, quietly bring back the
-  // descriptions this person has used there before. No AI, no button.
+  // Auto-memory: when the merchant is filled in, quietly bring back what this
+  // person has used there before — the descriptions AND the account + category they
+  // usually code it to. No AI, no button. So a regular coffee run comes back
+  // pre-coded, highlighted to confirm rather than fill out from scratch.
   async function recallDescriptions() {
     if (state.editingId || state.expenseType === 'mileage') return;
     const merchant = $('#f-business').value.trim();
-    if (!merchant || $('#f-description').value.trim()) return; // don't override what they typed
+    if (!merchant) return;
     const seq = ++describeSeq;
     try {
       const res = await api('suggest-description', { method: 'POST', body: describeBody({ recallOnly: true }) });
       if (seq !== describeSeq) return; // a newer request has taken over
-      if (res && res.remembered && res.remembered.length) renderDescribeChips(res.remembered, []);
+      // Descriptions only when they haven't typed one (don't override their words).
+      if (res && res.remembered && res.remembered.length && !$('#f-description').value.trim()) {
+        renderDescribeChips(res.remembered, []);
+      }
+      if (res && res.coding) applyCodingSuggestion(res.coding, merchant);
     } catch (e) { /* memory is a nicety — never interrupt */ }
+  }
+
+  // Pre-fill the account/category from what this person usually uses at this
+  // merchant — only into EMPTY fields (never clobber a choice they've made) — and
+  // highlight them so they just glance-confirm. Changing a field, or "Looks right",
+  // clears the highlight.
+  function markSuggested(sel, on) { if (sel) sel.classList.toggle('suggested', !!on); }
+  function applyCodingSuggestion(coding, merchant) {
+    let filled = 0;
+    const eaSel = $('#f-expense-account');
+    if (eaSel && !eaSel.value && coding.expenseAccount && hasOption('#f-expense-account', coding.expenseAccount)) {
+      eaSel.value = coding.expenseAccount;
+      populateCategories();     // refresh the category list for the chosen account
+      updateDefaultLink();
+      markSuggested(eaSel, true);
+      filled += 1;
+    }
+    const catSel = $('#f-account');
+    if (catSel && !catSel.value && coding.accountCode && hasOption('#f-account', coding.accountCode)) {
+      catSel.value = coding.accountCode;
+      markSuggested(catSel, true);
+      filled += 1;
+    }
+    const bar = $('#coding-suggest');
+    if (bar) {
+      if (filled) {
+        const txt = bar.querySelector('.cs-text');
+        if (txt) txt.textContent = `Filled in from your past visits to ${merchant}. Right?`;
+        bar.hidden = false;
+      } else { bar.hidden = true; }
+    }
+  }
+  function clearCodingSuggest() {
+    markSuggested($('#f-expense-account'), false);
+    markSuggested($('#f-account'), false);
+    const bar = $('#coding-suggest'); if (bar) bar.hidden = true;
   }
 
   // The ✨ button: memory first, then Claude fills in fresh ideas.
@@ -1628,6 +1672,7 @@
     state.scanMarks = null;
     state.pendingDeclaration = null;
     el.form.reset();
+    clearCodingSuggest();      // drop any "suggested" highlight
     $('#f-date').value = new Date().toISOString().slice(0, 10);
     populateExpenseAccounts(); // re-apply the default account…
     populateCategories();      // …and its category list
@@ -5384,7 +5429,9 @@
     updateSortHeader();
     $('#new-report-btn').addEventListener('click', createReportPrompt);
     $('#f-report').addEventListener('change', onFormReportChange);
-    $('#f-expense-account').addEventListener('change', () => { populateCategories(); updateDefaultLink(); });
+    $('#f-expense-account').addEventListener('change', () => { clearCodingSuggest(); populateCategories(); updateDefaultLink(); });
+    $('#f-account').addEventListener('change', () => { markSuggested($('#f-account'), false); });
+    { const b = $('#coding-confirm'); if (b) b.addEventListener('click', clearCodingSuggest); }
     $('#set-default-account').addEventListener('click', async () => {
       const code = selectedAccountCode();
       if (!code) return;
