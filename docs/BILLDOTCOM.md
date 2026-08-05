@@ -16,20 +16,36 @@ Connected, the flow becomes: a batch is approved → Reimbly tells Bill.com *who
 pay, how much, and how it's coded* → Bill.com sends the payments → Bill.com tells
 Reimbly "paid" → everyone's app updates itself. No spreadsheet, no manual wire.
 
-## First decision: payment rail only, or accounting too?
+## Update (after talking to Olivia): ride the pipe they already have
 
-Bill.com syncs natively to Sage Intacct, so there are two shapes:
+Mel confirmed **CedarStone already *receives* from Bill.com into Intacct** — so the
+**Bill.com → Intacct** channel exists and works today. That points straight at the
+least-work-for-CedarStone architecture:
 
-- **A — Bill.com is only the payment rail.** Keep the Intacct JE file we built for
-  the books; use Bill.com just to send the money. Simplest to reason about; the two
-  systems stay independent.
-- **B — Bill.com also carries the accounting.** If JV pays through Bill.com *and*
-  Bill.com syncs to Intacct, the bills we push could post to Intacct through
-  Bill.com — potentially **replacing** the JE file. One rail for pay + books.
+> **Reimbly → Bill.com → Intacct (their existing sync).**
 
-**We must settle this with CedarStone before building** — it decides whether the
-coding lives in the Bill.com bill, the Intacct file, or both. (This is on the
-CedarStone agenda.)
+Reimbly drops the reimbursements *into* Bill.com; Bill.com carries them into Intacct
+the way it already does. CedarStone does **less**, not more — they stop importing
+anything from us; the reimbursements arrive through the channel they already watch.
+
+Two things this settles:
+
+- The direction we were unsure about — **Intacct → Bill.com — is not needed.** We
+  only ever push data *into* Bill.com; Bill.com handles everything downstream.
+- The Intacct JE file we built becomes a **fallback**, not the main path. (Keep it
+  for now; it's the safety net until the Bill.com route is proven.)
+
+## The one thing to confirm — can we get data *into* Bill.com?
+
+The whole question narrows to this, and Bill.com supports at least one of:
+
+- **API** — Reimbly creates the bills in Bill.com directly (fully automatic), or
+- **Import file** — Reimbly produces a Bill.com bill-import file that's uploaded
+  into Bill.com (same idea as our Intacct file, pointed at Bill.com instead).
+
+Either lands in the same place, because Bill.com → Intacct is already theirs. We're
+well-positioned: Reimbly already produces the full coding (GL account + fund/
+project/class) a Bill.com bill needs to map cleanly into Intacct.
 
 ## What we need from Bill.com to build it
 
@@ -99,16 +115,25 @@ build time, but the shape is:
 3. **Turn it on for Finance** once CedarStone signs off on the coding + the A/B
    decision.
 
-## Requesting access — the outside-website steps (for Mel)
+## The question to ask Bill.com (for Mel)
 
-1. Sign in to Bill.com (or have CedarStone do it): <https://app.bill.com>.
-2. Ask Bill.com support / your account rep to **enable API access** and issue a
-   **Developer Key** for the org. (Search their help for "API access" / "developer
-   key," or ask the rep directly.)
-3. Get the **Organization ID**, and create a **dedicated API user**.
-4. Ask for **sandbox** credentials for testing.
-5. Send those to be put in **Netlify** (never email a key into the repo). Then Claude
-   builds against the sandbox first.
+One question decides the path — ask Bill.com support / your account rep:
+
+> **"Can we get bills *into* this account automatically — either through the API, or
+> a bill-import file — and have them flow to Intacct through our existing sync?"**
+
+- **If yes, API:** get **API access enabled**, a **Developer Key**, the
+  **Organization ID**, a **dedicated API user**, and **sandbox** credentials. Send
+  those to go in **Netlify** (never email a key into the repo); Claude builds against
+  the sandbox first.
+- **If yes, import file only (no API):** ask for their **bill-import template/format**.
+  Reimbly generates that file (it already has the coding); it's uploaded into
+  Bill.com like our Intacct file — still less work for CedarStone, since it rides
+  their Bill.com → Intacct sync.
+- **Either way, confirm:** whose account it is (JV vs CedarStone), and that staff can
+  be **Vendors** in Bill.com (that's what a payment is made to).
+
+Sign in / start here: <https://app.bill.com>.
 
 > When any of this is set up, add it to [EXTERNAL-SERVICES.md](EXTERNAL-SERVICES.md)
 > with the real org ID (non-secret) and which Netlify variables hold the keys.
