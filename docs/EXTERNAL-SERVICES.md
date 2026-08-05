@@ -81,6 +81,14 @@ live in Netlify's environment variables, kept secret and out of the code.
 - **Reference:** https://developer.intacct.com/api/
 - **Full notes:** **[docs/INTACCT-INTEGRATION.md](INTACCT-INTEGRATION.md)**
 
+### 10. Bill.com — paying reimbursements (planned / not live yet)
+- **What:** the planned money rail — actually sending each person their
+  reimbursement (ACH/check) when a batch is approved. Not built or connected yet.
+- **Sign in:** https://app.bill.com
+- **Netlify variables (planned):** `BILLDOTCOM_DEV_KEY`, `BILLDOTCOM_ORG_ID`,
+  `BILLDOTCOM_USER`, `BILLDOTCOM_PASSWORD`, `BILLDOTCOM_ENV`
+- **Plan & how to request access:** **[docs/BILLDOTCOM.md](BILLDOTCOM.md)**
+
 ---
 
 ## If you're ever setting one up from scratch
