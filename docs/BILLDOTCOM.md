@@ -51,17 +51,35 @@ What the one-way sync means for us:
   the Bill.com bill's fields. Confirm with CedarStone how their Bill.com → Intacct
   sync maps those dimensions, so the books land the same as they do today.
 
-## The one thing to confirm — can we get data *into* Bill.com?
+## What Bill.com can actually do (researched, Aug 2026)
 
-The whole question narrows to this, and Bill.com supports at least one of:
+Short answer: **everything we need is there via Bill.com's API.**
 
-- **API** — Reimbly creates the bills in Bill.com directly (fully automatic), or
-- **Import file** — Reimbly produces a Bill.com bill-import file that's uploaded
-  into Bill.com (same idea as our Intacct file, pointed at Bill.com instead).
+- **There is a full REST API** (BILL "AP & AR" API — v2 and a newer v3). You sign up
+  for a **developer key** and a **sandbox** to build/test. Auth is
+  `username + password + organizationId + devKey` → a `sessionId` used on every call.
+- **Reimbly can create the whole chain by API:** find-or-create each person as a
+  **vendor** (international vendors are supported), **create a bill** (with
+  `vendorId`, `dueDate`, and line items coded to the GL account + dimensions), and
+  **initiate the payment**, then **track status** to completion (polling or webhooks).
+- **The coding will carry.** Bill.com's Sage Intacct integration syncs the chart of
+  accounts and dimensions **from Intacct into Bill.com** (departments, locations,
+  classes, and custom dimensions — the latter one-way, view-only in Bill.com). So the
+  fund/project/class Reimbly already produces line up with what Bill.com holds, and
+  the **transaction sync runs one-way Bill.com → Intacct** — exactly what Olivia
+  described.
+- **International reach is broad:** Bill.com pays **~137 countries / ~106
+  currencies**, with **no wire fees on local-currency payments** and better-than-bank
+  FX — good for JV's Europe footprint (verify the exact country list, esp. Ukraine).
+- **CSV import exists but is the wrong tool here:** Bill.com's own docs say **don't
+  import bills by CSV when you sync to an accounting system** (it causes duplicates /
+  sync errors). Since JV syncs to Intacct, we use the **API**, not a file.
 
-Either lands in the same place, because Bill.com → Intacct is already theirs. We're
-well-positioned: Reimbly already produces the full coding (GL account + fund/
-project/class) a Bill.com bill needs to map cleanly into Intacct.
+**Note on "employee reimbursements":** Bill.com's core is *vendor* payments, so the
+clean model is each staff member = a **vendor**, each reimbursement = a **bill**.
+(Bill.com also sells a separate product, **BILL Spend & Expense**, that does employee
+reimbursements natively — worth a look, but our Reimbly-driven approach uses AP bills
+to vendors and doesn't need it.)
 
 ## What we need from Bill.com to build it
 
@@ -131,25 +149,26 @@ build time, but the shape is:
 3. **Turn it on for Finance** once CedarStone signs off on the coding + the A/B
    decision.
 
-## The question to ask Bill.com (for Mel)
+## What's left to nail down (the API exists — these are org-specific)
 
-One question decides the path — ask Bill.com support / your account rep:
+Research settled *whether* it's possible; these are the JV-account questions:
 
-> **"Can we get bills *into* this account automatically — either through the API, or
-> a bill-import file — and have them flow to Intacct through our existing sync?"**
+1. **Whose Bill.com account** is it — JV's or CedarStone's? Whoever owns it issues the
+   production **Developer Key** and **Organization ID** and creates a **dedicated API
+   user**. (The **sandbox** we can sign up for ourselves to start building now:
+   <https://developer.bill.com>.)
+2. **Country/currency coverage** for JV's actual list — confirm the ones that matter,
+   especially **Ukraine (UAH)** and smaller markets.
+3. **Vendor model:** confirm staff can be set up as **vendors** (that's what a bill is
+   paid to), and how their bank details get collected — in Bill.com's vendor
+   onboarding (the "staff enter their own details" flow you wanted).
+4. **Sync direction confirmed:** the Bill.com → Intacct **transaction** sync stays
+   **one-way** (so we don't double-book with the Intacct file).
 
-- **If yes, API:** get **API access enabled**, a **Developer Key**, the
-  **Organization ID**, a **dedicated API user**, and **sandbox** credentials. Send
-  those to go in **Netlify** (never email a key into the repo); Claude builds against
-  the sandbox first.
-- **If yes, import file only (no API):** ask for their **bill-import template/format**.
-  Reimbly generates that file (it already has the coding); it's uploaded into
-  Bill.com like our Intacct file — still less work for CedarStone, since it rides
-  their Bill.com → Intacct sync.
-- **Either way, confirm:** whose account it is (JV vs CedarStone), and that staff can
-  be **Vendors** in Bill.com (that's what a payment is made to).
+Then the production key + org id + API user go into **Netlify** (never emailed into
+the repo), and the build moves from sandbox to live.
 
-Sign in / start here: <https://app.bill.com>.
+Sign in / start here: <https://app.bill.com> · Developer portal: <https://developer.bill.com>
 
 > When any of this is set up, add it to [EXTERNAL-SERVICES.md](EXTERNAL-SERVICES.md)
 > with the real org ID (non-secret) and which Netlify variables hold the keys.
