@@ -22,22 +22,34 @@ Reimbly "paid" → everyone's app updates itself. No spreadsheet, no manual wire
 
 ## Update (after talking to Olivia): ride the pipe they already have
 
-Mel confirmed **CedarStone already *receives* from Bill.com into Intacct** — so the
-**Bill.com → Intacct** channel exists and works today. That points straight at the
-least-work-for-CedarStone architecture:
+Mel confirmed with Olivia (Aug 2026): **Intacct does not pay anything itself**, and
+the Bill.com ↔ Intacct link is **one-way — Bill.com syncs *into* Intacct after a
+payment, and Intacct never sends anything back to Bill.com.** So the
+**Bill.com → Intacct** channel exists and works today, and there is no
+Intacct → Bill.com direction to rely on.
 
-> **Reimbly → Bill.com → Intacct (their existing sync).**
+That settles the architecture — the least-work-for-CedarStone shape:
+
+> **Reimbly → Bill.com → Intacct (their existing one-way sync).**
 
 Reimbly drops the reimbursements *into* Bill.com; Bill.com carries them into Intacct
 the way it already does. CedarStone does **less**, not more — they stop importing
 anything from us; the reimbursements arrive through the channel they already watch.
 
-Two things this settles:
+What the one-way sync means for us:
 
-- The direction we were unsure about — **Intacct → Bill.com — is not needed.** We
-  only ever push data *into* Bill.com; Bill.com handles everything downstream.
-- The Intacct JE file we built becomes a **fallback**, not the main path. (Keep it
-  for now; it's the safety net until the Bill.com route is proven.)
+- **Reimbly must feed Bill.com directly.** Since Intacct can't push to Bill.com, the
+  only way in is Reimbly → Bill.com (API or import file). There's no shortcut through
+  Intacct.
+- **Don't double-book.** Once Bill.com is live for a reimbursement, we must **not
+  also send the Intacct JE file for it** — Bill.com's sync already posts it to
+  Intacct, so sending our file too would record it twice. The JE export becomes the
+  **pre-Bill.com fallback** (and the path for anything Bill.com can't pay), not an
+  additional feed.
+- **The coding must live on the Bill.com bill.** Because Bill.com carries the entry
+  into Intacct, the GL account + fund/project/class Reimbly produces must map onto
+  the Bill.com bill's fields. Confirm with CedarStone how their Bill.com → Intacct
+  sync maps those dimensions, so the books land the same as they do today.
 
 ## The one thing to confirm — can we get data *into* Bill.com?
 
