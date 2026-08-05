@@ -16,6 +16,10 @@ Connected, the flow becomes: a batch is approved → Reimbly tells Bill.com *who
 pay, how much, and how it's coded* → Bill.com sends the payments → Bill.com tells
 Reimbly "paid" → everyone's app updates itself. No spreadsheet, no manual wire.
 
+> Bill.com is one option for the money rail. For the wider comparison — services
+> where staff enter their own bank details and get paid out, and what they cost per
+> person — see **[PAYOUT-PROVIDERS.md](PAYOUT-PROVIDERS.md)**.
+
 ## Update (after talking to Olivia): ride the pipe they already have
 
 Mel confirmed **CedarStone already *receives* from Bill.com into Intacct** — so the
