@@ -589,6 +589,9 @@
     loadOptions();
     updateDescribeBtn();
     switchView('submit');
+    // Open Reimbly ready to add an expense — the new-expense form is expanded on
+    // launch (it stays collapse-on-tap when you come back to this tab later).
+    setAddFormOpen(true);
     // Quietly pre-load the person's reports so the "sent back" tab badge shows on
     // open, before they visit My reports.
     ensureReportsData().then(updateMineBadge).catch(() => {});
