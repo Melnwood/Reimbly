@@ -12,6 +12,7 @@ const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
 const { TABLES, ensureStaff, accountMap } = require('./lib/domain');
+const { CATEGORIES_8 } = require('./lib/coding');
 
 const firstLink = (v) => (Array.isArray(v) && v.length ? v[0] : null);
 const leadingCode = (s) => (String(s || '').match(/^\s*(\S+)/) || [])[1] || '';
@@ -88,6 +89,44 @@ function codingFrom(records, merchant, accounts) {
   if (best.expenseAccount) out.expenseAccount = best.expenseAccount;
   if (best.accountCode) out.accountCode = best.accountCode;
   return Object.keys(out).length ? out : null;
+}
+
+// For a merchant with no history, let Claude pick the single best-fitting category
+// (GL code) from the standard list — a starting guess the person confirms. Returns
+// a code that's guaranteed to be in the list, or '' if it couldn't choose.
+async function guessCategory({ merchant, amount, currency }) {
+  const cats = CATEGORIES_8;
+  const list = cats.map((c) => `${c.code} — ${c.name}`).join('\n');
+  const facts = [
+    merchant ? `Merchant: ${merchant}` : '',
+    amount != null ? `Amount: ${amount}${currency ? ` ${currency}` : ''}` : '',
+  ].filter(Boolean).join('\n');
+  const prompt =
+    'A staff member at Josiah Venture (a Christian ministry across Central & Eastern ' +
+    'Europe) is filing a reimbursement. From the expense categories below, pick the ONE ' +
+    'that best fits this purchase. Choose only from the list; if nothing clearly fits, pick ' +
+    'the closest sensible one. Return its code exactly.\n\nCategories:\n' + list + '\n\n' +
+    facts + '\n\nCall pick_category with the best code.';
+  const client = new Anthropic();
+  const message = await client.messages.create({
+    model: MODEL(),
+    max_tokens: 80,
+    tools: [{
+      name: 'pick_category',
+      description: 'Pick the single best-fitting expense category code.',
+      input_schema: {
+        type: 'object',
+        properties: { code: { type: 'string', description: 'The GL code, exactly as listed.' } },
+        required: ['code'],
+        additionalProperties: false,
+      },
+    }],
+    tool_choice: { type: 'tool', name: 'pick_category' },
+    messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
+  });
+  const toolUse = (message.content || []).find((b) => b.type === 'tool_use');
+  const code = toolUse && toolUse.input ? String(toolUse.input.code || '').trim() : '';
+  return cats.some((c) => c.code === code) ? code : '';
 }
 
 function describeTool() {
@@ -169,8 +208,18 @@ exports.handler = async (event) => {
       try { coding = codingFrom(records, merchant, await accountMap()); } catch (e) { coding = null; }
     }
 
-    // Recall is just history — no AI needed, so it works even with the key unset.
-    if (recallOnly) return ok({ remembered, options: [], coding });
+    // Recall is history first (works with the AI key unset). If there's no history
+    // for this merchant, offer Claude's best-guess category for the person to
+    // confirm — a new coffee shop still comes in pre-coded, just marked a guess.
+    if (recallOnly) {
+      if (!coding && merchant && process.env.ANTHROPIC_API_KEY) {
+        try {
+          const code = await guessCategory({ merchant, amount, currency });
+          if (code) coding = { accountCode: code, guess: true };
+        } catch (e) { /* a guess is a nicety — never interrupt */ }
+      }
+      return ok({ remembered, options: [], coding });
+    }
 
     if (!merchant && !hint && !account) throw badRequest('Add where you spent it (or a couple of words) first.');
 

@@ -1357,6 +1357,7 @@
     if (state.editingId || state.expenseType === 'mileage') return;
     const merchant = $('#f-business').value.trim();
     if (!merchant) return;
+    state.pendingCategoryGuess = null; // a new merchant invalidates any old guess
     const seq = ++describeSeq;
     try {
       const res = await api('suggest-description', { method: 'POST', body: describeBody({ recallOnly: true }) });
@@ -1374,10 +1375,23 @@
   // highlight them so they just glance-confirm. Changing a field, or "Looks right",
   // clears the highlight.
   function markSuggested(sel, on) { if (sel) sel.classList.toggle('suggested', !!on); }
+  function showCodingBar(filled, merchant, isGuess) {
+    const bar = $('#coding-suggest'); if (!bar) return;
+    if (!filled) { bar.hidden = true; return; }
+    const txt = bar.querySelector('.cs-text');
+    if (txt) {
+      txt.textContent = isGuess
+        ? 'Best guess for a new place — check it’s right.'
+        : `Filled in from your past visits to ${merchant}. Right?`;
+    }
+    bar.hidden = false;
+  }
   function applyCodingSuggestion(coding, merchant) {
+    // A guess (new merchant) is category-only; history can also fill the account.
+    state.pendingCategoryGuess = coding.guess && coding.accountCode ? { merchant, code: coding.accountCode } : null;
     let filled = 0;
     const eaSel = $('#f-expense-account');
-    if (eaSel && !eaSel.value && coding.expenseAccount && hasOption('#f-expense-account', coding.expenseAccount)) {
+    if (!coding.guess && eaSel && !eaSel.value && coding.expenseAccount && hasOption('#f-expense-account', coding.expenseAccount)) {
       eaSel.value = coding.expenseAccount;
       populateCategories();     // refresh the category list for the chosen account
       updateDefaultLink();
@@ -1389,14 +1403,22 @@
       catSel.value = coding.accountCode;
       markSuggested(catSel, true);
       filled += 1;
+      if (coding.guess) state.pendingCategoryGuess = null; // placed it already
     }
-    const bar = $('#coding-suggest');
-    if (bar) {
-      if (filled) {
-        const txt = bar.querySelector('.cs-text');
-        if (txt) txt.textContent = `Filled in from your past visits to ${merchant}. Right?`;
-        bar.hidden = false;
-      } else { bar.hidden = true; }
+    showCodingBar(filled, merchant, coding.guess);
+  }
+  // A guessed category we couldn't place yet (no account chosen) — fill it once the
+  // person picks their account, if it's valid there.
+  function applyPendingCategoryGuess() {
+    const g = state.pendingCategoryGuess;
+    if (!g) return;
+    if ($('#f-business').value.trim() !== g.merchant) { state.pendingCategoryGuess = null; return; }
+    const catSel = $('#f-account');
+    if (catSel && !catSel.value && hasOption('#f-account', g.code)) {
+      catSel.value = g.code;
+      markSuggested(catSel, true);
+      showCodingBar(1, g.merchant, true);
+      state.pendingCategoryGuess = null;
     }
   }
   function clearCodingSuggest() {
@@ -1673,6 +1695,7 @@
     state.pendingDeclaration = null;
     el.form.reset();
     clearCodingSuggest();      // drop any "suggested" highlight
+    state.pendingCategoryGuess = null;
     $('#f-date').value = new Date().toISOString().slice(0, 10);
     populateExpenseAccounts(); // re-apply the default account…
     populateCategories();      // …and its category list
@@ -5429,7 +5452,7 @@
     updateSortHeader();
     $('#new-report-btn').addEventListener('click', createReportPrompt);
     $('#f-report').addEventListener('change', onFormReportChange);
-    $('#f-expense-account').addEventListener('change', () => { clearCodingSuggest(); populateCategories(); updateDefaultLink(); });
+    $('#f-expense-account').addEventListener('change', () => { clearCodingSuggest(); populateCategories(); updateDefaultLink(); applyPendingCategoryGuess(); });
     $('#f-account').addEventListener('change', () => { markSuggested($('#f-account'), false); });
     { const b = $('#coding-confirm'); if (b) b.addEventListener('click', clearCodingSuggest); }
     $('#set-default-account').addEventListener('click', async () => {
