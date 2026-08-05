@@ -103,7 +103,20 @@ does.
 
 ---
 
-## Step 7 — Confirm with Olivia (the decisions to settle)
+## Step 7 — Safeguards built into every file
+
+So each hand-off can be trusted without re-checking it by hand:
+
+- **Nothing incomplete reaches you.** If any expense is missing its fund or GL code,
+  Reimbly won't build the file — it flags exactly which one to fix first. Every file
+  CedarStone receives is fully coded.
+- **A Summary tab confirms it balances.** Each file carries a second tab with the batch
+  totals, the wire fee, and **Balanced: Yes** — see it's complete and adds up before
+  importing. The Journal Entry stays the first tab.
+- **Any batch can be re-sent, identical.** Need a file again? We regenerate the exact
+  same one (same numbers, date, fee) — never a mismatched copy.
+
+## Step 8 — Confirm with Olivia (the decisions to settle)
 
 1. **General Fund project number.** Your upload file shows the General Fund project as
    **`10000`** (no leading zero); the fund listing writes it **`010000`**. Reimbly emits
