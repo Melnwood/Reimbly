@@ -154,24 +154,68 @@ build time, but the shape is:
 3. **Turn it on for Finance** once CedarStone signs off on the coding + the A/B
    decision.
 
-## What's left to nail down (the API exists — these are org-specific)
+## Cost — adding vendors is free
 
-Research settled *whether* it's possible; these are the JV-account questions:
+Bill.com's pricing is two parts, and **neither is per-vendor**:
 
-1. **Whose Bill.com account** is it — JV's or CedarStone's? Whoever owns it issues the
-   production **Developer Key** and **Organization ID** and creates a **dedicated API
-   user**. (The **sandbox** we can sign up for ourselves to start building now:
-   <https://developer.bill.com>.)
-2. **Country/currency coverage** for JV's actual list — confirm the ones that matter,
-   especially **Ukraine (UAH)** and smaller markets.
-3. **Vendor model:** confirm staff can be set up as **vendors** (that's what a bill is
-   paid to), and how their bank details get collected — in Bill.com's vendor
-   onboarding (the "staff enter their own details" flow you wanted).
-4. **Sync direction confirmed:** the Bill.com → Intacct **transaction** sync stays
-   **one-way** (so we don't double-book with the Intacct file).
+- **Per-user subscription** (the people who *log in* to Bill.com — the finance/AP
+  seats, not the staff being paid): roughly **$45–79/user/month** by plan.
+- **Per-payment fee** when you actually pay someone: about **$0.49 ACH**, **$1.99**
+  mailed check, **$9.99** international USD wire — and Bill.com advertises **no wire
+  fee on local-currency international payments** (an FX spread applies instead).
 
-Then the production key + org id + API user go into **Netlify** (never emailed into
-the repo), and the build moves from sandbox to live.
+So **adding all of JV's staff as *vendors* (payees) costs nothing** — vendors are
+free to add and manage. You only pay the small fee **when a payment goes out**, plus
+the monthly seats for whoever runs Bill.com. (Confirm JV's exact plan + international
+rates with CedarStone / a Bill.com quote.)
+
+## Questions for Olivia / CedarStone
+
+Research settled *whether* it's possible (yes). These are the account- and
+accounting-specific things only CedarStone can answer. **Must-knows first.**
+
+**A. The account & getting in**
+
+1. **Whose Bill.com account** is it — JV's or CedarStone's, and who administers it?
+   (Determines who issues access.)
+2. **Can we get API access** on it — a **Developer Key**, the **Organization ID**, and
+   a **dedicated API login**? (That's what lets Reimbly send bills in. The **sandbox**
+   we can sign up for ourselves at <https://developer.bill.com> to start now.)
+
+**B. How it lands in Intacct (the accounting — the important one)**
+
+3. **When a bill is paid in Bill.com and syncs to Intacct, which accounts does it
+   post to** — and is it enough for Reimbly to put the **expense-side coding** on the
+   bill (GL expense account + fund/project/class), with **Bill.com/Intacct handling
+   the cash/clearing side** automatically? (Today our JE credits bank clearing
+   `1100000` and debits the expense accounts; we need to know how that same result is
+   reached when Bill.com is the payer, so the books look the same.)
+4. Are JV's **dimensions** — fund (`DEPT_ID`), project, class — **available to code on
+   a Bill.com bill** (synced from Intacct)? (So each line lands coded correctly.)
+5. How should the **Bill.com processing/wire fee** be recorded? (Today we add a
+   `7111100` fee line; with Bill.com paying, does it record its own fee?)
+6. Keep the **Bill.com → Intacct transaction sync one-way**? (So we retire our Intacct
+   file and never double-book.)
+
+**C. Paying the staff**
+
+7. **Country/currency coverage** for JV's actual list — especially **Ukraine (UAH)**
+   and smaller markets. Any Bill.com can't pay, where we'd keep the current method?
+8. Are staff **already vendors** in Bill.com, or do we create them (matched by email)?
+   And is it OK for **each person to add their own bank details once** via Bill.com's
+   onboarding?
+9. Is there a **payment-approval step in Bill.com** CedarStone wants to keep, or is
+   Reimbly's approval enough to release payment?
+
+**D. Turning it on**
+
+10. Is your Bill.com/Intacct a **single entity or multi-entity** setup? (Changes the
+    sync configuration.)
+11. OK to **pilot with a small group** first, then retire the Intacct file once proven?
+    And does this change the **timing** (expenses in by the 2nd, close on the 20th)?
+
+Once A is answered, the production key + org id + API user go into **Netlify** (never
+emailed into the repo), and the build moves from sandbox to live.
 
 Sign in / start here: <https://app.bill.com> · Developer portal: <https://developer.bill.com>
 
