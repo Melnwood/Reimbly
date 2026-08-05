@@ -20,6 +20,11 @@ Reimbly "paid" → everyone's app updates itself. No spreadsheet, no manual wire
 > where staff enter their own bank details and get paid out, and what they cost per
 > person — see **[PAYOUT-PROVIDERS.md](PAYOUT-PROVIDERS.md)**.
 
+> **A CedarStone-facing walkthrough** of this flow (step by step, in plain language,
+> for Olivia) is a shareable page — regenerate/serve it from
+> `scratchpad/reimbly-billcom-flow.html`. The steps it shows are the same as
+> "How the integration will work" below.
+
 ## Update (after talking to Olivia): ride the pipe they already have
 
 Mel confirmed with Olivia (Aug 2026): **Intacct does not pay anything itself**, and
