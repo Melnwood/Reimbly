@@ -154,6 +154,37 @@ build time, but the shape is:
 3. **Turn it on for Finance** once CedarStone signs off on the coding + the A/B
    decision.
 
+## Keeping bank details safe — the design rule
+
+The single most important safety choice: **Reimbly never stores anyone's bank
+account details.** It doesn't today, and this design keeps it that way.
+
+- **Bank details live only in Bill.com's vault.** Each staff member enters their own
+  banking info directly into Bill.com through a secure link — never into Reimbly, a
+  spreadsheet, or email. Bill.com is a regulated financial platform (licensed money
+  transmitter, bank-grade encryption, audited) built to hold exactly this.
+- **Reimbly only passes "who, how much, and the coding."** It refers to each person
+  by a Bill.com **Vendor ID** — a harmless pointer on the Staff record — never an
+  account number. If all of Reimbly's data were somehow exposed, there would be **no
+  bank numbers in it.**
+- **The Reimbly ↔ Bill.com link is locked down:** encrypted API calls; keys live only
+  in **Netlify** env vars (never in GitHub), scoped to a **dedicated service user**,
+  and rotatable/revocable at any time.
+
+This is a reason to prefer self-onboarding rails (Bill.com, Trolley) over an
+"upload a batch file of everyone's account numbers" approach — the sensitive data
+stays with the specialist, out of our hands.
+
+### How Reimbly is already kept safe (the rest of the data)
+
+- **Sign-in** is Google, restricted to `josiahventure.com` — no passwords for us to hold.
+- **All secrets/API keys** live only in Netlify env vars, never in the code.
+- **Sensitive tokens already stored** (e.g. the Gmail connection) are **encrypted at
+  rest** (AES-256-GCM; see `lib/secure.js`).
+- **The database (Airtable)** is reached only through the serverless functions after a
+  verified sign-in — the browser never touches it directly; HTTPS throughout.
+- **Expenses & receipts** are visible only to the person, their approver, and Finance.
+
 ## Cost — adding vendors is free
 
 Bill.com's pricing is two parts, and **neither is per-vendor**:
