@@ -80,8 +80,9 @@ breaks for users as long as you do all three steps close together.
 1. **Regenerate in the console.** Open the Credentials link above → find the
    `Reimbly web` OAuth client → create a new Client ID (Web application), or edit the
    existing one. Copy the new value (ends in `.apps.googleusercontent.com`).
-   - Make sure **Authorized JavaScript origins** still lists the live site
-     (e.g. `https://reimbly.netlify.app`) and your custom domain.
+   - Make sure **Authorized JavaScript origins** lists **both** live addresses —
+     `https://reimbly.netlify.app` and the custom domain `https://reimbly.app`
+     (see [CUSTOM-DOMAIN.md](CUSTOM-DOMAIN.md)).
 2. **Update Netlify.** Netlify → Site settings → Environment variables →
    set `GOOGLE_CLIENT_ID` to the new value → save.
 3. **Redeploy.** Netlify → **Deploys → Trigger deploy → Deploy site** so the new

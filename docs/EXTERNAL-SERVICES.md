@@ -25,6 +25,14 @@ live in Netlify's environment variables, kept secret and out of the code.
 - **Where the keys live:** **Site settings → Environment variables**
 - **After changing any key:** **Deploys → Trigger deploy → Deploy site**
 
+### 2b. Domain registrar — reimbly.app
+- **What:** where `reimbly.app` (the app's main address) and its sibling domains
+  (`.org`, `.info`, `.pro`, `.vip`, …) are registered. `reimbly.app` is pointed at
+  Netlify as a custom domain.
+- **Netlify variable:** `APP_URL` = `https://reimbly.app` (tells the app its own
+  address for email links and the Gmail-connect return trip)
+- **Full setup steps:** **[docs/CUSTOM-DOMAIN.md](CUSTOM-DOMAIN.md)**
+
 ### 3. Airtable — the database
 - **What:** where all the expense data actually lives (the **JV Expenses** base).
 - **Sign in:** https://airtable.com → base `appquqkhFfrnoU6v9`
