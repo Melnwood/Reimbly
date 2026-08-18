@@ -10,6 +10,10 @@ const crypto = require('crypto');
 const airtable = require('./airtable');
 const coding = require('./coding');
 
+// The app's own address, for links that need to work outside the browser (a CSV
+// export, an email) where there's no page origin to resolve a relative URL against.
+const appUrl = () => (process.env.APP_URL || 'https://reimbly.netlify.app').replace(/\/$/, '');
+
 // Receipts are served through the app's own /api/receipt so the browser never
 // sees an Airtable file URL. A short HMAC (keyed on the server-only Airtable
 // token) makes the link unguessable — the same "anyone with the link" model the
@@ -884,10 +888,12 @@ function shapeExpense(record, maps = {}) {
     recurringMonthly: f['Recurring Monthly'] === true,
     recurringSource: f['Recurring Source'] || null,
     notes: f['Approver Note'] || '',
+    // Absolute (not relative) so the link still works outside the app — pasted
+    // into a CSV, opened from a spreadsheet, or dropped into an email.
     receipt: receipts[0]
       ? {
-          url: `/api/receipt?e=${record.id}&t=${receiptToken(record.id)}`,
-          thumb: `/api/receipt?e=${record.id}&t=${receiptToken(record.id)}&thumb=1`,
+          url: `${appUrl()}/api/receipt?e=${record.id}&t=${receiptToken(record.id)}`,
+          thumb: `${appUrl()}/api/receipt?e=${record.id}&t=${receiptToken(record.id)}&thumb=1`,
           filename: receipts[0].filename,
         }
       : null,
