@@ -20,6 +20,7 @@
     importMode: 'add', // 'add' | 'reconcile'
     sortKey: 'date', // 'date' | 'desc' | 'amt'
     sortDir: 'desc', // 'asc' | 'desc'
+    reportExportSel: new Set(), // report ids picked on "My reports" for the CSV export
   };
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -1873,6 +1874,14 @@
   // it creates the report and selects it. Picking an existing report is saved
   // when the line is closed (together with any field edits), so nothing is lost.
   async function onAddListChange(event) {
+    // A report was ticked/unticked for the CSV export.
+    const selBox = event.target.closest('.rc-select-box');
+    if (selBox) {
+      const id = selBox.dataset.report;
+      if (selBox.checked) state.reportExportSel.add(id); else state.reportExportSel.delete(id);
+      refreshReportExportBar();
+      return;
+    }
     // The Account picker changed — rebuild the Category list for the new account.
     const eaSel = event.target.closest('.ie-expense-account');
     if (eaSel) {
@@ -1950,6 +1959,7 @@
       card.classList.toggle('open', open);
       return;
     }
+    if (act === 'export-reports-csv') { exportReportsReceiptsCsv(); return; }
     const id = btn.dataset.id;
     if (act === 'report-submit') submitReport(id, btn);
     else if (act === 'report-rename') renameReportUi(id);
@@ -2729,16 +2739,22 @@
     const ordered = hasFix
       ? [...items.filter((e) => e.status === 'Rejected'), ...sortExpenses(items.filter((e) => e.status !== 'Rejected'))]
       : sortExpenses(items);
+    const canExport = items.length > 0;
     return `
       <div class="report-card rc-h-${health}${hasFix ? ' has-fix open' : ''}" data-report="${escapeHtml(r.id)}">
-        <button type="button" class="rc-head" data-act="report-toggle">
-          <div class="rc-main">
-            <div class="rc-name">${escapeHtml(r.name)}${r.ownerName && firstNameOf(r.ownerName).toLowerCase() !== firstNameOf((state.me && state.me.name) || '').toLowerCase() ? `<span class="mini-who-tag">${escapeHtml(firstNameOf(r.ownerName))}</span>` : ''}${hasFix ? '<span class="rc-fixtag">↩︎ needs your fix</span>' : ''}${healthPill}</div>
-            <div class="rc-sub">${items.length} expense${items.length === 1 ? '' : 's'} · ${escapeHtml(money(total, 'USD'))}</div>
-          </div>
-          ${badge}
-          <span class="mini-caret" aria-hidden="true">▾</span>
-        </button>
+        <div class="rc-top">
+          ${canExport ? `<label class="rc-select" title="Select for CSV export">
+            <input type="checkbox" class="rc-select-box" data-report="${escapeHtml(r.id)}"${state.reportExportSel.has(r.id) ? ' checked' : ''} />
+          </label>` : '<span class="rc-select rc-select-spacer" aria-hidden="true"></span>'}
+          <button type="button" class="rc-head" data-act="report-toggle">
+            <div class="rc-main">
+              <div class="rc-name">${escapeHtml(r.name)}${r.ownerName && firstNameOf(r.ownerName).toLowerCase() !== firstNameOf((state.me && state.me.name) || '').toLowerCase() ? `<span class="mini-who-tag">${escapeHtml(firstNameOf(r.ownerName))}</span>` : ''}${hasFix ? '<span class="rc-fixtag">↩︎ needs your fix</span>' : ''}${healthPill}</div>
+              <div class="rc-sub">${items.length} expense${items.length === 1 ? '' : 's'} · ${escapeHtml(money(total, 'USD'))}</div>
+            </div>
+            ${badge}
+            <span class="mini-caret" aria-hidden="true">▾</span>
+          </button>
+        </div>
         ${reportStepper(status)}${status === 'Reimbursed' && paidOn ? `<div class="rc-paid-on">Paid ${escapeHtml(fmtDateShort(paidOn))}</div>` : ''}
         <div class="rc-body"${hasFix ? '' : ' hidden'}>
           ${items.length ? ordered.map(expenseRowHtml).join('') : '<div class="state small">No expenses yet — add some on the “Add expense” tab, then pick this report.</div>'}
@@ -2804,6 +2820,22 @@
     </div>`;
   }
 
+  // The bar above the report list: tick a report's checkbox, then download a CSV
+  // of its receipts (date, merchant, amount, and a link to each receipt file).
+  // Re-rendered in place on every checkbox toggle so open/closed report cards
+  // aren't disturbed by a full re-render.
+  function reportExportBarHtml() {
+    const n = state.reportExportSel.size;
+    return `<div class="rc-export-bar" id="rc-export-bar">
+      <span class="rc-export-hint">${ic('receipt')} ${n ? `${n} report${n === 1 ? '' : 's'} selected` : 'Select reports below to export their receipts'}</span>
+      <button type="button" class="btn ${n ? 'primary' : 'ghost'} small" data-act="export-reports-csv"${n ? '' : ' disabled'}>⤓ Download CSV</button>
+    </div>`;
+  }
+  function refreshReportExportBar() {
+    const bar = $('#rc-export-bar');
+    if (bar) bar.outerHTML = reportExportBarHtml();
+  }
+
   function renderReports() {
     const box = el.reportsList;
     if (!box) return;
@@ -2833,6 +2865,13 @@
     if (!reports.length) {
       html += `<div class="state"><span class="emoji">${ic('folder')}</span>No reports yet. Tap “＋ New report”, then file expenses into it from the “Add expense” tab.</div>`;
     } else {
+      // Drop any stale selection (a report that's since been deleted) before we
+      // count it, so the toolbar's number is always right.
+      const validIds = new Set(reports.map((r) => r.id));
+      [...state.reportExportSel].forEach((id) => { if (!validIds.has(id)) state.reportExportSel.delete(id); });
+      const anyExportable = reports.some((r) => reportRollup(r.id).items.length > 0);
+      if (anyExportable) html += reportExportBarHtml();
+
       // Sort every report into the stage it's at, so the screen reads like the
       // real process: things you're still working on, things on their way to
       // being paid, and everything that's been paid (filed away by month).
@@ -4256,6 +4295,20 @@
     }
   }
 
+  // Turn CSV lines into a file download in the browser. A leading BOM makes Excel
+  // open it as UTF-8 (so Czech/Polish names show correctly) instead of guessing.
+  function downloadCsvLines(lines, filename) {
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   // A plain CSV copy of the approved batch — a spreadsheet to look over. Unlike
   // the Intacct download, this does NOT start a payment batch or move anything;
   // it's just a peek. The real hand-off is "Download for Intacct & start paying".
@@ -4273,17 +4326,35 @@
         e.decidedOn || '',
       ].map(csvCell).join(','));
     }
-    // Prepend a BOM so Excel opens UTF-8 (Czech/Polish names) correctly.
-    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `approved-expenses-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadCsvLines(lines, `approved-expenses-${new Date().toISOString().slice(0, 10)}.csv`);
     toast(`Downloaded a CSV of ${rows.length} approved expense${rows.length === 1 ? '' : 's'}.`, 'good');
+  }
+
+  // A CSV of the receipts in whichever reports you've ticked on "My reports" — one
+  // row per expense, with a link straight to its receipt file. Nothing is moved or
+  // changed; it's just a copy to keep or hand off.
+  function exportReportsReceiptsCsv() {
+    const ids = state.reportExportSel;
+    if (!ids.size) return toast('Tick at least one report first.', 'bad');
+    const rows = (state.mineExpenses || []).filter((e) => ids.has(e.reportId));
+    if (!rows.length) return toast('Those reports have no expenses yet.', 'bad');
+    const sorted = [...rows].sort((a, b) => (a.reportName || '').localeCompare(b.reportName || '')
+      || String(a.date || '').localeCompare(String(b.date || '')));
+    const headers = ['Report', 'Date', 'Merchant', 'Description', 'Category', 'Account',
+      'Amount', 'Currency', 'Amount (USD)', 'Status', 'Receipt link'];
+    const lines = [headers.join(',')];
+    for (const e of sorted) {
+      lines.push([
+        e.reportName || '', e.date || '', e.merchant || '', e.description || '',
+        e.category || '', e.account || '',
+        e.amount != null ? e.amount : '', e.currency || '', e.amountUsd != null ? e.amountUsd : '',
+        e.status || '',
+        (e.receipt && e.receipt.url) ? e.receipt.url : (e.missingReceipt ? 'No receipt (declared)' : ''),
+      ].map(csvCell).join(','));
+    }
+    const n = ids.size;
+    downloadCsvLines(lines, `reimbly-receipts-${n}-report${n === 1 ? '' : 's'}-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast(`Downloaded ${rows.length} receipt${rows.length === 1 ? '' : 's'} from ${n} report${n === 1 ? '' : 's'}.`, 'good');
   }
 
   // Reflect the current checkbox selection in the waiting toolbar.
