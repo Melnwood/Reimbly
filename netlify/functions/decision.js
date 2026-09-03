@@ -7,7 +7,7 @@
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, STATUS, EVENTS, ensureStaff, isApprover, displayMaps, shapeExpense, logActivity } = require('./lib/domain');
+const { TABLES, STATUS, EVENTS, ensureStaff, isApprover, approverScopeAllows, displayMaps, shapeExpense, logActivity } = require('./lib/domain');
 const notify = require('./lib/notify');
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -52,6 +52,13 @@ exports.handler = async (event) => {
     if ((current.fields && current.fields.Status) !== STATUS.SUBMITTED) {
       const err = new Error('That expense was already decided by someone else.');
       err.statusCode = 409;
+      throw err;
+    }
+    // An approver (not Finance) may only decide on people who report to them —
+    // the same team boundary the Review queue already shows them.
+    if (!(await approverScopeAllows(current.fields, role, approverId))) {
+      const err = new Error('That expense isn’t from someone who reports to you.');
+      err.statusCode = 403;
       throw err;
     }
 

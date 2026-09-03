@@ -55,8 +55,9 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role, record: staffRec } = await ensureStaff(user);
+    const { id: myStaffId, role, record: staffRec } = await ensureStaff(user);
     const canSeeAll = isApprover(role);
+    const isFinance = role === 'Finance';
 
     const q = event.queryStringParameters || {};
     const wantAll = canSeeAll && String(q.scope || '').toLowerCase() === 'all';
@@ -76,7 +77,16 @@ exports.handler = async (event) => {
       displayMaps(),
     ]);
 
-    const expenses = records.map((r) => shapeExpense(r, maps));
+    let expenses = records.map((r) => shapeExpense(r, maps));
+    // "The whole team's" for a plain Approver means THEIR team, not everyone's —
+    // the same boundary Review/Paid already use. Finance really does see all.
+    if (wantAll && !isFinance) {
+      expenses = expenses.filter((e) => {
+        const submitter = e.submitterId && maps.staff[e.submitterId];
+        const uplineId = submitter && submitter.uplineId;
+        return !uplineId || uplineId === myStaffId;
+      });
+    }
     const monthPrefix = new Date().toISOString().slice(0, 7);
 
     return ok({

@@ -14,7 +14,7 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role } = await ensureStaff(user);
+    const { id: staffId, role } = await ensureStaff(user);
 
     const id = String((parseBody(event) || {}).id || '').trim();
     if (!id) {
@@ -26,7 +26,7 @@ exports.handler = async (event) => {
     const current = await getExpenseById(id);
     if (!current) return ok({ deleted: true }); // already gone — nothing to do
 
-    if (!canModify(current, user, role)) {
+    if (!(await canModify(current, user, role, null, staffId))) {
       const err = new Error('You can only delete your own expenses before they’re approved.');
       err.statusCode = 403;
       throw err;

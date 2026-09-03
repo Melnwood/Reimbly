@@ -24,7 +24,7 @@ exports.handler = async (event) => {
 
   try {
     const user = await verifyRequest(event.headers);
-    const { role, record: staffRec } = await ensureStaff(user);
+    const { id: staffId, role, record: staffRec } = await ensureStaff(user);
     const { emails: householdEmails } = await householdScope(staffRec);
 
     const body = parseBody(event);
@@ -34,7 +34,7 @@ exports.handler = async (event) => {
 
     const current = await getExpenseById(id);
     if (!current) throw badRequest('That expense no longer exists.');
-    if (!canModify(current, user, role, householdEmails)) {
+    if (!(await canModify(current, user, role, householdEmails, staffId))) {
       const err = new Error('You can only change your own household’s expenses.');
       err.statusCode = 403;
       throw err;

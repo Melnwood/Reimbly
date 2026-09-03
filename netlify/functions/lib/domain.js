@@ -189,15 +189,39 @@ function submitterEmailOf(fields = {}) {
   return (Array.isArray(v) ? v[0] : v) || '';
 }
 
+async function getStaffById(id) {
+  if (!id) return null;
+  return airtable.findFirst(TABLES.STAFF, { filterByFormula: `RECORD_ID() = '${esc(String(id))}'` });
+}
+
+// Whether a non-Finance approver may act on someone ELSE's expense: only if that
+// person reports to them (Upline = them), or has no upline assigned yet. Finance
+// may always act. This is the same team boundary already used to scope what an
+// approver *sees* (approvals.js, archive.js) — applied here to what they can
+// *do* (approve/reject/edit/delete), so an approver can't reach past their own
+// people just by knowing or guessing another expense's id.
+async function approverScopeAllows(fields, role, myStaffId) {
+  if (role === 'Finance') return true;
+  const submitterId = firstLinkId(fields.Submitter);
+  if (!submitterId) return true; // nothing to compare against — don't block
+  const submitter = await getStaffById(submitterId);
+  const uplineId = submitter && firstLinkId((submitter.fields || {}).Upline);
+  return !uplineId || uplineId === myStaffId;
+}
+
 // Decide whether `user` (with `role`) may edit/delete a raw expense record.
-function canModify(record, user, role, householdEmails = null) {
+// `myStaffId` scopes a plain Approver to their own team (see approverScopeAllows);
+// omitted, it defaults to "no one's team" — safe (denies) rather than open.
+async function canModify(record, user, role, householdEmails = null, myStaffId = null) {
   const f = record.fields || {};
   const status = f.Status || 'Submitted';
   const owner = submitterEmailOf(f).toLowerCase();
   const inHousehold = householdEmails
     && (householdEmails.has ? householdEmails.has(owner) : householdEmails.includes(owner));
   const isOwner = owner === user.email.toLowerCase() || !!inHousehold;
-  return APPROVER_ROLES.has(role) || (isOwner && EDITABLE_STATUSES.has(status));
+  if (isOwner && EDITABLE_STATUSES.has(status)) return true;
+  if (!APPROVER_ROLES.has(role)) return false;
+  return approverScopeAllows(f, role, myStaffId);
 }
 
 /**
@@ -1015,6 +1039,7 @@ module.exports = {
   verifyReceiptToken,
   getExpenseById,
   canModify,
+  approverScopeAllows,
   isApprover,
   resolveCurrencyId,
   resolveCategoryId,

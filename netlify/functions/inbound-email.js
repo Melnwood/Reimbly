@@ -7,9 +7,18 @@
 //
 // Opt-in: Reimbly only accepts email for people who turned it on themselves.
 
+const crypto = require('crypto');
 const { ok, error, methodGuard, parseBody } = require('./lib/http');
 const { ensureStaff, emailIntakeOn } = require('./lib/domain');
 const { intakeReceipts } = require('./lib/intake');
+
+// Constant-time secret compare — same reasoning as the receipt/session tokens
+// elsewhere: a plain !== leaks timing information character-by-character.
+function secretsMatch(a, b) {
+  const bufA = Buffer.from(String(a || ''));
+  const bufB = Buffer.from(String(b || ''));
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+}
 
 exports.handler = async (event) => {
   const guard = methodGuard(event, 'POST');
@@ -21,7 +30,7 @@ exports.handler = async (event) => {
     const headers = event.headers || {};
     const body = parseBody(event);
     const provided = headers['x-reimbly-secret'] || headers['X-Reimbly-Secret'] || body.secret;
-    if (provided !== secret) { const err = new Error('Not authorized.'); err.statusCode = 401; throw err; }
+    if (!secretsMatch(provided, secret)) { const err = new Error('Not authorized.'); err.statusCode = 401; throw err; }
     if (!process.env.ANTHROPIC_API_KEY) { const err = new Error('Receipt reading is not turned on yet.'); err.statusCode = 503; throw err; }
 
     const from = String(body.from || '').trim().toLowerCase();

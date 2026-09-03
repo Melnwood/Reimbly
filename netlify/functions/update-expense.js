@@ -67,7 +67,7 @@ exports.handler = async (event) => {
 
     const current = await getExpenseById(id);
     if (!current) throw badRequest('That expense no longer exists.');
-    if (!canModify(current, user, role, householdEmails)) {
+    if (!(await canModify(current, user, role, householdEmails, staffId))) {
       const err = new Error('You can only edit your own expenses before they’re approved.');
       err.statusCode = 403;
       throw err;

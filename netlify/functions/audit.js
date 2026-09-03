@@ -8,7 +8,7 @@
 const { ok, error, methodGuard } = require('./lib/http');
 const { verifyRequest } = require('./lib/google');
 const airtable = require('./lib/airtable');
-const { TABLES, ensureStaff, isApprover, displayMaps, shapeExpense, dupKey } = require('./lib/domain');
+const { TABLES, ensureStaff, displayMaps, shapeExpense, dupKey } = require('./lib/domain');
 
 // Return the list of problems with one expense (empty = ready to send).
 function auditExpense(e) {
@@ -34,8 +34,11 @@ exports.handler = async (event) => {
   try {
     const user = await verifyRequest(event.headers);
     const { role } = await ensureStaff(user);
-    if (!isApprover(role)) {
-      const err = new Error('You do not have approver access.');
+    // This is a whole-org, pre-Cedarstone completeness sweep — not scoped to any
+    // one team like Review/Paid are — so it's kept to Finance, who already sees
+    // everyone's expenses on those screens too.
+    if (role !== 'Finance') {
+      const err = new Error('Only Finance can run the audit.');
       err.statusCode = 403;
       throw err;
     }
